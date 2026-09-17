@@ -1,57 +1,57 @@
-# AI Coding Agent Guidelines (`AGENTS.md`)
+# AI コーディングエージェント開発ガイドライン (`AGENTS.md`)
 
-This repository is an open-source project designed as a zero-backend, client-side SPA for GitHub Actions & PR integration.
-All AI coding agents (Antigravity, Cursor, Claude Code, GitHub Copilot, etc.) working on this repository must strictly follow these instructions.
-
----
-
-## 🏛 Project Architecture & Constraints
-
-- **Zero-Backend (Client-Only)**:
-  - This application runs entirely in the user's browser (hosted statically on GitHub Pages).
-  - Never introduce external backend servers or proxy APIs.
-  - Personal Access Tokens (PAT) are stored exclusively in `localStorage` and sent directly to `api.github.com` via client-side CORS.
-- **Tech Stack**:
-  - React 19 + TypeScript (strict mode) + Vite + Tailwind CSS v4 + Lucide Icons.
-  - Keep root configuration minimal: use a single, unified `tsconfig.json`.
+このリポジトリは、GitHub Actions の無料枠使用量と複数リポジトリの PR / CI 状況を統合管理する、完全クライアント完結型 (Zero-Backend SPA) のオープンソースプロジェクトです。
+本リポジトリで作業するすべての AI コーディングエージェント（Antigravity、Cursor、Claude Code、GitHub Copilot など）は、以下のルールと制約を厳格に遵守してください。
 
 ---
 
-## 🛡️ Git & Branch Workflow Rules
+## 🏛 プロジェクトアーキテクチャと制約事項
 
-1. **Direct Commits to `main` are Strictly Forbidden**:
-   - Both remote GitHub branch protection and local Git hooks (`.githooks/pre-commit`, `.githooks/pre-push`) are enforced.
-   - Always create a dedicated topic branch (e.g., `feature/*`, `fix/*`, `chore/*`) and submit a Pull Request.
-2. **Release-Driven Deployments**:
-   - Merging to `main` does NOT immediately deploy to production. Production deployments are triggered by GitHub Releases / version tags (`v*.*.*`).
-   - Detailed workflow: see [`docs/release-flow.md`](docs/release-flow.md).
-
----
-
-## 📝 CLI & Shell Markdown Escaping Rules
-
-When using the GitHub CLI (`gh`) to create or edit Pull Requests:
-
-- **Mandatory `--body-file` usage**:
-  - NEVER pass multi-line Markdown or backticks directly via `--body "..."` in shell commands. Doing so causes escaping artifacts (such as unintended backslashes `\` and broken code formatting).
-  - Always write the PR description to a temporary Markdown file and use `gh pr create --body-file <path>` or `gh pr edit --body-file <path>`. Clean up temporary files immediately.
-- Detailed rule: see [`.agents/rules/cli-markdown-escaping.md`](.agents/rules/cli-markdown-escaping.md).
+- **完全クライアント完結 (Zero-Backend)**:
+  - 本アプリケーションはユーザーのブラウザ内（GitHub Pages による静的配信）で完結して動作します。
+  - 外部のバックエンドサーバーやプロキシ API を絶対に追加しないでください。
+  - Personal Access Token (PAT) はブラウザの `localStorage` にのみ保存し、クライアント側から直接 CORS 経由で `api.github.com` と通信します。
+- **技術スタック**:
+  - React 19 + TypeScript (strict モード) + Vite + Tailwind CSS v4 + Lucide Icons。
+  - ルート設定は最小限に保ち、単一の統合された `tsconfig.json` を使用してください。
 
 ---
 
-## 🛠 Useful Commands
+## 🛡️ Git & ブランチ運用ルール
 
-- `npm run dev`: Start local Vite development server (`http://localhost:5173/`)
-- `npm run typecheck`: Run TypeScript type checking (`tsc --noEmit`)
-- `npm run build`: Build production bundle (`tsc && vite build`)
-- `npm run preview`: Preview production build locally
+1. **`main` ブランチへの直接コミット・プッシュは厳格に禁止**:
+   - リモートの GitHub ブランチ保護設定およびローカルの Git Hook (`.githooks/pre-commit`, `.githooks/pre-push`) の両方で保護されています。
+   - 必ずトピックブランチ（例: `feature/*`, `fix/*`, `chore/*`）を作成し、Pull Request を作成してマージしてください。
+2. **リリース（タグ）駆動デプロイ**:
+   - `main` ブランチにマージしても即座には本番環境へデプロイされません。本番（GitHub Pages）へのデプロイは GitHub Releases / バージョンタグ (`v*.*.*`) の公開によってトリガーされます。
+   - 運用手順の詳細は [`docs/release-flow.md`](docs/release-flow.md) を参照してください。
 
 ---
 
-## 📚 Detailed Specifications
+## 📝 CLI & マークダウンエスケープ防止ルール
 
-- 🏛️ [Architecture & Security (`docs/architecture.md`)](docs/architecture.md)
-- 📡 [GitHub API & GraphQL Rollup Design (`docs/api-design.md`)](docs/api-design.md)
-- 🧩 [Data Models & State (`docs/data-model.md`)](docs/data-model.md)
-- 🖥️ [UI / UX Component Design (`docs/ui-design.md`)](docs/ui-design.md)
-- 🚀 [Development & Release Flow (`docs/release-flow.md`)](docs/release-flow.md)
+GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合：
+
+- **`--body-file` の使用を義務化**:
+  - シェルコマンドの `--body "..."` に複数行の Markdown やバッククォートを直接渡さないでください。PowerShell 等の展開処理によって意図しないバックスラッシュ（`\`）の混入やコードブロック破損が発生します。
+  - 必ず一時的な Markdown ファイルに本文を書き出し、`gh pr create --body-file <path>` または `gh pr edit --body-file <path>` を使用してください。送信完了後は一時ファイルを直ちに削除してください。
+- 詳細ルール: [`.agents/rules/cli-markdown-escaping.md`](.agents/rules/cli-markdown-escaping.md)
+
+---
+
+## 🛠 主要コマンド
+
+- `npm run dev`: ローカル開発サーバーを起動 (`http://localhost:5173/`)
+- `npm run typecheck`: TypeScript 型チェックを実行 (`tsc --noEmit`)
+- `npm run build`: プロダクションビルドを実行 (`tsc && vite build`)
+- `npm run preview`: 本番ビルド成果物をローカルでプレビュー
+
+---
+
+## 📚 仕様ドキュメント一覧
+
+- 🏛️ [アーキテクチャ & セキュリティ設計 (`docs/architecture.md`)](docs/architecture.md)
+- 📡 [GitHub API & GraphQL Rollup 設計 (`docs/api-design.md`)](docs/api-design.md)
+- 🧩 [データモデル & State 定義 (`docs/data-model.md`)](docs/data-model.md)
+- 🖥️ [UI / UX コンポーネント設計 (`docs/ui-design.md`)](docs/ui-design.md)
+- 🚀 [開発・ブランチ・リリース運用ガイド (`docs/release-flow.md`)](docs/release-flow.md)
