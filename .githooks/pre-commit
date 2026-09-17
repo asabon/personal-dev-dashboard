@@ -1,0 +1,17 @@
+#!/bin/sh
+
+# main / master ブランチへの直接コミットを防止する
+current_branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+if [ "$current_branch" = "main" ] || [ "$current_branch" = "master" ]; then
+  echo ""
+  echo "================================================================="
+  echo " [ERROR] Direct commit to '$current_branch' branch is forbidden!"
+  echo " Please create a topic branch first and submit a Pull Request."
+  echo "   e.g. git checkout -b feature/your-feature-name"
+  echo "================================================================="
+  echo ""
+  exit 1
+fi
+
+exit 0
