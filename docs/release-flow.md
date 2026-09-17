@@ -16,13 +16,22 @@
 
 - **`main` ブランチ**:
   - 常に動作可能な最新の開発コードを保持します。
-  - 直接 push は行わず、必ずトピックブランチから PR 経由でマージします。
+  - 直接 push / commit は禁止されています（GitHub のブランチ保護 + ローカル Git Hook による二重防止）。
+  - 必ずトピックブランチから PR 経由でマージします。
 - **トピックブランチ (`feature/*`, `fix/*`, `chore/*`)**:
   - 新機能や不具合修正ごとに作成します。
   - 命名例:
     - `feature/actions-usage-card`
     - `fix/token-validation-error`
     - `chore/update-dependencies`
+
+> [!TIP]
+> **ローカルでの誤コミット防止設定 (Git Hook)**:
+> リポジトリ内の `.githooks/` を有効化するため、初回セットアップ時に以下を実行します。
+> ```bash
+> git config core.hooksPath .githooks
+> ```
+> これにより、`main` ブランチでの直接 `git commit` および `git push` が自動でブロックされます。
 
 ---
 
