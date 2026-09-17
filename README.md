@@ -60,12 +60,12 @@
 
 ## 🗺 ロードマップ (Roadmap)
 
-- [ ] **Phase 1 (MVP)**:
-  - [ ] Vite + React + Tailwind CSS のプロジェクト基盤構築
-  - [ ] トークン入力 & 検証（オンボーディング）画面
-  - [ ] Actions 無料枠使用量カードの実装 (REST API)
-  - [ ] リポジトリ手動追加 & PR × CI ステータス一覧の実装 (GraphQL API)
-  - [ ] localStorage への設定永続化
+- [x] **Phase 1 (MVP)**:
+  - [x] Vite + React + Tailwind CSS のプロジェクト基盤構築
+  - [x] トークン入力 & 検証（オンボーディング）画面
+  - [x] Actions 無料枠使用量カードの実装 (REST API)
+  - [x] リポジトリ手動追加 & PR × CI ステータス一覧の実装 (GraphQL API)
+  - [x] localStorage への設定永続化
 - [ ] **Phase 2**:
   - [ ] GitHub Pages デプロイワークフロー構築
   - [ ] 自動更新ポーリング機能
