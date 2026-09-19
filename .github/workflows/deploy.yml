@@ -2,11 +2,14 @@ name: Deploy to GitHub Pages
 
 on:
   release:
-    types: [published]
-  workflow_dispatch: # 手動デプロイテスト用
+    types: [prereleased, published]
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -52,3 +55,19 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  promote_to_release:
+    name: Promote Pre-Release to Full Release
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'prereleased'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Promote Pre-Release to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          gh release edit "$TAG_NAME" --prerelease=false --latest
