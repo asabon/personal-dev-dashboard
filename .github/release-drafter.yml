@@ -1,5 +1,5 @@
-name-template: 'v$RESOLVED_VERSION'
-tag-template: 'v$RESOLVED_VERSION'
+name-template: 'Next release'
+tag-template: 'next-release'
 
 categories:
   - title: '🚀 新機能・機能改善 (Features)'

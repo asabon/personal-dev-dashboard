@@ -23,8 +23,9 @@
    - リモートの GitHub ブランチ保護設定およびローカルの Git Hook (`.githooks/pre-commit`, `.githooks/pre-push`) の両方で保護されています。
    - 必ずトピックブランチ（例: `feature/*`, `fix/*`, `chore/*`）を作成し、Pull Request を作成してマージしてください。
 2. **リリース（タグ）駆動デプロイ & Release Drafter**:
-   - `main` ブランチへの通常マージ時は **Release Drafter** が自動起動し、ドラフトリリースノートを更新・蓄積します。
+   - `main` ブランチへの通常マージ時は **Release Drafter** が自動起動し、ドラフトリリースノート（"Next release"）を更新・蓄積します。
    - リリース時はリリース PR をマージ後に Pre-Release を作成し、デプロイワークフロー (`deploy.yml`) 成功後に自動で本番 Release に昇格します。
+   - リリース作業は専用スキル [`.agents/skills/release-app/SKILL.md`](.agents/skills/release-app/SKILL.md) の手順に厳格に従って実行してください。
    - 運用手順の詳細は [`docs/release-flow.md`](docs/release-flow.md) を参照してください。
 
 ---
