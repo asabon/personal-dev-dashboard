@@ -1,8 +1,6 @@
 name: Deploy to GitHub Pages
 
 on:
-  release:
-    types: [prereleased, published]
   push:
     tags:
       - 'v*.*.*'
@@ -56,18 +54,24 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-  promote_to_release:
-    name: Promote Pre-Release to Full Release
+  publish_release:
+    name: Publish Release
     needs: deploy
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'prereleased'
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Promote Pre-Release to Release
+      - name: Publish Draft Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ github.event.release.tag_name }}
+          TAG_NAME: ${{ github.ref_name }}
         run: |
-          gh release edit "$TAG_NAME" --prerelease=false --latest
+          # Release Drafter が作成した "Next Release" ドラフトを正式 Release として公開
+          # もしドラフトが見つからない場合は新規に Release を作成
+          if gh release view next-release >/dev/null 2>&1; then
+            gh release edit next-release --tag "$TAG_NAME" --title "$TAG_NAME" --draft=false --latest
+          else
+            gh release create "$TAG_NAME" --title "$TAG_NAME" --generate-notes
+          fi
