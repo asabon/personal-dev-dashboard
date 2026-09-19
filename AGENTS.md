@@ -25,7 +25,7 @@
 2. **リリース（タグ）駆動デプロイ & Release Drafter**:
    - `main` ブランチへの通常マージ時は **Release Drafter** が自動起動し、ドラフトリリースノート（"Next release"）を更新・蓄積します。
    - リリース時はリリース PR をマージ後に Pre-Release を作成し、デプロイワークフロー (`deploy.yml`) 成功後に自動で本番 Release に昇格します。
-   - リリース作業は専用スキル [`.agents/skills/release-app/SKILL.md`](.agents/skills/release-app/SKILL.md) の手順に厳格に従って実行してください。
+   - リリース作業は専用スキル [`.agents/skills/prepare-release/SKILL.md`](.agents/skills/prepare-release/SKILL.md) および [`.agents/skills/promote-release/SKILL.md`](.agents/skills/promote-release/SKILL.md) の手順に厳格に従って実行してください。
    - 運用手順の詳細は [`docs/release-flow.md`](docs/release-flow.md) を参照してください。
 
 ---
