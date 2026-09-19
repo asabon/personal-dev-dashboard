@@ -2,7 +2,17 @@
 
 > 個人開発者のための **GitHub Actions 無料枠使用量 & 複数リポジトリ PR × CI 統合ダッシュボード**
 
+[![CI](https://github.com/asabon/personal-dev-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/asabon/personal-dev-dashboard/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/asabon/personal-dev-dashboard)](https://github.com/asabon/personal-dev-dashboard/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+---
+
+## 🌐 今すぐ使う (Live Demo)
+
+👉 **[https://asabon.github.io/personal-dev-dashboard/](https://asabon.github.io/personal-dev-dashboard/)**
+
+インストールやサーバー構築は不要です。ブラウザを開いてお手持ちの GitHub Personal Access Token (PAT) を入力するだけで、すぐにご自身の統合ダッシュボードとしてご利用いただけます（入力されたトークンはお使いのブラウザ内 `localStorage` にのみ安全に保存され、外部サーバーには送信されません）。
 
 ---
 
