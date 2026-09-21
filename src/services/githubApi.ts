@@ -66,38 +66,79 @@ export async function validateToken(pat: string): Promise<{ username: string; av
  * ユーザーの Actions 無料枠使用量を取得する
  */
 export async function fetchActionsUsage(pat: string, username: string): Promise<ActionsUsage> {
-  const res = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}/settings/billing/actions`, {
-    headers: {
-      Authorization: `Bearer ${pat.trim()}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-  });
+  const res = await fetch(
+    `https://api.github.com/users/${encodeURIComponent(username)}/settings/billing/usage/summary?product=actions`,
+    {
+      headers: {
+        Authorization: `Bearer ${pat.trim()}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    }
+  );
 
   updateRateLimitFromHeaders(res.headers);
 
   if (!res.ok) {
+    let errorDetail = '';
+    try {
+      const errorJson = await res.json();
+      if (errorJson.message) {
+        errorDetail = ` (${errorJson.message})`;
+      }
+    } catch {
+      // JSON パース失敗時は無視
+    }
+
     if (res.status === 403 || res.status === 404) {
       throw new Error(
-        'Actions 使用量を取得できませんでした。Classic PAT に `user` スコープが付与されているかご確認ください（Fine-grained PAT は GitHub の Billing API に非対応です）。'
+        `Actions 使用量を取得できませんでした。Classic PAT に \`user\` スコープが付与されているかご確認ください（Fine-grained PAT は GitHub の Billing API に非対応です）。${errorDetail}`
       );
     }
-    throw new Error(`Actions 使用量取得失敗 (${res.status})`);
+    throw new Error(`Actions 使用量取得失敗 (${res.status}${errorDetail})`);
   }
 
   const data = await res.json();
-  const totalMinutes = data.total_minutes_used || 0;
   const includedMinutes = data.included_minutes || 2000;
+
+  let totalMinutes = 0;
+  let ubuntuMinutes = 0;
+  let macMinutes = 0;
+  let windowsMinutes = 0;
+
+  if (Array.isArray(data.usageItems)) {
+    for (const item of data.usageItems) {
+      const sku = (item.sku || '').toLowerCase();
+      const qty = item.grossQuantity ?? item.quantity ?? 0;
+      totalMinutes += qty;
+
+      if (sku.includes('linux') || sku.includes('ubuntu')) {
+        ubuntuMinutes += qty;
+      } else if (sku.includes('mac') || sku.includes('darwin')) {
+        macMinutes += qty;
+      } else if (sku.includes('win')) {
+        windowsMinutes += qty;
+      } else {
+        ubuntuMinutes += qty;
+      }
+    }
+  } else if (typeof data.total_minutes_used === 'number') {
+    totalMinutes = data.total_minutes_used;
+    ubuntuMinutes = data.minutes_used_breakdown?.UBUNTU || 0;
+    macMinutes = data.minutes_used_breakdown?.MACOS || 0;
+    windowsMinutes = data.minutes_used_breakdown?.WINDOWS || 0;
+  }
+
   const percentage = includedMinutes > 0 ? Math.min(100, Math.round((totalMinutes / includedMinutes) * 100)) : 0;
 
   return {
-    totalMinutesUsed: totalMinutes,
+    totalMinutesUsed: Math.round(totalMinutes),
     includedMinutes,
     usagePercentage: percentage,
     breakdown: {
-      ubuntu: data.minutes_used_breakdown?.UBUNTU || 0,
-      macOS: data.minutes_used_breakdown?.MACOS || 0,
-      windows: data.minutes_used_breakdown?.WINDOWS || 0,
+      ubuntu: Math.round(ubuntuMinutes),
+      macOS: Math.round(macMinutes),
+      windows: Math.round(windowsMinutes),
     },
     lastUpdated: new Date().toISOString(),
   };
