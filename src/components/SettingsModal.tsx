@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Check,
   Star,
+  Cpu,
 } from 'lucide-react';
 import type { AppSettings, UserRepositoryOption } from '../types';
 import { validateToken, fetchUserRepositories } from '../services/githubApi';
@@ -38,6 +39,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [repositories, setRepositories] = useState<string[]>(settings.repositories);
   const [newRepoInput, setNewRepoInput] = useState('');
   const [refreshInterval, setRefreshInterval] = useState(settings.refreshIntervalSec);
+  const [showSelfHostedRunners, setShowSelfHostedRunners] = useState(
+    Boolean(settings.showSelfHostedRunners)
+  );
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -125,6 +129,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         username,
         repositories,
         refreshIntervalSec: refreshInterval,
+        showSelfHostedRunners,
       };
 
       onSave(updated);
@@ -466,6 +471,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <option value={60}>1分ごと（推奨）</option>
               <option value={300}>5分ごと</option>
             </select>
+          </div>
+
+          {/* 4. Self-hosted Runners Monitoring (Opt-in) */}
+          <div className="space-y-2 pt-2 border-t border-slate-800">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+                Self-hosted Runners の稼働状況を表示
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowSelfHostedRunners(!showSelfHostedRunners)}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  showSelfHostedRunners ? 'bg-indigo-600' : 'bg-slate-800'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                    showSelfHostedRunners ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              自宅マシンや自前サーバー（セルフホステッドランナー）の Online / Offline 死活ステータスをダッシュボード上部に表示します。（※
+              要: PAT の <code className="text-slate-300">repo</code> または <code className="text-slate-300">Actions: Read</code> 権限）
+            </p>
           </div>
         </div>
 

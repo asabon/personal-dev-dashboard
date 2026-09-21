@@ -5,11 +5,13 @@ import { loadSettings, saveSettings, clearSettings } from './services/storage';
 import {
   fetchActionsUsage,
   fetchRepositoryPRs,
+  fetchAllSelfHostedRunners,
   getLatestRateLimit,
 } from './services/githubApi';
 import { Header } from './components/Header';
 import { ActionsUsageCard } from './components/ActionsUsageCard';
 import { RepoCard } from './components/RepoCard';
+import { RunnersCard } from './components/RunnersCard';
 import { SettingsModal } from './components/SettingsModal';
 import { OnboardingModal } from './components/OnboardingModal';
 
@@ -24,6 +26,9 @@ export function App() {
     rateLimit: null,
     usage: null,
     projects: [],
+    runners: [],
+    isLoadingRunners: false,
+    runnersError: null,
     error: null,
   });
 
@@ -75,6 +80,32 @@ export function App() {
         setState((prev) => ({ ...prev, projects: [] }));
       }
 
+      // 3. セルフホステッドランナーの取得（設定が有効な場合のみ）
+      if (settings.showSelfHostedRunners) {
+        setState((prev) => ({ ...prev, isLoadingRunners: true, runnersError: null }));
+        try {
+          const runnersData = await fetchAllSelfHostedRunners(
+            settings.pat,
+            settings.repositories
+          );
+          setState((prev) => ({
+            ...prev,
+            runners: runnersData,
+            isLoadingRunners: false,
+            runnersError: null,
+          }));
+        } catch (err: any) {
+          console.warn('Runners fetch failed:', err);
+          setState((prev) => ({
+            ...prev,
+            isLoadingRunners: false,
+            runnersError: err.message || 'ランナー情報の取得に失敗しました',
+          }));
+        }
+      } else {
+        setState((prev) => ({ ...prev, runners: [], isLoadingRunners: false, runnersError: null }));
+      }
+
       setState((prev) => ({
         ...prev,
         rateLimit: getLatestRateLimit(),
@@ -90,14 +121,14 @@ export function App() {
         error: err.message || 'データの取得中にエラーが発生しました',
       }));
     }
-  }, [settings.pat, settings.username, settings.repositories]);
+  }, [settings.pat, settings.username, settings.repositories, settings.showSelfHostedRunners]);
 
   // 設定変更または初回ロード時のデータ取得
   useEffect(() => {
     if (settings.pat && settings.username) {
       refreshData();
     }
-  }, [settings.pat, settings.username, settings.repositories, refreshData]);
+  }, [settings.pat, settings.username, settings.repositories, settings.showSelfHostedRunners, refreshData]);
 
   // 自動更新タイマーの設定
   const timerRef = useRef<number | null>(null);
@@ -146,6 +177,7 @@ export function App() {
         username: '',
         repositories: [],
         refreshIntervalSec: 60,
+        showSelfHostedRunners: false,
       });
       setState({
         isLoading: false,
@@ -154,6 +186,9 @@ export function App() {
         rateLimit: null,
         usage: null,
         projects: [],
+        runners: [],
+        isLoadingRunners: false,
+        runnersError: null,
         error: null,
       });
       setIsSettingsOpen(false);
@@ -196,7 +231,16 @@ export function App() {
           isLoading={state.isRefreshing && !state.usage}
         />
 
-        {/* 2. Repositories Section */}
+        {/* 2. Self-hosted Runners Panel (設定で有効時のみ表示) */}
+        {settings.showSelfHostedRunners && (
+          <RunnersCard
+            runners={state.runners}
+            isLoading={state.isLoadingRunners}
+            error={state.runnersError}
+          />
+        )}
+
+        {/* 3. Repositories Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

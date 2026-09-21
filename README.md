@@ -100,10 +100,10 @@
   - [x] Actions 無料枠使用量カードの実装 (REST API)
   - [x] リポジトリ手動追加 & PR × CI ステータス一覧の実装 (GraphQL API)
   - [x] localStorage への設定永続化
-- [ ] **Phase 2**:
+- [x] **Phase 2**:
   - [x] GitHub Pages デプロイ & CI ワークフロー構築
   - [x] 自動更新ポーリング機能 (設定モーダルで間隔切替可能)
   - [x] 自分のリポジトリからのワンクリック追加機能
 - [ ] **Phase 3**:
-  - [ ] Self-hosted runner の稼働状況サポート（任意）
+  - [x] Self-hosted runner の稼働状況サポート（任意）
   - [ ] CI 失敗時の通知機能

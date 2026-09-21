@@ -40,7 +40,7 @@ GitHub には 2 種類の PAT がありますが、本アプリケーション�
 1. **Note**: `Personal Dev Dashboard`（用途がわかる名前）
 2. **Expiration（有効期限）**: お好みの期間（推奨: `30 days` 〜 `90 days`）
 3. **Select scopes（スコープ）**:
-   - `[x] repo` — プライベートリポジトリの PR 情報・CI 実行結果の取得に必要です。  
+   - `[x] repo` — プライベートリポジトリの PR 情報・CI 実行結果の取得、および **Self-hosted runner（セルフホステッドランナー）の稼働状況取得** に必要です。  
      *(※ パブリックリポジトリのみを監視する場合は `public_repo` のみでも利用可能です)*
    - `[x] user` — 月間の GitHub Actions 無料枠使用量（2,000分）の取得に必要です。  
      *(※ GitHub Billing API の仕様上、`read:user` ではなく `user` が必須となります)*
