@@ -14,6 +14,9 @@
 - **技術スタック**:
   - React 19 + TypeScript (strict モード) + Vite + Tailwind CSS v4 + Lucide Icons。
   - ルート設定は最小限に保ち、単一の統合された `tsconfig.json` を使用してください。
+- **改行コードの統一 (LF)**:
+  - リポジトリ内のすべてのテキストファイルは **LF (`\n`)** で統一します（CRLF の混入厳禁）。
+  - `.gitattributes` および `.editorconfig` の設定に従い、Windows 環境でのコミット時にも差分汚染が発生しないよう注意してください。
 
 ---
 
