@@ -61,7 +61,7 @@ IntervalTimer プロジェクトのリリース準備パイプラインに準拠
    - 一時 Markdown ファイル（`temp_pr_body.md`）に、変更内容（What's Changed）や確認事項を記載。
 3. **GitHub CLI で PR を作成 (`--body-file` 必須)**:
    ```bash
-   gh pr create --title "[Chore] リリース vX.Y.Z" --body-file "temp_pr_body.md" --label "chore" --base main
+   gh pr create --title "chore: リリース vX.Y.Z" --body-file "temp_pr_body.md" --base main
    Remove-Item "temp_pr_body.md"
    ```
 4. **ユーザーへの報告 & レビュー依頼**:
