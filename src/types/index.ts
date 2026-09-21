@@ -86,3 +86,14 @@ export interface DashboardState {
   projects: RepositoryDashboardData[];
   error: string | null;
 }
+
+export interface UserRepositoryOption {
+  fullName: string;
+  name: string;
+  owner: string;
+  isPrivate: boolean;
+  description: string | null;
+  updatedAt: string;
+  stargazersCount: number;
+  fork: boolean;
+}

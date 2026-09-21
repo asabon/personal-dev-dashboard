@@ -6,6 +6,7 @@ import type {
   OverallCiState,
   PullRequestItem,
   RepositoryDashboardData,
+  UserRepositoryOption,
 } from '../types';
 
 export interface RateLimitInfo {
@@ -314,4 +315,65 @@ export async function fetchRepositoryPRs(
     isPrivate: repo.isPrivate,
     pullRequests,
   };
+}
+
+let userReposCache: { pat: string; data: UserRepositoryOption[]; fetchedAt: number } | null = null;
+
+/**
+ * ログインユーザーがアクセス可能なリポジトリ一覧を取得する（直近更新順・最大100件）
+ */
+export async function fetchUserRepositories(
+  pat: string,
+  forceRefresh = false
+): Promise<UserRepositoryOption[]> {
+  const trimmedPat = pat.trim();
+  if (!trimmedPat) return [];
+
+  const now = Date.now();
+  const CACHE_TTL_MS = 60 * 1000; // 1分キャッシュ
+
+  if (!forceRefresh && userReposCache && userReposCache.pat === trimmedPat && now - userReposCache.fetchedAt < CACHE_TTL_MS) {
+    return userReposCache.data;
+  }
+
+  const res = await fetch(
+    'https://api.github.com/user/repos?sort=updated&direction=desc&per_page=100&affiliation=owner,collaborator,organization_member',
+    {
+      headers: {
+        Authorization: `Bearer ${trimmedPat}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    }
+  );
+
+  updateRateLimitFromHeaders(res.headers);
+
+  if (!res.ok) {
+    throw new Error(`リポジトリ一覧の取得に失敗しました (${res.status}): ${res.statusText}`);
+  }
+
+  const list = await res.json();
+  if (!Array.isArray(list)) {
+    return [];
+  }
+
+  const result: UserRepositoryOption[] = list.map((item: any) => ({
+    fullName: item.full_name,
+    name: item.name,
+    owner: item.owner?.login || '',
+    isPrivate: item.private || false,
+    description: item.description || null,
+    updatedAt: item.updated_at,
+    stargazersCount: item.stargazers_count || 0,
+    fork: item.fork || false,
+  }));
+
+  userReposCache = {
+    pat: trimmedPat,
+    data: result,
+    fetchedAt: now,
+  };
+
+  return result;
 }
