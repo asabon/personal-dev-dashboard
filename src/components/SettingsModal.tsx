@@ -17,6 +17,8 @@ import {
   Star,
   Cpu,
   Building2,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import type { AppSettings, UserRepositoryOption } from '../types';
 import { validateToken, fetchUserRepositories, fetchUserOrganizations } from '../services/githubApi';
@@ -146,6 +148,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleRemoveRepo = (target: string) => {
     setRepositories(repositories.filter((r) => r !== target));
+  };
+
+  const handleMoveUp = (index: number) => {
+    if (index <= 0) return;
+    setRepositories((prev) => {
+      const next = [...prev];
+      const temp = next[index];
+      next[index] = next[index - 1];
+      next[index - 1] = temp;
+      return next;
+    });
+  };
+
+  const handleMoveDown = (index: number) => {
+    if (index >= repositories.length - 1) return;
+    setRepositories((prev) => {
+      const next = [...prev];
+      const temp = next[index];
+      next[index] = next[index + 1];
+      next[index + 1] = temp;
+      return next;
+    });
   };
 
   const handleSave = async () => {
@@ -467,25 +491,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* 現在登録されているリポジトリ一覧 */}
             <div className="space-y-1.5">
-              <span className="text-[11px] text-slate-400 font-medium">現在登録中のリポジトリ:</span>
-              <div className="max-h-36 overflow-y-auto space-y-1 rounded-xl border border-slate-800 bg-slate-900/40 p-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 font-medium">現在登録中のリポジトリ:</span>
+                <span className="text-[10px] text-slate-500">（矢印ボタンで表示順を変更できます）</span>
+              </div>
+              <div className="max-h-48 overflow-y-auto space-y-1 rounded-xl border border-slate-800 bg-slate-900/40 p-2">
                 {repositories.length === 0 ? (
                   <p className="text-xs text-slate-500 py-3 text-center">監視対象のリポジトリがありません</p>
                 ) : (
-                  repositories.map((repo) => (
+                  repositories.map((repo, idx) => (
                     <div
                       key={repo}
                       className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800/80 text-xs font-mono text-slate-200"
                     >
-                      <span className="truncate mr-2">{repo}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveRepo(repo)}
-                        title="監視対象から削除"
-                        className="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors cursor-pointer shrink-0"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-2 min-w-0 mr-2">
+                        <span className="text-[10px] text-slate-500 font-sans w-4 text-right select-none">
+                          {idx + 1}.
+                        </span>
+                        <span className="truncate">{repo}</span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveUp(idx)}
+                          disabled={idx === 0}
+                          title="上へ移動"
+                          className="p-1 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveDown(idx)}
+                          disabled={idx === repositories.length - 1}
+                          title="下へ移動"
+                          className="p-1 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRepo(repo)}
+                          title="監視対象から削除"
+                          className="text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 p-1 rounded transition-colors cursor-pointer ml-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
