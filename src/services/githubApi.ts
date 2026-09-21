@@ -473,24 +473,79 @@ async function fetchOrgRunners(
   }
 }
 
+let userOrgsCache: { pat: string; data: string[]; fetchedAt: number } | null = null;
+
 /**
- * 監視対象リポジトリ群に関連するすべてのセルフホステッドランナーを取得する
+ * ログインユーザーが所属する Organization 一覧を取得する
+ */
+export async function fetchUserOrganizations(
+  pat: string,
+  forceRefresh = false
+): Promise<string[]> {
+  const trimmedPat = pat.trim();
+  if (!trimmedPat) return [];
+
+  const now = Date.now();
+  const CACHE_TTL_MS = 60 * 1000;
+
+  if (!forceRefresh && userOrgsCache && userOrgsCache.pat === trimmedPat && now - userOrgsCache.fetchedAt < CACHE_TTL_MS) {
+    return userOrgsCache.data;
+  }
+
+  try {
+    const res = await fetch('https://api.github.com/user/orgs', {
+      headers: {
+        Authorization: `Bearer ${trimmedPat}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+
+    updateRateLimitFromHeaders(res.headers);
+
+    if (!res.ok) {
+      return [];
+    }
+
+    const list = await res.json();
+    if (!Array.isArray(list)) return [];
+
+    const orgs = list.map((item: any) => item.login).filter(Boolean);
+
+    userOrgsCache = {
+      pat: trimmedPat,
+      data: orgs,
+      fetchedAt: now,
+    };
+
+    return orgs;
+  } catch (err) {
+    console.warn('Failed to fetch user orgs:', err);
+    return [];
+  }
+}
+
+/**
+ * 監視対象リポジトリ群および指定 Organization に関連するすべてのセルフホステッドランナーを取得する
  */
 export async function fetchAllSelfHostedRunners(
   pat: string,
-  repositories: string[]
+  repositories: string[],
+  monitoredOrgs: string[] = [],
+  currentUsername?: string
 ): Promise<{ runners: SelfHostedRunner[]; warning?: string }> {
   const trimmedPat = pat.trim();
-  if (!trimmedPat || repositories.length === 0) return { runners: [] };
+  if (!trimmedPat && repositories.length === 0 && monitoredOrgs.length === 0) {
+    return { runners: [] };
+  }
 
-  // ユニークな owner (Org候補) を抽出
-  const orgCandidates = Array.from(
-    new Set(
-      repositories
-        .map((r) => r.split('/')[0])
-        .filter(Boolean)
-    )
-  );
+  // ユニークな owner (Org候補) を抽出 (個人アカウント自身はスキップ)
+  const extractedOwners = repositories
+    .map((r) => r.split('/')[0])
+    .filter((owner) => owner && (!currentUsername || owner.toLowerCase() !== currentUsername.toLowerCase()));
+
+  // 監視対象 Org (リポジトリから抽出された Org + 明示的に監視指定された Org)
+  const allOrgTargets = Array.from(new Set([...extractedOwners, ...monitoredOrgs]));
 
   // 1. 各リポジトリの専用ランナー取得
   const repoPromises = repositories.map(async (repoFullName) => {
@@ -500,7 +555,7 @@ export async function fetchAllSelfHostedRunners(
   });
 
   // 2. 各 Org の共有ランナー取得
-  const orgPromises = orgCandidates.map(async (org) => {
+  const orgPromises = allOrgTargets.map(async (org) => {
     return fetchOrgRunners(trimmedPat, org);
   });
 
@@ -542,4 +597,5 @@ export async function fetchAllSelfHostedRunners(
     warning: warnings.length > 0 ? warnings.join('\n') : undefined,
   };
 }
+
 

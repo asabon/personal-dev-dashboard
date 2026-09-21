@@ -9,6 +9,8 @@ export interface AppSettings {
   refreshIntervalSec: number;
   /** セルフホステッドランナーの稼働状況を表示するかどうか (デフォルト: false) */
   showSelfHostedRunners?: boolean;
+  /** ランナー監視対象の Organization 一覧 (任意) */
+  monitoredOrgs?: string[];
 }
 
 export interface ActionsUsageBreakdown {

@@ -86,7 +86,9 @@ export function App() {
         try {
           const { runners: runnersData, warning } = await fetchAllSelfHostedRunners(
             settings.pat,
-            settings.repositories
+            settings.repositories,
+            settings.monitoredOrgs || [],
+            settings.username
           );
           setState((prev) => ({
             ...prev,
@@ -121,14 +123,14 @@ export function App() {
         error: err.message || 'データの取得中にエラーが発生しました',
       }));
     }
-  }, [settings.pat, settings.username, settings.repositories, settings.showSelfHostedRunners]);
+  }, [settings.pat, settings.username, settings.repositories, settings.showSelfHostedRunners, settings.monitoredOrgs]);
 
   // 設定変更または初回ロード時のデータ取得
   useEffect(() => {
     if (settings.pat && settings.username) {
       refreshData();
     }
-  }, [settings.pat, settings.username, settings.repositories, settings.showSelfHostedRunners, refreshData]);
+  }, [settings.pat, settings.username, settings.repositories, settings.showSelfHostedRunners, settings.monitoredOrgs, refreshData]);
 
   // 自動更新タイマーの設定
   const timerRef = useRef<number | null>(null);
