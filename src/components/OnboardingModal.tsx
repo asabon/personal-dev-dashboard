@@ -66,7 +66,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
                 Personal Access Token (PAT)
               </label>
               <a
-                href="https://github.com/settings/tokens/new?scopes=repo,read:user"
+                href="https://github.com/settings/tokens/new?scopes=repo,user&description=Personal%20Dev%20Dashboard"
                 target="_blank"
                 rel="noreferrer"
                 className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
@@ -85,7 +85,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
               className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-mono text-xs shadow-inner"
             />
             <p className="text-[11px] text-slate-500">
-              ※ <span className="text-slate-400 font-mono">repo</span> (PR & CI取得) および <span className="text-slate-400 font-mono">read:user</span> (Actions使用量取得) スコープが必要です。
+              ※ <span className="text-slate-400 font-mono">repo</span> (PR & CI取得) および <span className="text-slate-400 font-mono">user</span> (Actions使用量取得) スコープが必要です（Classic PAT 推奨）。
             </p>
           </div>
 
@@ -111,6 +111,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
             )}
           </button>
         </form>
+
+        {/* Version */}
+        <div className="text-center pt-1 border-t border-slate-800/60">
+          <span className="font-mono text-[10px] text-slate-500">
+            Personal Dev Dashboard v{__APP_VERSION__}
+          </span>
+        </div>
       </div>
     </div>
   );

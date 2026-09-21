@@ -22,7 +22,7 @@ graph TD
     end
 
     subgraph GitHub 公式
-        GH_REST[GitHub REST API<br/>/users/{user}/actions/usage]
+        GH_REST[GitHub REST API<br/>/users/{user}/settings/billing/actions]
         GH_GQL[GitHub GraphQL API<br/>statusCheckRollup]
     end
 
@@ -44,17 +44,16 @@ graph TD
 ### 2.2 推奨トークン権限
 利用者が安全に利用できるよう、必要最小限のスコープを UI で明示します。
 
-- **Fine-grained Personal Access Token (推奨)**:
+- **Classic PAT (推奨)**:
+  - `repo` (プライベートリポジトリの PR / CI 監視に必要。公開リポジトリのみなら `public_repo`)
+  - `user` (Actions 使用量取得に必要。GitHub Billing API の仕様)
+- **Fine-grained Personal Access Token**:
+  - ※GitHub の仕様上、Fine-grained PAT は個人の Billing API に非対応のため、Actions 使用量は表示できません（PR / CI 監視のみ利用可能）。
   - Repository permissions:
     - **Pull requests**: Read-only
     - **Actions**: Read-only
     - **Checks**: Read-only
     - **Metadata**: Read-only
-  - Account permissions (Actions 使用量取得用):
-    - **Plan**: Read-only (※Classic PAT の場合は `read:user` または `repo`)
-- **Classic PAT**:
-  - `repo` (プライベートリポジトリの PR / CI 監視に必要)
-  - `read:user` (Actions 使用量取得に必要)
 
 ### 2.3 ログアウト / トークン破棄
 - UI 上にいつでもワンクリックでトークンおよび監視設定をローカルストレージから完全消去できる「ログアウト / 設定リセット」機能を提供します。

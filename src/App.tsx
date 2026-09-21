@@ -253,6 +253,30 @@ export function App() {
         </div>
       </main>
 
+      {/* Footer */}
+      <footer className="mt-auto py-6 border-t border-slate-900 text-center text-xs text-slate-500">
+        <div className="flex items-center justify-center gap-2">
+          <span>Personal Dev Dashboard</span>
+          <a
+            href="https://github.com/asabon/personal-dev-dashboard/releases"
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-[11px] text-slate-400 hover:text-indigo-400 transition-colors"
+          >
+            v{__APP_VERSION__}
+          </a>
+          <span>•</span>
+          <a
+            href="https://github.com/asabon/personal-dev-dashboard"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-slate-400 transition-colors"
+          >
+            GitHub
+          </a>
+        </div>
+      </footer>
+
       {/* Settings Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}

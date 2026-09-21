@@ -16,23 +16,23 @@ Personal Dev Dashboard をご利用いただくために必要な **GitHub Perso
 
 ## 🎯 トークン形式の選び方
 
-GitHub には 2 種類の PAT があります。ご用途に合わせてお選びください。
+GitHub には 2 種類の PAT がありますが、本アプリケーションでは **Personal Access Token (Classic)** を強く推奨しています。
 
 | 形式 | おすすめ度 | 特徴 | 手間 |
 | :--- | :---: | :--- | :---: |
-| **Personal Access Token (Classic)** | **推奨** | スコープ指定済みリンクから **数クリックで即座に発行可能**。個人アカウントの Actions 使用量も確実に取得できます。 | ★☆☆ (簡単) |
-| **Fine-grained Token** | セキュリティ重視 | リポジトリや権限を個別に細かく制限できます。組織やリポジトリ単位で厳密に最小権限化したい方向け。 | ★★★ (項目多め) |
+| **Personal Access Token (Classic)** | **強く推奨** | スコープ指定済みリンクから **数クリックで即座に発行可能**。GitHub Actions 使用量（Billing API）の取得に対応しています。 | ★☆☆ (簡単) |
+| **Fine-grained Token** | 制約あり | リポジトリ単位で権限を細かく制限できますが、**GitHub の仕様上、Actions 使用量（Billing API）を取得できません**（PR / CI 監視のみ利用可能）。 | ★★★ (項目多め) |
 
 ---
 
-## 🚀 方法 1: Classic PAT を作成する（推奨・かんたん）
+## 🚀 方法 1: Classic PAT を作成する（強く推奨・かんたん）
 
-最も手軽でおすすめの方法です。
+最も手軽でおすすめの方法です。Actions 無料枠使用量と PR/CI 監視のすべての機能をご利用いただけます。
 
 ### 1. トークン作成画面を開く
 以下のスコープ設定済みリンクをクリックして GitHub のトークン生成ページを開きます：
 
-👉 **[Classic PAT を新規作成（スコープ自動選択リンク）](https://github.com/settings/tokens/new?scopes=repo,read:user&description=Personal%20Dev%20Dashboard)**
+👉 **[Classic PAT を新規作成（スコープ自動選択リンク）](https://github.com/settings/tokens/new?scopes=repo,user&description=Personal%20Dev%20Dashboard)**
 
 ### 2. 項目を確認・入力
 リンクから開くと、必要なスコープがあらかじめチェックされています。
@@ -42,7 +42,8 @@ GitHub には 2 種類の PAT があります。ご用途に合わせてお選�
 3. **Select scopes（スコープ）**:
    - `[x] repo` — プライベートリポジトリの PR 情報・CI 実行結果の取得に必要です。  
      *(※ パブリックリポジトリのみを監視する場合は `public_repo` のみでも利用可能です)*
-   - `[x] read:user` — 月間の GitHub Actions 無料枠使用量（2,000分）の取得に必要です。
+   - `[x] user` — 月間の GitHub Actions 無料枠使用量（2,000分）の取得に必要です。  
+     *(※ GitHub Billing API の仕様上、`read:user` ではなく `user` が必須となります)*
 
 ### 3. トークンを生成
 ページ最下部の緑色のボタン **「Generate token」** をクリックします。
@@ -98,8 +99,8 @@ GitHub の [Fine-grained personal access tokens](https://github.com/settings/per
 ## ❓ トラブルシューティング & よくある質問
 
 ### Q. 「Actions 使用量を取得できませんでした」と表示される
-- **Classic PAT の場合**: `read:user` スコープが付与されているか確認してください。
-- **Fine-grained PAT の場合**: Account permissions の `Plan` が `Read-only` になっているか確認してください。
+- **Classic PAT の場合**: `user` スコープが付与されているか確認してください（`read:user` では GitHub Billing API の権限不足となります）。
+- **Fine-grained PAT の場合**: GitHub の仕様上、Fine-grained PAT では個人の Actions Billing API（使用量）を取得できません。Actions 使用量カードを表示するには、Classic PAT（`user`, `repo`）をご利用ください。
 
 ### Q. 「リポジトリが見つかりません」または 404 / 403 エラーになる
 - 対象リポジトリがプライベートリポジトリの場合、Classic PAT に `repo` スコープが必要です（`public_repo` のみではプライベートリポジトリを参照できません）。
