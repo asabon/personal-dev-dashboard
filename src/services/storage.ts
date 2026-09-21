@@ -7,6 +7,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   username: '',
   repositories: [],
   refreshIntervalSec: 60, // デフォルト1分更新
+  showSelfHostedRunners: false, // デフォルトは無効（非表示）
+  monitoredOrgs: [],
 };
 
 export function loadSettings(): AppSettings {
@@ -19,6 +21,8 @@ export function loadSettings(): AppSettings {
       username: parsed.username || '',
       repositories: Array.isArray(parsed.repositories) ? parsed.repositories : [],
       refreshIntervalSec: typeof parsed.refreshIntervalSec === 'number' ? parsed.refreshIntervalSec : 60,
+      showSelfHostedRunners: Boolean(parsed.showSelfHostedRunners),
+      monitoredOrgs: Array.isArray(parsed.monitoredOrgs) ? parsed.monitoredOrgs : [],
     };
   } catch (err) {
     console.error('Failed to parse settings from localStorage:', err);

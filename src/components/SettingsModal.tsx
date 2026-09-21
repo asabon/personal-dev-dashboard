@@ -15,9 +15,11 @@ import {
   RefreshCw,
   Check,
   Star,
+  Cpu,
+  Building2,
 } from 'lucide-react';
 import type { AppSettings, UserRepositoryOption } from '../types';
-import { validateToken, fetchUserRepositories } from '../services/githubApi';
+import { validateToken, fetchUserRepositories, fetchUserOrganizations } from '../services/githubApi';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -38,6 +40,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [repositories, setRepositories] = useState<string[]>(settings.repositories);
   const [newRepoInput, setNewRepoInput] = useState('');
   const [refreshInterval, setRefreshInterval] = useState(settings.refreshIntervalSec);
+  const [showSelfHostedRunners, setShowSelfHostedRunners] = useState(
+    Boolean(settings.showSelfHostedRunners)
+  );
+  const [monitoredOrgs, setMonitoredOrgs] = useState<string[]>(
+    settings.monitoredOrgs || []
+  );
+  const [availableOrgs, setAvailableOrgs] = useState<string[]>([]);
+  const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -64,14 +74,45 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [pat]);
 
+  const loadUserOrgs = useCallback(async () => {
+    if (!pat.trim()) return;
+    setIsLoadingOrgs(true);
+    try {
+      const orgs = await fetchUserOrganizations(pat.trim());
+      setAvailableOrgs(orgs);
+      // 初回で未設定の場合は、検出された Org を自動選択
+      setMonitoredOrgs((prev) => {
+        if (prev.length === 0 && orgs.length > 0) {
+          return orgs;
+        }
+        return prev;
+      });
+    } catch (err: any) {
+      console.warn('Failed to load user orgs:', err);
+    } finally {
+      setIsLoadingOrgs(false);
+    }
+  }, [pat]);
+
   // モーダルが開かれたとき、または PAT が有効な状態で初回表示時にリポジトリ一覧を読み込む
   useEffect(() => {
     if (isOpen && pat.trim()) {
       loadUserRepos();
+      if (showSelfHostedRunners) {
+        loadUserOrgs();
+      }
     }
-  }, [isOpen, loadUserRepos, pat]);
+  }, [isOpen, loadUserRepos, loadUserOrgs, pat, showSelfHostedRunners]);
 
   if (!isOpen) return null;
+
+  const handleToggleOrg = (org: string) => {
+    if (monitoredOrgs.includes(org)) {
+      setMonitoredOrgs(monitoredOrgs.filter((o) => o !== org));
+    } else {
+      setMonitoredOrgs([...monitoredOrgs, org]);
+    }
+  };
 
   const handleToggleRepo = (fullName: string) => {
     if (repositories.includes(fullName)) {
@@ -125,6 +166,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         username,
         repositories,
         refreshIntervalSec: refreshInterval,
+        showSelfHostedRunners,
+        monitoredOrgs,
       };
 
       onSave(updated);
@@ -466,6 +509,83 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <option value={60}>1分ごと（推奨）</option>
               <option value={300}>5分ごと</option>
             </select>
+          </div>
+
+          {/* 4. Self-hosted Runners Monitoring (Opt-in) */}
+          <div className="space-y-3 pt-2 border-t border-slate-800">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+                Self-hosted Runners の稼働状況を表示
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !showSelfHostedRunners;
+                  setShowSelfHostedRunners(next);
+                  if (next && availableOrgs.length === 0) {
+                    loadUserOrgs();
+                  }
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  showSelfHostedRunners ? 'bg-indigo-600' : 'bg-slate-800'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                    showSelfHostedRunners ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              自宅マシンや自前サーバー（セルフホステッドランナー）の Online / Offline 死活ステータスをダッシュボード上部に表示します。（※
+              要: リポジトリ専用ランナーは <code className="text-slate-300">repo</code>、Org 共有ランナーは <code className="text-slate-300">admin:org</code> スコープ）
+            </p>
+
+            {/* 所属 Organization の選択チェックボックス */}
+            {showSelfHostedRunners && (
+              <div className="mt-2 p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+                <span className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-purple-400" />
+                  共有ランナーを監視する Organization:
+                </span>
+
+                {isLoadingOrgs ? (
+                  <p className="text-[11px] text-slate-400">所属 Organization を取得中...</p>
+                ) : availableOrgs.length === 0 ? (
+                  <p className="text-[11px] text-slate-500">
+                    所属している Organization は見つかりませんでした（リポジトリ専用ランナーのみ監視対象になります）。
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {availableOrgs.map((org) => {
+                      const isChecked = monitoredOrgs.includes(org);
+                      return (
+                        <button
+                          key={org}
+                          type="button"
+                          onClick={() => handleToggleOrg(org)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 border transition-all cursor-pointer ${
+                            isChecked
+                              ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-sm'
+                              : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {}} // 親ボタンクリックでトグル
+                            className="rounded text-purple-600 focus:ring-0 focus:ring-offset-0 cursor-pointer pointer-events-none w-3.5 h-3.5"
+                          />
+                          <span>{org}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

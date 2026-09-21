@@ -7,6 +7,7 @@ import type {
   PullRequestItem,
   RepositoryDashboardData,
   UserRepositoryOption,
+  SelfHostedRunner,
 } from '../types';
 
 export interface RateLimitInfo {
@@ -377,3 +378,224 @@ export async function fetchUserRepositories(
 
   return result;
 }
+
+/**
+ * リポジトリ単位のセルフホステッドランナー一覧を取得する
+ */
+async function fetchRepositoryRunners(
+  pat: string,
+  owner: string,
+  repo: string
+): Promise<SelfHostedRunner[]> {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/runners`, {
+      headers: {
+        Authorization: `Bearer ${pat}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+
+    updateRateLimitFromHeaders(res.headers);
+
+    if (!res.ok) {
+      // 権限がない場合(403/404)は空リスト
+      return [];
+    }
+
+    const data = await res.json();
+    if (!data.runners || !Array.isArray(data.runners)) return [];
+
+    return data.runners.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      os: r.os || 'Unknown',
+      status: r.status === 'online' ? 'online' : 'offline',
+      busy: Boolean(r.busy),
+      labels: Array.isArray(r.labels) ? r.labels.map((l: any) => l.name) : [],
+      scopeType: 'repo',
+      scopeName: `${owner}/${repo}`,
+    }));
+  } catch (err) {
+    console.warn(`Failed to fetch repo runners for ${owner}/${repo}:`, err);
+    return [];
+  }
+}
+
+/**
+ * Organization 単位のセルフホステッドランナー一覧を取得する
+ */
+async function fetchOrgRunners(
+  pat: string,
+  org: string
+): Promise<{ runners: SelfHostedRunner[]; warning?: string }> {
+  try {
+    const res = await fetch(`https://api.github.com/orgs/${org}/actions/runners`, {
+      headers: {
+        Authorization: `Bearer ${pat}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+
+    updateRateLimitFromHeaders(res.headers);
+
+    if (res.status === 403) {
+      return {
+        runners: [],
+        warning: `Organization「${org}」のランナー一覧を取得できませんでした。PAT に admin:org スコープが付与されているかご確認ください。`,
+      };
+    }
+
+    if (!res.ok) {
+      // 404 (個人アカウント等) の場合は無視
+      return { runners: [] };
+    }
+
+    const data = await res.json();
+    if (!data.runners || !Array.isArray(data.runners)) return { runners: [] };
+
+    const runners: SelfHostedRunner[] = data.runners.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      os: r.os || 'Unknown',
+      status: r.status === 'online' ? 'online' : 'offline',
+      busy: Boolean(r.busy),
+      labels: Array.isArray(r.labels) ? r.labels.map((l: any) => l.name) : [],
+      scopeType: 'org',
+      scopeName: org,
+    }));
+
+    return { runners };
+  } catch (err) {
+    console.warn(`Failed to fetch org runners for ${org}:`, err);
+    return { runners: [] };
+  }
+}
+
+let userOrgsCache: { pat: string; data: string[]; fetchedAt: number } | null = null;
+
+/**
+ * ログインユーザーが所属する Organization 一覧を取得する
+ */
+export async function fetchUserOrganizations(
+  pat: string,
+  forceRefresh = false
+): Promise<string[]> {
+  const trimmedPat = pat.trim();
+  if (!trimmedPat) return [];
+
+  const now = Date.now();
+  const CACHE_TTL_MS = 60 * 1000;
+
+  if (!forceRefresh && userOrgsCache && userOrgsCache.pat === trimmedPat && now - userOrgsCache.fetchedAt < CACHE_TTL_MS) {
+    return userOrgsCache.data;
+  }
+
+  try {
+    const res = await fetch('https://api.github.com/user/orgs', {
+      headers: {
+        Authorization: `Bearer ${trimmedPat}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+
+    updateRateLimitFromHeaders(res.headers);
+
+    if (!res.ok) {
+      return [];
+    }
+
+    const list = await res.json();
+    if (!Array.isArray(list)) return [];
+
+    const orgs = list.map((item: any) => item.login).filter(Boolean);
+
+    userOrgsCache = {
+      pat: trimmedPat,
+      data: orgs,
+      fetchedAt: now,
+    };
+
+    return orgs;
+  } catch (err) {
+    console.warn('Failed to fetch user orgs:', err);
+    return [];
+  }
+}
+
+/**
+ * 監視対象リポジトリ群および指定 Organization に関連するすべてのセルフホステッドランナーを取得する
+ */
+export async function fetchAllSelfHostedRunners(
+  pat: string,
+  repositories: string[],
+  monitoredOrgs: string[] = [],
+  currentUsername?: string
+): Promise<{ runners: SelfHostedRunner[]; warning?: string }> {
+  const trimmedPat = pat.trim();
+  if (!trimmedPat && repositories.length === 0 && monitoredOrgs.length === 0) {
+    return { runners: [] };
+  }
+
+  // ユニークな owner (Org候補) を抽出 (個人アカウント自身はスキップ)
+  const extractedOwners = repositories
+    .map((r) => r.split('/')[0])
+    .filter((owner) => owner && (!currentUsername || owner.toLowerCase() !== currentUsername.toLowerCase()));
+
+  // 監視対象 Org (リポジトリから抽出された Org + 明示的に監視指定された Org)
+  const allOrgTargets = Array.from(new Set([...extractedOwners, ...monitoredOrgs]));
+
+  // 1. 各リポジトリの専用ランナー取得
+  const repoPromises = repositories.map(async (repoFullName) => {
+    const [owner, name] = repoFullName.split('/');
+    if (!owner || !name) return [];
+    return fetchRepositoryRunners(trimmedPat, owner, name);
+  });
+
+  // 2. 各 Org の共有ランナー取得
+  const orgPromises = allOrgTargets.map(async (org) => {
+    return fetchOrgRunners(trimmedPat, org);
+  });
+
+  const [repoRunnersNested, orgResults] = await Promise.all([
+    Promise.all(repoPromises),
+    Promise.all(orgPromises),
+  ]);
+
+  const orgRunners = orgResults.flatMap((r) => r.runners);
+  const warnings = orgResults.map((r) => r.warning).filter(Boolean) as string[];
+
+  const allRunners: SelfHostedRunner[] = [
+    ...orgRunners,
+    ...repoRunnersNested.flat(),
+  ];
+
+  // 重複ランナー（同じ scopeType & id）の除去
+  const seen = new Set<string>();
+  const uniqueRunners: SelfHostedRunner[] = [];
+
+  for (const runner of allRunners) {
+    const key = `${runner.scopeType}-${runner.scopeName}-${runner.id}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueRunners.push(runner);
+    }
+  }
+
+  // ソート順: 状態（busy -> online -> offline）、次に名前順
+  uniqueRunners.sort((a, b) => {
+    const scoreA = a.busy ? 3 : a.status === 'online' ? 2 : 1;
+    const scoreB = b.busy ? 3 : b.status === 'online' ? 2 : 1;
+    if (scoreA !== scoreB) return scoreB - scoreA;
+    return a.name.localeCompare(b.name);
+  });
+
+  return {
+    runners: uniqueRunners,
+    warning: warnings.length > 0 ? warnings.join('\n') : undefined,
+  };
+}
+
+

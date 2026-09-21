@@ -7,6 +7,10 @@ export interface AppSettings {
   repositories: string[];
   /** 自動更新間隔（秒）。0 は自動更新無効 */
   refreshIntervalSec: number;
+  /** セルフホステッドランナーの稼働状況を表示するかどうか (デフォルト: false) */
+  showSelfHostedRunners?: boolean;
+  /** ランナー監視対象の Organization 一覧 (任意) */
+  monitoredOrgs?: string[];
 }
 
 export interface ActionsUsageBreakdown {
@@ -73,6 +77,17 @@ export interface RepositoryDashboardData {
   isLoading?: boolean;
 }
 
+export interface SelfHostedRunner {
+  id: number;
+  name: string;
+  os: string;
+  status: 'online' | 'offline';
+  busy: boolean;
+  labels: string[];
+  scopeType: 'org' | 'repo';
+  scopeName: string; // "org名" または "owner/repo"
+}
+
 export interface DashboardState {
   isLoading: boolean;
   isRefreshing: boolean;
@@ -84,6 +99,9 @@ export interface DashboardState {
   } | null;
   usage: ActionsUsage | null;
   projects: RepositoryDashboardData[];
+  runners: SelfHostedRunner[];
+  isLoadingRunners: boolean;
+  runnersError: string | null;
   error: string | null;
 }
 
