@@ -428,7 +428,7 @@ async function fetchRepositoryRunners(
 async function fetchOrgRunners(
   pat: string,
   org: string
-): Promise<SelfHostedRunner[]> {
+): Promise<{ runners: SelfHostedRunner[]; warning?: string }> {
   try {
     const res = await fetch(`https://api.github.com/orgs/${org}/actions/runners`, {
       headers: {
@@ -440,15 +440,22 @@ async function fetchOrgRunners(
 
     updateRateLimitFromHeaders(res.headers);
 
+    if (res.status === 403) {
+      return {
+        runners: [],
+        warning: `Organization「${org}」のランナー一覧を取得できませんでした。PAT に admin:org スコープが付与されているかご確認ください。`,
+      };
+    }
+
     if (!res.ok) {
-      // Orgではない個人アカウント、または権限がない場合は空リスト
-      return [];
+      // 404 (個人アカウント等) の場合は無視
+      return { runners: [] };
     }
 
     const data = await res.json();
-    if (!data.runners || !Array.isArray(data.runners)) return [];
+    if (!data.runners || !Array.isArray(data.runners)) return { runners: [] };
 
-    return data.runners.map((r: any) => ({
+    const runners: SelfHostedRunner[] = data.runners.map((r: any) => ({
       id: r.id,
       name: r.name,
       os: r.os || 'Unknown',
@@ -458,9 +465,11 @@ async function fetchOrgRunners(
       scopeType: 'org',
       scopeName: org,
     }));
+
+    return { runners };
   } catch (err) {
     console.warn(`Failed to fetch org runners for ${org}:`, err);
-    return [];
+    return { runners: [] };
   }
 }
 
@@ -470,9 +479,9 @@ async function fetchOrgRunners(
 export async function fetchAllSelfHostedRunners(
   pat: string,
   repositories: string[]
-): Promise<SelfHostedRunner[]> {
+): Promise<{ runners: SelfHostedRunner[]; warning?: string }> {
   const trimmedPat = pat.trim();
-  if (!trimmedPat || repositories.length === 0) return [];
+  if (!trimmedPat || repositories.length === 0) return { runners: [] };
 
   // ユニークな owner (Org候補) を抽出
   const orgCandidates = Array.from(
@@ -495,13 +504,16 @@ export async function fetchAllSelfHostedRunners(
     return fetchOrgRunners(trimmedPat, org);
   });
 
-  const [repoRunnersNested, orgRunnersNested] = await Promise.all([
+  const [repoRunnersNested, orgResults] = await Promise.all([
     Promise.all(repoPromises),
     Promise.all(orgPromises),
   ]);
 
+  const orgRunners = orgResults.flatMap((r) => r.runners);
+  const warnings = orgResults.map((r) => r.warning).filter(Boolean) as string[];
+
   const allRunners: SelfHostedRunner[] = [
-    ...orgRunnersNested.flat(),
+    ...orgRunners,
     ...repoRunnersNested.flat(),
   ];
 
@@ -525,6 +537,9 @@ export async function fetchAllSelfHostedRunners(
     return a.name.localeCompare(b.name);
   });
 
-  return uniqueRunners;
+  return {
+    runners: uniqueRunners,
+    warning: warnings.length > 0 ? warnings.join('\n') : undefined,
+  };
 }
 

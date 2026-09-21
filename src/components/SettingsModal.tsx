@@ -496,7 +496,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
               自宅マシンや自前サーバー（セルフホステッドランナー）の Online / Offline 死活ステータスをダッシュボード上部に表示します。（※
-              要: PAT の <code className="text-slate-300">repo</code> または <code className="text-slate-300">Actions: Read</code> 権限）
+              要: リポジトリ専用ランナーは <code className="text-slate-300">repo</code>、Org 共有ランナーは <code className="text-slate-300">admin:org</code> スコープ）
             </p>
           </div>
         </div>

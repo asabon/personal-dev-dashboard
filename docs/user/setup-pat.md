@@ -40,10 +40,15 @@ GitHub には 2 種類の PAT がありますが、本アプリケーション�
 1. **Note**: `Personal Dev Dashboard`（用途がわかる名前）
 2. **Expiration（有効期限）**: お好みの期間（推奨: `30 days` 〜 `90 days`）
 3. **Select scopes（スコープ）**:
-   - `[x] repo` — プライベートリポジトリの PR 情報・CI 実行結果の取得、および **Self-hosted runner（セルフホステッドランナー）の稼働状況取得** に必要です。  
+   - `[x] repo` — プライベートリポジトリの PR 情報・CI 実行結果の取得、およびリポジトリ専用の Self-hosted runner 監視に必要です。  
      *(※ パブリックリポジトリのみを監視する場合は `public_repo` のみでも利用可能です)*
    - `[x] user` — 月間の GitHub Actions 無料枠使用量（2,000分）の取得に必要です。  
      *(※ GitHub Billing API の仕様上、`read:user` ではなく `user` が必須となります)*
+   - `[ ] admin:org`（**任意**）— **Organization 単位で登録されている Self-hosted runner の稼働状況を監視する場合にのみ必須** です。  
+     *(※ GitHub の仕様上、Org レベルのランナー一覧 API にアクセスするには `admin:org` スコープが必要となります。個人リポジトリのランナーのみを利用する場合や、ランナー監視機能を使用しない場合は不要です)*
+
+> 💡 **Org のランナーも監視したい場合**:  
+> 👉 **[Classic PAT を新規作成（admin:org も含めた自動選択リンク）](https://github.com/settings/tokens/new?scopes=repo,user,admin:org&description=Personal%20Dev%20Dashboard)** から作成すると簡単です。
 
 ### 3. トークンを生成
 ページ最下部の緑色のボタン **「Generate token」** をクリックします。
@@ -105,6 +110,11 @@ GitHub の [Fine-grained personal access tokens](https://github.com/settings/per
 ### Q. 「リポジトリが見つかりません」または 404 / 403 エラーになる
 - 対象リポジトリがプライベートリポジトリの場合、Classic PAT に `repo` スコープが必要です（`public_repo` のみではプライベートリポジトリを参照できません）。
 - Fine-grained PAT の場合は、トークン設定の「Repository access」で対象リポジトリが選択されているか確認してください。
+
+### Q. Organization の Self-hosted runner（自前ランナー）が表示されない
+- GitHub API の仕様上、Organization レベルのランナー一覧を取得するには **`admin:org`** スコープが必要です。
+- トークンに `admin:org` スコープが付与されているか確認し、不足している場合は GitHub のトークン編集画面から付与してください。
+- また、ダッシュボードの監視対象リポジトリに、該当する Organization のリポジトリが 1 つ以上登録されている必要があります。
 
 ### Q. トークンを変更・更新したい
 - 画面右上の **鍵アイコン（設定）** をクリックすると、新しいトークンへの更新や登録済みリポジトリの管理がいつでも行えます。

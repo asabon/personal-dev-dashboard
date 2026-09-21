@@ -84,7 +84,7 @@ export function App() {
       if (settings.showSelfHostedRunners) {
         setState((prev) => ({ ...prev, isLoadingRunners: true, runnersError: null }));
         try {
-          const runnersData = await fetchAllSelfHostedRunners(
+          const { runners: runnersData, warning } = await fetchAllSelfHostedRunners(
             settings.pat,
             settings.repositories
           );
@@ -92,7 +92,7 @@ export function App() {
             ...prev,
             runners: runnersData,
             isLoadingRunners: false,
-            runnersError: null,
+            runnersError: warning || null,
           }));
         } catch (err: any) {
           console.warn('Runners fetch failed:', err);
