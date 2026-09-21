@@ -15,5 +15,8 @@ Windows / PowerShell 環境下で `gh pr create` や `gh pr edit` に `--body ".
 - 一時ファイル（例: `temp_pr_body.md` や scratch 領域）に完全な Markdown を書き出し、`gh pr create --body-file <path>` / `gh pr edit --body-file <path>` で送信すること。
 - 送信完了後、一時ファイルは速やかに削除する。
 
-### 2. 作成後の自動検証
+### 2. PR タイトルは日本語で記述する
+- `feat:`, `fix:`, `docs:`, `chore:` などのプレフィックスに続けて、変更内容の要約を **日本語** で記述すること（例: `fix: Actions 使用量取得エンドポイント・スコープの修正とバージョン表示の追加`）。
+
+### 3. 作成後の自動検証
 - PR 作成後は `gh pr view <number>` を実行し、本文に不要なエスケープ文字（`\`）や記号崩れがないか確認すること。

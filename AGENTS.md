@@ -30,10 +30,12 @@
 
 ---
 
-## 📝 CLI & マークダウンエスケープ防止ルール
+## 📝 Pull Request 作成 & CLI 運用ルール
 
 GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合：
 
+- **PR タイトルは日本語で記述**:
+  - `feat:`, `fix:`, `docs:`, `chore:` などの Conventional Commits プレフィックスに続けて、変更内容の要約を **日本語** で記述してください（例: `fix: Actions 使用量取得エンドポイント・スコープの修正とバージョン表示の追加`）。
 - **`--body-file` の使用を義務化**:
   - シェルコマンドの `--body "..."` に複数行の Markdown やバッククォートを直接渡さないでください。PowerShell 等の展開処理によって意図しないバックスラッシュ（`\`）の混入やコードブロック破損が発生します。
   - 必ず一時的な Markdown ファイルに本文を書き出し、`gh pr create --body-file <path>` または `gh pr edit --body-file <path>` を使用してください。送信完了後は一時ファイルを直ちに削除してください。
