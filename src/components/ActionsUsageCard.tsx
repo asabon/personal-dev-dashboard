@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, AlertTriangle, CheckCircle2, Monitor, Apple, Terminal } from 'lucide-react';
+import { Cpu, AlertTriangle, AlertCircle, CheckCircle2, Monitor, Apple, Terminal } from 'lucide-react';
 import type { ActionsUsage } from '../types';
 
 interface ActionsUsageCardProps {
@@ -36,16 +36,40 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({ usage, error
   const { totalMinutesUsed, includedMinutes, usagePercentage, breakdown } = usage;
   const remainingMinutes = Math.max(0, includedMinutes - totalMinutesUsed);
 
-  // プログレスバーのカラー判定
+  // 当月の日付と経過目安の計算
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const currentDay = now.getDate();
+  const expectedPercentage = Math.round((currentDay / daysInMonth) * 100);
+  const expectedMinutes = Math.round((includedMinutes * currentDay) / daysInMonth);
+
+  // ペース判定に基づくカラー・テキスト設定
+  // 1. 全体使用率が 90% 以上: 危険（赤）
+  // 2. 目安比 +15% 超過 かつ 使用量 >= 100分: ハイペース（赤）
+  // 3. 目安比 +5% 超過 かつ 使用量 >= 100分: やや速い（黄）
+  // 4. それ以外: 順調（緑）
   let barGradient = 'from-emerald-500 to-teal-400';
   let badgeColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+  let paceStatusText = '順調';
+  let PaceIcon = CheckCircle2;
 
   if (usagePercentage >= 90) {
     barGradient = 'from-rose-500 to-red-600';
     badgeColor = 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-  } else if (usagePercentage >= 75) {
+    paceStatusText = '残り僅か';
+    PaceIcon = AlertTriangle;
+  } else if (usagePercentage > expectedPercentage + 15 && totalMinutesUsed >= 100) {
+    barGradient = 'from-rose-500 to-red-600';
+    badgeColor = 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+    paceStatusText = 'ハイペース';
+    PaceIcon = AlertTriangle;
+  } else if (usagePercentage > expectedPercentage + 5 && totalMinutesUsed >= 100) {
     barGradient = 'from-amber-500 to-yellow-400';
     badgeColor = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+    paceStatusText = 'やや速い';
+    PaceIcon = AlertCircle;
   }
 
   return (
@@ -71,26 +95,38 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({ usage, error
 
         <div className="flex items-center gap-2">
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${badgeColor} flex items-center gap-1.5`}>
-            {usagePercentage >= 90 ? (
-              <AlertTriangle className="w-3.5 h-3.5" />
-            ) : (
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            )}
-            {usagePercentage}% 使用中
+            <PaceIcon className="w-3.5 h-3.5 shrink-0" />
+            <span>{usagePercentage}% 使用中</span>
+            <span className="opacity-40">•</span>
+            <span className="text-[11px] font-medium">{paceStatusText}</span>
           </span>
         </div>
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress Bar with Pacing Line Overlay */}
       <div className="space-y-1.5 mb-5">
-        <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-800">
-          <div
-            className={`h-full rounded-full bg-gradient-to-r ${barGradient} transition-all duration-700 ease-out`}
-            style={{ width: `${Math.min(100, Math.max(2, usagePercentage))}%` }}
-          />
+        <div className="relative">
+          {/* Progress Bar Track */}
+          <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-800 relative">
+            <div
+              className={`h-full rounded-full bg-gradient-to-r ${barGradient} transition-all duration-700 ease-out`}
+              style={{ width: `${Math.min(100, Math.max(2, usagePercentage))}%` }}
+            />
+            {/* Target Pace Marker Line */}
+            <div
+              className="absolute top-0 bottom-0 w-0.5 bg-sky-300 shadow-[0_0_6px_rgba(56,189,248,0.9)] pointer-events-none z-10"
+              style={{ left: `${Math.min(99.5, Math.max(0.5, expectedPercentage))}%` }}
+              title={`本日の目安: ${expectedPercentage}% (${expectedMinutes.toLocaleString()} 分)`}
+            />
+          </div>
         </div>
-        <div className="flex justify-between text-[11px] text-slate-400 font-mono">
-          <span>{totalMinutesUsed.toLocaleString()} min used</span>
+        <div className="flex justify-between items-center text-[11px] text-slate-400 font-mono">
+          <div className="flex items-center gap-1.5">
+            <span>{totalMinutesUsed.toLocaleString()} min used</span>
+            <span className="text-slate-500 font-sans text-[10px]">
+              (本日目安: {expectedMinutes.toLocaleString()} min / {expectedPercentage}%)
+            </span>
+          </div>
           <span>{includedMinutes.toLocaleString()} min</span>
         </div>
       </div>
