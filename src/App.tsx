@@ -168,6 +168,15 @@ export function App() {
   const handleSaveSettings = (newSettings: AppSettings) => {
     saveSettings(newSettings);
     setSettings(newSettings);
+
+    // 既存の projects も新しい順序に即座に並べ替えて即応性を高める
+    setState((prev) => {
+      const repoMap = new Map(prev.projects.map((p) => [p.fullName, p]));
+      const reorderedProjects = newSettings.repositories
+        .map((name) => repoMap.get(name))
+        .filter((p): p is RepositoryDashboardData => Boolean(p));
+      return { ...prev, projects: reorderedProjects };
+    });
   };
 
   // ログアウト / リセットハンドラ
