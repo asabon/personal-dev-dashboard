@@ -63,11 +63,11 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Rate Limit Badge */}
           {rateLimit && (
             <div
-              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300"
-              title={`リセット予定: ${rateLimit.resetAt.toLocaleTimeString()}`}
+              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 cursor-help"
+              title={`GitHub API レート制限の残数（1時間上限: ${rateLimit.limit}回）\n枠のリセット予定: ${rateLimit.resetAt.toLocaleTimeString()}`}
             >
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>API:</span>
+              <span>API残数:</span>
               <span className="font-mono font-medium text-slate-100">
                 {rateLimit.remaining}
               </span>
