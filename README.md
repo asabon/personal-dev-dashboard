@@ -16,6 +16,25 @@
 
 ---
 
+## 🚀 はじめかた (Quick Start)
+
+わずか 3 ステップですぐに使い始めることができます：
+
+### Step 1: GitHub Personal Access Token (PAT) を取得
+- 最も手軽なのは **[Classic PAT（スコープ自動選択リンク）](https://github.com/settings/tokens/new?scopes=repo,read:user&description=Personal%20Dev%20Dashboard)** からの発行です。
+  - 必要な権限（`repo`, `read:user`）が自動で選択されています。画面下部の「Generate token」をクリックしてトークン文字列（`ghp_...`）をコピーしてください。
+  - Fine-grained PAT の設定方法や、各スコープの詳細・セキュリティについては [**🔑 GitHub PAT 作成・設定ガイド (docs/user/setup-pat.md)**](docs/user/setup-pat.md) をご覧ください。
+
+### Step 2: ダッシュボードを開いてトークンを入力
+- [**Personal Dev Dashboard**](https://asabon.github.io/personal-dev-dashboard/) をブラウザで開きます。
+- 初回表示のモーダルにコピーした PAT を貼り付け、「利用を開始する」をクリックします。
+
+### Step 3: 監視したいリポジトリを登録
+- ダッシュボード画面上の「リポジトリ追加」ボタンから、監視したいリポジトリ名（例: `asabon/personal-dev-dashboard`）を入力して追加します。
+- これで、今月の Actions 無料枠使用状況と各リポジトリの PR / CI 実行結果が一元表示されます。
+
+---
+
 ## 💡 概要 (Overview)
 
 個人開発で複数リポジトリを並行して動かしていると、以下のような不便が生じがちです：
@@ -43,19 +62,24 @@
 
 ---
 
-## 📚 仕様・ドキュメント (Specifications)
+## 📚 ドキュメント (Documentation)
 
-設計の詳細は [`docs/`](docs/) 配下に整理されています：
+### 👤 利用者向けガイド
+- 🔑 [**GitHub PAT 作成・設定ガイド (docs/user/setup-pat.md)**](docs/user/setup-pat.md)  
+  Classic / Fine-grained PAT の詳しい発行手順、必要な権限、トラブルシューティング
 
-- 🏛️ [**システムアーキテクチャ (docs/architecture.md)**](docs/architecture.md)  
+### 🛠 開発・設計ドキュメント
+設計の詳細は [`docs/dev/`](docs/dev/) 配下に整理されています：
+
+- 🏛️ [**システムアーキテクチャ (docs/dev/architecture.md)**](docs/dev/architecture.md)  
   クライアント完結型設計、セキュリティとトークン管理、技術選定
-- 📡 [**GitHub API 設計 (docs/api-design.md)**](docs/api-design.md)  
+- 📡 [**GitHub API 設計 (docs/dev/api-design.md)**](docs/dev/api-design.md)  
   REST (Actions Usage) と GraphQL (`statusCheckRollup`) による効率的なデータ取得とレート制限対策
-- 🧩 [**データモデル (docs/data-model.md)**](docs/data-model.md)  
+- 🧩 [**データモデル (docs/dev/data-model.md)**](docs/dev/data-model.md)  
   ローカル設定・キャッシュ構造、React 状態管理の TypeScript 型定義
-- 🖥️ [**UI / UX 設計 (docs/ui-design.md)**](docs/ui-design.md)  
+- 🖥️ [**UI / UX 設計 (docs/dev/ui-design.md)**](docs/dev/ui-design.md)  
   画面レイアウト、コンポーネント構成、オンボーディング導線
-- 🚀 [**開発・リリース運用ガイド (docs/release-flow.md)**](docs/release-flow.md)  
+- 🚀 [**開発・リリース運用ガイド (docs/dev/release-flow.md)**](docs/dev/release-flow.md)  
   GitHub Flow ブランチ戦略、GitHub Releases 駆動の本番デプロイ手順、CI/CD 設計
 
 ---

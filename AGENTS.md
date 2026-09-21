@@ -26,7 +26,7 @@
    - `main` ブランチへの通常マージ時は **Release Drafter** が自動起動し、ドラフトリリースノート（"Next release"）を更新・蓄積します。
    - リリース時はリリース PR をマージ後にタグ（`v*.*.*`）を push することで、デプロイワークフロー (`deploy.yml`) が起動し、デプロイ成功後にドラフトが自動で正式 Release として公開されます。
    - リリース作業は専用スキル [`.agents/skills/prepare-release/SKILL.md`](.agents/skills/prepare-release/SKILL.md) および [`.agents/skills/publish-release/SKILL.md`](.agents/skills/publish-release/SKILL.md) の手順に従って実行してください。
-   - 運用手順の詳細は [`docs/release-flow.md`](docs/release-flow.md) を参照してください。
+   - 運用手順の詳細は [`docs/dev/release-flow.md`](docs/dev/release-flow.md) を参照してください。
 
 ---
 
@@ -50,10 +50,14 @@ GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合
 
 ---
 
-## 📚 仕様ドキュメント一覧
+## 📚 ドキュメント一覧
 
-- 🏛️ [アーキテクチャ & セキュリティ設計 (`docs/architecture.md`)](docs/architecture.md)
-- 📡 [GitHub API & GraphQL Rollup 設計 (`docs/api-design.md`)](docs/api-design.md)
-- 🧩 [データモデル & State 定義 (`docs/data-model.md`)](docs/data-model.md)
-- 🖥️ [UI / UX コンポーネント設計 (`docs/ui-design.md`)](docs/ui-design.md)
-- 🚀 [開発・ブランチ・リリース運用ガイド (`docs/release-flow.md`)](docs/release-flow.md)
+### 利用者向けガイド
+- 🔑 [GitHub PAT 作成・設定ガイド (`docs/user/setup-pat.md`)](docs/user/setup-pat.md)
+
+### 開発・設計ドキュメント
+- 🏛️ [アーキテクチャ & セキュリティ設計 (`docs/dev/architecture.md`)](docs/dev/architecture.md)
+- 📡 [GitHub API & GraphQL Rollup 設計 (`docs/dev/api-design.md`)](docs/dev/api-design.md)
+- 🧩 [データモデル & State 定義 (`docs/dev/data-model.md`)](docs/dev/data-model.md)
+- 🖥️ [UI / UX コンポーネント設計 (`docs/dev/ui-design.md`)](docs/dev/ui-design.md)
+- 🚀 [開発・ブランチ・リリース運用ガイド (`docs/dev/release-flow.md`)](docs/dev/release-flow.md)
