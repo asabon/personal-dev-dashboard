@@ -3,40 +3,46 @@ name-template: 'Next Release'
 autolabeler:
   - label: 'feature'
     title:
-      - '^\[Feature\]'
-      - '^feat(\(.*\))?:'
+      - '/^\[Feature\]/'
+      - '/^feat(\(.*\))?:/'
     branch:
-      - '^feature/'
+      - '/^feature\//'
   - label: 'fix'
     title:
-      - '^\[Fix\]'
-      - '^fix(\(.*\))?:'
+      - '/^\[Fix\]/'
+      - '/^fix(\(.*\))?:/'
     branch:
-      - '^fix/'
+      - '/^fix\//'
   - label: 'refactor'
     title:
-      - '^\[Refactor\]'
-      - '^refactor(\(.*\))?:'
+      - '/^\[Refactor\]/'
+      - '/^refactor(\(.*\))?:/'
     branch:
-      - '^refactor/'
+      - '/^refactor\//'
   - label: 'docs'
     title:
-      - '^\[Docs\]'
-      - '^docs(\(.*\))?:'
+      - '/^\[Docs\]/'
+      - '/^docs(\(.*\))?:/'
     branch:
-      - '^docs/'
+      - '/^docs\//'
   - label: 'chore'
     title:
-      - '^\[Chore\]'
-      - '^chore(\(.*\))?:'
+      - '/^\[Chore\]/'
+      - '/^chore(\(.*\))?:/'
     branch:
-      - '^chore/'
+      - '/^chore\//'
   - label: 'test'
     title:
-      - '^\[Test\]'
-      - '^test(\(.*\))?:'
+      - '/^\[Test\]/'
+      - '/^test(\(.*\))?:/'
     branch:
-      - '^test/'
+      - '/^test\//'
+  - label: 'ci'
+    title:
+      - '/^\[CI\]/'
+      - '/^ci(\(.*\))?:/'
+    branch:
+      - '/^ci\//'
 
 category-template: |
   ### $TITLE
