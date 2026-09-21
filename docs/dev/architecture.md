@@ -22,7 +22,7 @@ graph TD
     end
 
     subgraph GitHub 公式
-        GH_REST[GitHub REST API<br/>/users/{user}/settings/billing/actions]
+        GH_REST[GitHub REST API<br/>/users/{user}/settings/billing/usage/summary]
         GH_GQL[GitHub GraphQL API<br/>statusCheckRollup]
     end
 
