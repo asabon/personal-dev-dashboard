@@ -81,6 +81,8 @@
   画面レイアウト、コンポーネント構成、オンボーディング導線
 - 🚀 [**開発・リリース運用ガイド (docs/dev/release-flow.md)**](docs/dev/release-flow.md)  
   GitHub Flow ブランチ戦略、GitHub Releases 駆動の本番デプロイ手順、CI/CD 設計
+- 🗺️ [**開発ロードマップ & 実装実績 (docs/dev/roadmap.md)**](docs/dev/roadmap.md)  
+  Phase 1〜3 の開発実績、マイルストーン達成記録、今後の拡張アイデア
 
 ---
 
@@ -88,22 +90,4 @@
 
 - **Frontend**: React 19 / TypeScript / Vite
 - **Styling**: Tailwind CSS / Lucide Icons
-- **Deployment**: GitHub Pages (via GitHub Actions)
-
----
-
-## 🗺 ロードマップ (Roadmap)
-
-- [x] **Phase 1 (MVP)**:
-  - [x] Vite + React + Tailwind CSS のプロジェクト基盤構築
-  - [x] トークン入力 & 検証（オンボーディング）画面
-  - [x] Actions 無料枠使用量カードの実装 (REST API)
-  - [x] リポジトリ手動追加 & PR × CI ステータス一覧の実装 (GraphQL API)
-  - [x] localStorage への設定永続化
-- [x] **Phase 2**:
-  - [x] GitHub Pages デプロイ & CI ワークフロー構築
-  - [x] 自動更新ポーリング機能 (設定モーダルで間隔切替可能)
-  - [x] 自分のリポジトリからのワンクリック追加機能
-- [ ] **Phase 3**:
-  - [x] Self-hosted runner の稼働状況サポート（任意）
-  - [ ] CI 失敗時の通知機能
+- **Deployment**: GitHub Pages (via GitHub Actions)

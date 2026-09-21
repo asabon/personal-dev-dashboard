@@ -14,6 +14,9 @@
 - **技術スタック**:
   - React 19 + TypeScript (strict モード) + Vite + Tailwind CSS v4 + Lucide Icons。
   - ルート設定は最小限に保ち、単一の統合された `tsconfig.json` を使用してください。
+- **改行コードの統一 (LF)**:
+  - リポジトリ内のすべてのテキストファイルは **LF (`\n`)** で統一します（CRLF の混入厳禁）。
+  - `.gitattributes` および `.editorconfig` の設定に従い、Windows 環境でのコミット時にも差分汚染が発生しないよう注意してください。
 
 ---
 
@@ -63,3 +66,4 @@ GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合
 - 🧩 [データモデル & State 定義 (`docs/dev/data-model.md`)](docs/dev/data-model.md)
 - 🖥️ [UI / UX コンポーネント設計 (`docs/dev/ui-design.md`)](docs/dev/ui-design.md)
 - 🚀 [開発・ブランチ・リリース運用ガイド (`docs/dev/release-flow.md`)](docs/dev/release-flow.md)
+- 🗺️ [開発ロードマップ & 実装実績 (`docs/dev/roadmap.md`)](docs/dev/roadmap.md)
