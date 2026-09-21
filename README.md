@@ -21,8 +21,8 @@
 わずか 3 ステップですぐに使い始めることができます：
 
 ### Step 1: GitHub Personal Access Token (PAT) を取得
-- 最も手軽なのは **[Classic PAT（スコープ自動選択リンク）](https://github.com/settings/tokens/new?scopes=repo,read:user&description=Personal%20Dev%20Dashboard)** からの発行です。
-  - 必要な権限（`repo`, `read:user`）が自動で選択されています。画面下部の「Generate token」をクリックしてトークン文字列（`ghp_...`）をコピーしてください。
+- 最も手軽なのは **[Classic PAT（スコープ自動選択リンク）](https://github.com/settings/tokens/new?scopes=repo,user&description=Personal%20Dev%20Dashboard)** からの発行です。
+  - 必要な権限（`repo`, `user`）が自動で選択されています。画面下部の「Generate token」をクリックしてトークン文字列（`ghp_...`）をコピーしてください。
   - Fine-grained PAT の設定方法や、各スコープの詳細・セキュリティについては [**🔑 GitHub PAT 作成・設定ガイド (docs/user/setup-pat.md)**](docs/user/setup-pat.md) をご覧ください。
 
 ### Step 2: ダッシュボードを開いてトークンを入力

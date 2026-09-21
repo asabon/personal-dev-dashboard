@@ -66,7 +66,7 @@ export async function validateToken(pat: string): Promise<{ username: string; av
  * ユーザーの Actions 無料枠使用量を取得する
  */
 export async function fetchActionsUsage(pat: string, username: string): Promise<ActionsUsage> {
-  const res = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}/actions/usage`, {
+  const res = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}/settings/billing/actions`, {
     headers: {
       Authorization: `Bearer ${pat.trim()}`,
       Accept: 'application/vnd.github+json',
@@ -77,10 +77,9 @@ export async function fetchActionsUsage(pat: string, username: string): Promise<
   updateRateLimitFromHeaders(res.headers);
 
   if (!res.ok) {
-    // 権限不足の場合（Fine-grained PAT で Plan 権限がない等）のフォールバック
     if (res.status === 403 || res.status === 404) {
       throw new Error(
-        'Actions 使用量を取得できませんでした。トークンに `read:user` またはプラン閲覧権限が付与されているかご確認ください。'
+        'Actions 使用量を取得できませんでした。Classic PAT に `user` スコープが付与されているかご確認ください（Fine-grained PAT は GitHub の Billing API に非対応です）。'
       );
     }
     throw new Error(`Actions 使用量取得失敗 (${res.status})`);

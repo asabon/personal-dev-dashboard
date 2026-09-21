@@ -12,7 +12,8 @@
 
 ユーザー個人の今月の GitHub Actions 無料枠（月2000分）の使用状況を取得します。
 
-- **Endpoint**: `GET https://api.github.com/users/{username}/actions/usage`
+- **Endpoint**: `GET https://api.github.com/users/{username}/settings/billing/actions`
+- **権限 (Scopes)**: `user` (Classic PAT)
 - **Headers**:
   ```http
   Authorization: Bearer <PAT>

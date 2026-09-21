@@ -37,6 +37,15 @@ export const Header: React.FC<HeaderProps> = ({
               <h1 className="text-lg font-bold text-slate-100 tracking-tight">
                 Personal Dev Dashboard
               </h1>
+              <a
+                href="https://github.com/asabon/personal-dev-dashboard/releases"
+                target="_blank"
+                rel="noreferrer"
+                title={`バージョン v${__APP_VERSION__} のリリースノートを開く`}
+                className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200 border border-slate-700/60 hover:border-slate-600 transition-colors"
+              >
+                v{__APP_VERSION__}
+              </a>
               <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                 OSS
               </span>
