@@ -14,9 +14,13 @@ permissions:
 
 jobs:
   update_release_draft:
-    name: Draft Release Notes
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - uses: release-drafter/release-drafter@v6
+        with:
+          commitish: main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
