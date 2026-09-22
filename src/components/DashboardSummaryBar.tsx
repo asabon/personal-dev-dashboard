@@ -11,7 +11,8 @@ import type { RepositoryDashboardData, ActionsUsage, SelfHostedRunner } from '..
 
 interface DashboardSummaryBarProps {
   projects: RepositoryDashboardData[];
-  usage: ActionsUsage | null;
+  usage?: ActionsUsage | null;
+  usages?: (ActionsUsage | null)[];
   runners: SelfHostedRunner[];
   showRunners?: boolean;
 }
@@ -19,6 +20,7 @@ interface DashboardSummaryBarProps {
 export const DashboardSummaryBar: React.FC<DashboardSummaryBarProps> = ({
   projects,
   usage,
+  usages,
   runners,
   showRunners = false,
 }) => {
@@ -40,9 +42,19 @@ export const DashboardSummaryBar: React.FC<DashboardSummaryBarProps> = ({
     }
   }
 
-  // 2. Actions 使用枠の警告判定 (85%以上 or 残り僅か)
-  const isUsageWarning = usage ? usage.usagePercentage >= 85 : false;
-  const isUsageCritical = usage ? usage.usagePercentage >= 95 : false;
+  // 2. Actions 使用枠の警告判定 (全アカウントを対象にチェック)
+  const allUsages: ActionsUsage[] = [];
+  if (usages && usages.length > 0) {
+    for (const u of usages) {
+      if (u) allUsages.push(u);
+    }
+  } else if (usage) {
+    allUsages.push(usage);
+  }
+
+  const warningUsage = allUsages.find((u) => u.usagePercentage >= 85);
+  const isUsageWarning = Boolean(warningUsage);
+  const isUsageCritical = Boolean(allUsages.some((u) => u.usagePercentage >= 95));
 
   // 3. ランナーのオフライン判定
   const offlineRunners = showRunners ? runners.filter((r) => r.status === 'offline') : [];
@@ -124,7 +136,7 @@ export const DashboardSummaryBar: React.FC<DashboardSummaryBarProps> = ({
         )}
 
         {/* 3. Actions 残り枠警告 */}
-        {usage && isUsageWarning && (
+        {isUsageWarning && warningUsage && (
           <button
             type="button"
             onClick={() => scrollToElement('actions-usage-section')}
@@ -137,7 +149,7 @@ export const DashboardSummaryBar: React.FC<DashboardSummaryBarProps> = ({
           >
             <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
             <span>
-              Actions残り僅か ({usage.usagePercentage}%)
+              Actions残り僅か{warningUsage.accountName ? `: ${warningUsage.accountName}` : ''} ({warningUsage.usagePercentage}%)
             </span>
             <ArrowDown className="w-3 h-3 opacity-70" />
           </button>

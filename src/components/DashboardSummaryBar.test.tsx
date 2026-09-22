@@ -121,7 +121,33 @@ describe('DashboardSummaryBar', () => {
       />
     );
 
-    expect(screen.getByText('Actions残り僅か (90%)')).toBeDefined();
+    expect(screen.getByText(/Actions残り僅か/)).toBeDefined();
+  });
+
+  it('usages 配列のうち 1 つでも 85% を超過していれば警告を表示すること', () => {
+    const normalUsage: ActionsUsage = {
+      ...dummyUsage,
+      accountName: 'personal',
+      usagePercentage: 20,
+    };
+    const criticalOrgUsage: ActionsUsage = {
+      ...dummyUsage,
+      accountName: 'my-org',
+      totalMinutesUsed: 2700,
+      includedMinutes: 3000,
+      usagePercentage: 90,
+    };
+
+    render(
+      <DashboardSummaryBar
+        projects={[dummyRepoSuccess]}
+        usages={[normalUsage, criticalOrgUsage]}
+        runners={[]}
+        showRunners={false}
+      />
+    );
+
+    expect(screen.getByText('Actions残り僅か: my-org (90%)')).toBeDefined();
   });
 
   it('renders runner offline warning when runner is down and showRunners is true', () => {

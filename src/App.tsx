@@ -449,39 +449,30 @@ export function App() {
 
         {/* Dashboard Status Highlights */}
         {(() => {
-          const currentAcc = selectedUsageAccount || settings.username;
-          const item = state.usageMap?.[currentAcc];
-          const usageData = item ? item.usage : (currentAcc === settings.username ? state.usage : null);
+          const allUsages = accounts.map((acc) => {
+            const item = state.usageMap?.[acc.name];
+            return item ? item.usage : (acc.name === settings.username ? state.usage : null);
+          });
 
           return (
             <DashboardSummaryBar
               projects={state.projects}
-              usage={usageData}
+              usages={allUsages}
               runners={state.runners}
               showRunners={Boolean(settings.showSelfHostedRunners)}
             />
           );
         })()}
 
-        {/* 1. Actions Usage Summary */}
-        {(() => {
-          const currentAcc = selectedUsageAccount || settings.username;
-          const item = state.usageMap?.[currentAcc];
-          const usageData = item ? item.usage : (currentAcc === settings.username ? state.usage : null);
-          const usageErr = item ? item.error : (currentAcc === settings.username ? actionsError : null);
-
-          return (
-            <ActionsUsageCard
-              usage={usageData}
-              error={usageErr}
-              isLoading={state.isRefreshing && !usageData && !usageErr}
-              accounts={accounts}
-              selectedAccount={currentAcc}
-              isCompact={viewMode === 'compact'}
-              onSelectAccount={(name) => setSelectedUsageAccount(name)}
-            />
-          );
-        })()}
+        {/* 1. Actions Usage Summary (全アカウント常時並列表示) */}
+        <ActionsUsageCard
+          accounts={accounts}
+          usageMap={state.usageMap}
+          isLoading={state.isRefreshing}
+          isCompact={viewMode === 'compact'}
+          usage={state.usage}
+          error={actionsError}
+        />
 
         {/* 2. Self-hosted Runners Panel (設定で有効時のみ表示) */}
         {settings.showSelfHostedRunners && (
