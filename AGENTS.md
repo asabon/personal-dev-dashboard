@@ -42,7 +42,7 @@ GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合
 - **`--body-file` の使用を義務化**:
   - シェルコマンドの `--body "..."` に複数行の Markdown やバッククォートを直接渡さないでください。PowerShell 等の展開処理によって意図しないバックスラッシュ（`\`）の混入やコードブロック破損が発生します。
   - 必ず一時的な Markdown ファイルに本文を書き出し、`gh pr create --body-file <path>` または `gh pr edit --body-file <path>` を使用してください。送信完了後は一時ファイルを直ちに削除してください。
-- 詳細ルール: [`.agents/rules/cli-markdown-escaping.md`](.agents/rules/cli-markdown-escaping.md)
+- 詳細ルール: [`.agents/rules/cli-markdown-escaping.md`](.agents/rules/cli-markdown-escaping.md), [`.agents/rules/windows-shell-commands.md`](.agents/rules/windows-shell-commands.md)
 
 ---
 

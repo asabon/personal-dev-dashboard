@@ -41,7 +41,7 @@ IntervalTimer プロジェクトのリリース準備パイプラインに準拠
 2. **Next Release ドラフトの確認**:
    - GitHub Releases 上の `Next Release` ドラフトの内容を確認し、PR 本文およびリリースノートに反映する準備をします。
    ```bash
-   gh api repos/:owner/:repo/releases | jq '.[] | select(.draft == true)'
+   gh api repos/:owner/:repo/releases --jq '.[] | select(.draft == true)'
    ```
 3. **コミット作成**:
    ```bash
