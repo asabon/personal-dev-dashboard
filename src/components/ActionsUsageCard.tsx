@@ -9,6 +9,7 @@ import {
   Terminal,
   User,
   Building2,
+  Info,
 } from 'lucide-react';
 import type { ActionsUsage, ActionsUsageAccount } from '../types';
 import { calculateActionsPacing } from '../utils/actionsUsage';
@@ -95,7 +96,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-100">GitHub Actions 無料枠使用状況</h2>
+                <h2 className="text-base font-bold text-slate-100">GitHub Actions 使用状況</h2>
                 {currentAccountName && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-xs border border-slate-700">
                     {isOrg ? <Building2 className="w-3 h-3 text-indigo-400" /> : <User className="w-3 h-3 text-indigo-400" />}
@@ -156,7 +157,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base font-bold text-slate-100">
-                GitHub Actions 無料枠使用状況
+                GitHub Actions 使用状況
               </h2>
               {currentAccountName && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800/90 text-slate-300 text-xs border border-slate-700 font-medium">
@@ -165,9 +166,23 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400">
-              月間クォータ: {includedMinutes.toLocaleString()} 分（当月 1日〜{daysInMonth}日）
-            </p>
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+              <span>月間クォータ: {includedMinutes.toLocaleString()} 分（当月 1日〜{daysInMonth}日）</span>
+              <span className="text-slate-600 hidden sm:inline">•</span>
+              <span className="inline-flex items-center gap-1 text-slate-400">
+                <span>総稼働時間集計</span>
+                <span className="relative group inline-flex items-center">
+                  <Info className="w-3.5 h-3.5 text-slate-400 hover:text-indigo-400 cursor-help transition-colors" />
+                  <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover:block z-40 w-72 sm:w-80 p-3 bg-slate-900 border border-slate-700/90 rounded-xl text-[11px] leading-relaxed text-slate-300 shadow-2xl backdrop-blur-md pointer-events-none">
+                    <span className="block font-semibold text-slate-200 mb-1 flex items-center gap-1.5 text-xs">
+                      <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                      GitHub API の集計仕様について
+                    </span>
+                    GitHub 公式の課金 API (Usage Summary) の仕様上、パブリックリポジトリでの無料実行時間も含んだ総稼働時間が集計されます。また、無料枠の消費計算には各 OS の消費倍率（Ubuntu: 1倍、macOS: 10倍、Windows: 2倍）が適用されています。
+                  </span>
+                </span>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -183,7 +198,9 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
       {/* Metrics Row: Usage vs Remaining */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800/80 flex flex-col justify-between">
-          <span className="text-xs text-slate-400 font-medium mb-1">当月の使用量</span>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-slate-400 font-medium">当月の使用量 (換算目安)</span>
+          </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl sm:text-3xl font-bold font-mono text-slate-100">
               {totalMinutesUsed.toLocaleString()}
@@ -198,7 +215,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
         </div>
 
         <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800/80 flex flex-col justify-between">
-          <span className="text-xs text-slate-400 font-medium mb-1">残り無料枠</span>
+          <span className="text-xs text-slate-400 font-medium mb-1">残り無料枠 (目安)</span>
           <div className="flex items-baseline gap-2">
             <span className={`text-2xl sm:text-3xl font-bold font-mono ${remainingMinutes < 200 ? 'text-rose-400' : 'text-emerald-400'}`}>
               {remainingMinutes.toLocaleString()}
@@ -243,7 +260,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
           <Terminal className="w-4 h-4 text-orange-400 shrink-0" />
           <div>
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Ubuntu (x1)</div>
+            <div className="text-[11px] text-slate-400 font-medium">Ubuntu (x1)</div>
             <div className="text-sm font-semibold font-mono text-slate-200">{breakdown.ubuntu.toLocaleString()} <span className="text-xs text-slate-400 font-normal">分</span></div>
           </div>
         </div>
@@ -251,7 +268,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
           <Apple className="w-4 h-4 text-sky-400 shrink-0" />
           <div>
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">macOS (x10)</div>
+            <div className="text-[11px] text-slate-400 font-medium">macOS (x10)</div>
             <div className="text-sm font-semibold font-mono text-slate-200">{breakdown.macOS.toLocaleString()} <span className="text-xs text-slate-400 font-normal">分</span></div>
           </div>
         </div>
@@ -259,7 +276,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
           <Monitor className="w-4 h-4 text-blue-400 shrink-0" />
           <div>
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Windows (x2)</div>
+            <div className="text-[11px] text-slate-400 font-medium">Windows (x2)</div>
             <div className="text-sm font-semibold font-mono text-slate-200">{breakdown.windows.toLocaleString()} <span className="text-xs text-slate-400 font-normal">分</span></div>
           </div>
         </div>

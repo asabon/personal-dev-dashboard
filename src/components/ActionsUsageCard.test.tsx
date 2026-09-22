@@ -36,16 +36,17 @@ describe('ActionsUsageCard', () => {
     render(<ActionsUsageCard usage={mockUsage} />);
 
     // タイトル
-    expect(screen.getByText('GitHub Actions 無料枠使用状況')).toBeInTheDocument();
+    expect(screen.getByText('GitHub Actions 使用状況')).toBeInTheDocument();
 
     // 当月の使用量
-    expect(screen.getByText('当月の使用量')).toBeInTheDocument();
+    expect(screen.getByText(/当月の使用量/)).toBeInTheDocument();
+    expect(screen.getByText('総稼働時間集計')).toBeInTheDocument();
     expect(screen.getAllByText('550')).toHaveLength(2); // メイン数値と OS 内訳 (Ubuntu)
     expect(screen.getByText('/ 2,000 分')).toBeInTheDocument();
     expect(screen.getByText('28%')).toBeInTheDocument();
 
     // 残り無料枠
-    expect(screen.getByText('残り無料枠')).toBeInTheDocument();
+    expect(screen.getByText(/残り無料枠/)).toBeInTheDocument();
     expect(screen.getByText('1,450')).toBeInTheDocument();
     expect(screen.getByText('(枠の 72%)')).toBeInTheDocument();
 

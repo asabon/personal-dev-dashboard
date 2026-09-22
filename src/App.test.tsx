@@ -37,7 +37,7 @@ describe('App Demo Mode (?demo=true)', () => {
     expect(screen.getByText('octocat/frontend-app')).toBeInTheDocument();
 
     // デモ用 Actions 使用量が表示されること
-    expect(screen.getByText('当月の使用量')).toBeInTheDocument();
+    expect(screen.getByText(/当月の使用量/)).toBeInTheDocument();
   });
 
   it('通常アクセス（demoパラメータなし & PAT未設定）の場合はオンボーディングモーダルが表示されること', () => {
