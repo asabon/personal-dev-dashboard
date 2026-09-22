@@ -52,7 +52,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({ usage, error
   // 4. それ以外: 順調（緑）
   let barGradient = 'from-emerald-500 to-teal-400';
   let badgeColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-  let paceStatusText = '順調';
+  let paceStatusText = '順調 (目安内)';
   let PaceIcon = CheckCircle2;
 
   if (usagePercentage >= 90) {
@@ -77,6 +77,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({ usage, error
       {/* Background ambient glow */}
       <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
 
+      {/* Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 shadow-inner">
@@ -84,11 +85,10 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({ usage, error
           </div>
           <div>
             <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
-              GitHub Actions 無料枠使用量 (今月)
+              GitHub Actions 無料枠使用状況
             </h2>
             <p className="text-xs text-slate-400">
-              月間無料枠: {includedMinutes.toLocaleString()} 分 / 残り{' '}
-              <span className="text-slate-200 font-semibold">{remainingMinutes.toLocaleString()} 分</span>
+              月間クォータ: {includedMinutes.toLocaleString()} 分（当月 1日〜{daysInMonth}日）
             </p>
           </div>
         </div>
@@ -96,10 +96,39 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({ usage, error
         <div className="flex items-center gap-2">
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${badgeColor} flex items-center gap-1.5`}>
             <PaceIcon className="w-3.5 h-3.5 shrink-0" />
-            <span>{usagePercentage}% 使用中</span>
-            <span className="opacity-40">•</span>
-            <span className="text-[11px] font-medium">{paceStatusText}</span>
+            <span>{paceStatusText}</span>
           </span>
+        </div>
+      </div>
+
+      {/* Metrics Row: Usage vs Remaining */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800/80 flex flex-col justify-between">
+          <span className="text-xs text-slate-400 font-medium mb-1">当月の使用量</span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-bold font-mono text-slate-100">
+              {totalMinutesUsed.toLocaleString()}
+            </span>
+            <span className="text-slate-400 text-sm font-medium">
+              / {includedMinutes.toLocaleString()} 分
+            </span>
+            <span className="text-xs font-semibold text-slate-300 ml-auto bg-slate-800/90 border border-slate-700/60 px-2 py-0.5 rounded-md">
+              {usagePercentage}%
+            </span>
+          </div>
+        </div>
+
+        <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800/80 flex flex-col justify-between">
+          <span className="text-xs text-slate-400 font-medium mb-1">残り無料枠</span>
+          <div className="flex items-baseline gap-2">
+            <span className={`text-2xl sm:text-3xl font-bold font-mono ${remainingMinutes < 200 ? 'text-rose-400' : 'text-emerald-400'}`}>
+              {remainingMinutes.toLocaleString()}
+            </span>
+            <span className="text-slate-400 text-sm font-medium">分</span>
+            <span className="text-xs text-slate-400 ml-auto">
+              (枠の {100 - usagePercentage}%)
+            </span>
+          </div>
         </div>
       </div>
 
@@ -110,7 +139,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({ usage, error
           <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-800 relative">
             <div
               className={`h-full rounded-full bg-gradient-to-r ${barGradient} transition-all duration-700 ease-out`}
-              style={{ width: `${Math.min(100, Math.max(2, usagePercentage))}%` }}
+              style={{ width: `${Math.min(100, Math.max(totalMinutesUsed > 0 ? 1 : 0, usagePercentage))}%` }}
             />
             {/* Target Pace Marker Line */}
             <div
@@ -121,13 +150,12 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({ usage, error
           </div>
         </div>
         <div className="flex justify-between items-center text-[11px] text-slate-400 font-mono">
-          <div className="flex items-center gap-1.5">
-            <span>{totalMinutesUsed.toLocaleString()} min used</span>
-            <span className="text-slate-500 font-sans text-[10px]">
-              (本日目安: {expectedMinutes.toLocaleString()} min / {expectedPercentage}%)
-            </span>
+          <span>0 分</span>
+          <div className="flex items-center gap-1.5 text-slate-400 font-sans">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 shadow-[0_0_4px_rgba(56,189,248,0.8)]" />
+            <span>本日目安: {expectedMinutes.toLocaleString()} 分 ({expectedPercentage}%)</span>
           </div>
-          <span>{includedMinutes.toLocaleString()} min</span>
+          <span>{includedMinutes.toLocaleString()} 分</span>
         </div>
       </div>
 
