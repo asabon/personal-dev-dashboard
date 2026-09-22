@@ -1,79 +1,149 @@
-import React from 'react';
-import { FolderGit2, Lock, Globe, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  FolderGit2,
+  Lock,
+  Globe,
+  Trash2,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import type { RepositoryDashboardData } from '../types';
 import { PullRequestCard } from './PullRequestCard';
 
 interface RepoCardProps {
   repo: RepositoryDashboardData;
+  isCompact?: boolean;
   onRemove: (fullName: string) => void;
 }
 
-export const RepoCard: React.FC<RepoCardProps> = ({ repo, onRemove }) => {
+export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false, onRemove }) => {
+  const hasFailure = repo.pullRequests.some((pr) => pr.overallCiState === 'FAILURE');
+  const hasRunning = repo.pullRequests.some((pr) => pr.overallCiState === 'PENDING');
+  const hasSuccess = repo.pullRequests.some((pr) => pr.overallCiState === 'SUCCESS');
+
+  // isCompact 時は失敗またはエラーがある場合のみデフォルト展開、それ以外は折りたたみ
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (isCompact) {
+      return Boolean(hasFailure || repo.error);
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (isCompact) {
+      setIsExpanded(Boolean(hasFailure || repo.error));
+    } else {
+      setIsExpanded(true);
+    }
+  }, [isCompact, hasFailure, repo.error]);
+
+  const cardId = `repo-${repo.fullName.replace('/', '-')}`;
+
   return (
-    <div className="glass-panel rounded-2xl border border-slate-800/80 shadow-lg overflow-hidden flex flex-col">
+    <div
+      id={cardId}
+      className="glass-panel rounded-2xl border border-slate-800/80 shadow-lg overflow-hidden flex flex-col transition-all duration-200"
+    >
       {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-800/80 bg-slate-900/40 flex items-center justify-between gap-3">
+      <div
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="px-4 sm:px-5 py-3.5 border-b border-slate-800/80 bg-slate-900/40 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-900/60 transition-colors select-none"
+      >
         <div className="flex items-center gap-2.5 min-w-0">
           <FolderGit2 className="w-4 h-4 text-indigo-400 shrink-0" />
           <a
             href={`https://github.com/${repo.fullName}`}
             target="_blank"
             rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
             className="text-sm font-bold text-slate-100 hover:text-indigo-400 transition-colors truncate font-mono"
           >
             {repo.fullName}
           </a>
 
           {repo.isPrivate ? (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
               <Lock className="w-2.5 h-2.5" /> Private
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
               <Globe className="w-2.5 h-2.5" /> Public
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
+          {/* CI ステータスサマリーアイコン */}
+          {hasFailure && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
+              <XCircle className="w-3 h-3" />
+              <span className="hidden sm:inline">Failed</span>
+            </span>
+          )}
+          {!hasFailure && hasRunning && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span className="hidden sm:inline">Running</span>
+            </span>
+          )}
+          {!hasFailure && !hasRunning && hasSuccess && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <CheckCircle2 className="w-3 h-3" />
+              <span className="hidden sm:inline">Passed</span>
+            </span>
+          )}
+
           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700">
             {repo.pullRequests.length} PRs
           </span>
 
           <button
             type="button"
-            onClick={() => onRemove(repo.fullName)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(repo.fullName);
+            }}
             className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
             title="監視リストから削除"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
+
+          <div className="p-0.5 text-slate-400 hover:text-slate-200">
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </div>
         </div>
       </div>
 
       {/* Content Body */}
-      <div className="p-4 flex-1">
-        {repo.error ? (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <p className="font-semibold">取得エラー</p>
-              <p className="text-rose-400/80 mt-0.5">{repo.error}</p>
+      {isExpanded && (
+        <div className="p-3 sm:p-4 flex-1">
+          {repo.error ? (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="font-semibold">取得エラー</p>
+                <p className="text-rose-400/80 mt-0.5">{repo.error}</p>
+              </div>
             </div>
-          </div>
-        ) : repo.pullRequests.length === 0 ? (
-          <div className="py-8 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
-            <CheckCircle2 className="w-8 h-8 text-slate-700" />
-            <p className="text-xs font-medium">現在 Open な Pull Request はありません</p>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            {repo.pullRequests.map((pr) => (
-              <PullRequestCard key={pr.id} pr={pr} />
-            ))}
-          </div>
-        )}
-      </div>
+          ) : repo.pullRequests.length === 0 ? (
+            <div className="py-6 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
+              <CheckCircle2 className="w-7 h-7 text-slate-700" />
+              <p className="text-xs font-medium">現在 Open な Pull Request はありません</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {repo.pullRequests.map((pr) => (
+                <PullRequestCard key={pr.id} pr={pr} isCompact={isCompact} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

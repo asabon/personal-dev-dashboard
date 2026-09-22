@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Cpu,
   ChevronDown,
@@ -17,21 +17,30 @@ interface RunnersCardProps {
   runners: SelfHostedRunner[];
   isLoading: boolean;
   error: string | null;
+  isCompact?: boolean;
 }
 
 export const RunnersCard: React.FC<RunnersCardProps> = ({
   runners,
   isLoading,
   error,
+  isCompact = false,
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(isCompact);
+
+  useEffect(() => {
+    setIsCollapsed(isCompact);
+  }, [isCompact]);
 
   const onlineCount = runners.filter((r) => r.status === 'online').length;
   const busyCount = runners.filter((r) => r.busy).length;
   const offlineCount = runners.filter((r) => r.status === 'offline').length;
 
   return (
-    <div className="glass-panel rounded-2xl border border-slate-800/80 shadow-xl overflow-hidden transition-all duration-200">
+    <div
+      id="runners-section"
+      className="glass-panel rounded-2xl border border-slate-800/80 shadow-xl overflow-hidden transition-all duration-200"
+    >
       {/* Header */}
       <div
         onClick={() => setIsCollapsed(!isCollapsed)}

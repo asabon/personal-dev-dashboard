@@ -14,9 +14,10 @@ import type { PullRequestItem, ActionCheck } from '../types';
 
 interface PullRequestCardProps {
   pr: PullRequestItem;
+  isCompact?: boolean;
 }
 
-export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr }) => {
+export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact = false }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getStatusBadge = () => {
@@ -75,17 +76,21 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr }) => {
   };
 
   return (
-    <div className="rounded-xl bg-slate-900/50 hover:bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all p-4 space-y-3">
+    <div
+      className={`rounded-xl bg-slate-900/50 hover:bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all ${
+        isCompact ? 'p-2.5 sm:p-3 space-y-1.5' : 'p-4 space-y-3'
+      }`}
+    >
       {/* Top row: Title, Number, Status */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5 min-w-0">
-          <GitPullRequest className="w-4 h-4 text-emerald-400 mt-1 shrink-0" />
+      <div className="flex items-start justify-between gap-2.5">
+        <div className="flex items-start gap-2 min-w-0">
+          <GitPullRequest className="w-3.5 h-3.5 text-emerald-400 mt-1 shrink-0" />
           <div className="min-w-0">
             <a
               href={pr.url}
               target="_blank"
               rel="noreferrer"
-              className="text-sm font-semibold text-slate-100 hover:text-indigo-400 transition-colors flex items-center gap-1.5 group"
+              className="text-xs sm:text-sm font-semibold text-slate-100 hover:text-indigo-400 transition-colors flex items-center gap-1.5 group"
             >
               <span className="truncate">{pr.title}</span>
               <span className="text-slate-500 font-normal">#{pr.number}</span>
@@ -97,42 +102,63 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr }) => {
         <div className="shrink-0">{getStatusBadge()}</div>
       </div>
 
-      {/* Meta row: Branch, Commit SHA, Author, Updated Time */}
-      <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-xs text-slate-400">
-        <div className="flex items-center gap-1 font-mono text-slate-300 bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-800">
-          <GitBranch className="w-3 h-3 text-indigo-400" />
-          <span className="truncate max-w-[140px]">{pr.headBranch}</span>
-          <span className="text-slate-500">@</span>
-          <span className="text-slate-400">{pr.shortSha}</span>
-        </div>
+      {/* Meta row */}
+      {isCompact ? (
+        <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
+          <div className="flex items-center gap-2">
+            <span>@{pr.author.login}</span>
+            <span className="text-slate-600">•</span>
+            <span>{formatRelativeTime(pr.updatedAt)}</span>
+          </div>
 
-        <div className="flex items-center gap-1.5">
-          {pr.author.avatarUrl ? (
-            <img
-              src={pr.author.avatarUrl}
-              alt={pr.author.login}
-              className="w-4 h-4 rounded-full border border-slate-700"
-            />
-          ) : null}
-          <span>{pr.author.login}</span>
+          {pr.checks.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <span>{pr.checks.length} Checks</span>
+              {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+          )}
         </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-xs text-slate-400">
+          <div className="flex items-center gap-1 font-mono text-slate-300 bg-slate-800/60 px-2 py-0.5 rounded-md border border-slate-800">
+            <GitBranch className="w-3 h-3 text-indigo-400" />
+            <span className="truncate max-w-[140px]">{pr.headBranch}</span>
+            <span className="text-slate-500">@</span>
+            <span className="text-slate-400">{pr.shortSha}</span>
+          </div>
 
-        <div className="flex items-center gap-1 text-slate-500">
-          <Clock className="w-3 h-3" />
-          <span>{formatRelativeTime(pr.updatedAt)}</span>
+          <div className="flex items-center gap-1.5">
+            {pr.author.avatarUrl ? (
+              <img
+                src={pr.author.avatarUrl}
+                alt={pr.author.login}
+                className="w-4 h-4 rounded-full border border-slate-700"
+              />
+            ) : null}
+            <span>{pr.author.login}</span>
+          </div>
+
+          <div className="flex items-center gap-1 text-slate-500">
+            <Clock className="w-3 h-3" />
+            <span>{formatRelativeTime(pr.updatedAt)}</span>
+          </div>
+
+          {pr.checks.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="ml-auto text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <span>{pr.checks.length} Checks</span>
+              {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+          )}
         </div>
-
-        {pr.checks.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="ml-auto text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            <span>{pr.checks.length} Checks</span>
-            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-        )}
-      </div>
+      )}
 
       {/* Expanded checks detail */}
       {isExpanded && pr.checks.length > 0 && (

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Cpu,
   AlertTriangle,
@@ -10,6 +10,8 @@ import {
   User,
   Building2,
   Info,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import type { ActionsUsage, ActionsUsageAccount } from '../types';
 import { calculateActionsPacing } from '../utils/actionsUsage';
@@ -20,6 +22,7 @@ interface ActionsUsageCardProps {
   isLoading?: boolean;
   accounts?: ActionsUsageAccount[];
   selectedAccount?: string;
+  isCompact?: boolean;
   onSelectAccount?: (accountName: string) => void;
 }
 
@@ -29,8 +32,14 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
   isLoading,
   accounts = [],
   selectedAccount,
+  isCompact = false,
   onSelectAccount,
 }) => {
+  const [showBreakdown, setShowBreakdown] = useState(!isCompact);
+
+  useEffect(() => {
+    setShowBreakdown(!isCompact);
+  }, [isCompact]);
   const currentAccountName = selectedAccount || usage?.accountName;
   const currentAccount = accounts.find((a) => a.name === currentAccountName);
   const isOrg = currentAccount?.type === 'org' || usage?.accountType === 'org';
@@ -144,7 +153,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
         : CheckCircle2;
 
   return (
-    <div className="glass-panel rounded-2xl p-6 border border-slate-800/80 shadow-xl relative overflow-hidden">
+    <div id="actions-usage-section" className="glass-panel rounded-2xl p-6 border border-slate-800/80 shadow-xl relative overflow-hidden transition-all">
       {/* Background ambient glow */}
       <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -256,30 +265,47 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
       </div>
 
       {/* OS Breakdown */}
-      <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-800/80">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
-          <Terminal className="w-4 h-4 text-orange-400 shrink-0" />
-          <div>
-            <div className="text-[11px] text-slate-400 font-medium">Ubuntu (x1)</div>
-            <div className="text-sm font-semibold font-mono text-slate-200">{breakdown.ubuntu.toLocaleString()} <span className="text-xs text-slate-400 font-normal">分</span></div>
-          </div>
+      <div className="pt-3 border-t border-slate-800/80">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-slate-400">OS別 実稼働内訳</span>
+          <button
+            type="button"
+            onClick={() => setShowBreakdown(!showBreakdown)}
+            className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors py-0.5 px-1.5 rounded hover:bg-indigo-500/10 cursor-pointer"
+            aria-expanded={showBreakdown}
+          >
+            <span>{showBreakdown ? '内訳を隠す' : '内訳を表示'}</span>
+            {showBreakdown ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
-          <Apple className="w-4 h-4 text-sky-400 shrink-0" />
-          <div>
-            <div className="text-[11px] text-slate-400 font-medium">macOS (x10)</div>
-            <div className="text-sm font-semibold font-mono text-slate-200">{breakdown.macOS.toLocaleString()} <span className="text-xs text-slate-400 font-normal">分</span></div>
-          </div>
-        </div>
+        {showBreakdown && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-3">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
+              <Terminal className="w-4 h-4 text-orange-400 shrink-0" />
+              <div>
+                <div className="text-[11px] text-slate-400 font-medium">Ubuntu (x1)</div>
+                <div className="text-sm font-semibold font-mono text-slate-200">{breakdown.ubuntu.toLocaleString()} <span className="text-xs text-slate-400 font-normal">分</span></div>
+              </div>
+            </div>
 
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
-          <Monitor className="w-4 h-4 text-blue-400 shrink-0" />
-          <div>
-            <div className="text-[11px] text-slate-400 font-medium">Windows (x2)</div>
-            <div className="text-sm font-semibold font-mono text-slate-200">{breakdown.windows.toLocaleString()} <span className="text-xs text-slate-400 font-normal">分</span></div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
+              <Apple className="w-4 h-4 text-sky-400 shrink-0" />
+              <div>
+                <div className="text-[11px] text-slate-400 font-medium">macOS (x10)</div>
+                <div className="text-sm font-semibold font-mono text-slate-200">{breakdown.macOS.toLocaleString()} <span className="text-xs text-slate-400 font-normal">分</span></div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
+              <Monitor className="w-4 h-4 text-blue-400 shrink-0" />
+              <div>
+                <div className="text-[11px] text-slate-400 font-medium">Windows (x2)</div>
+                <div className="text-sm font-semibold font-mono text-slate-200">{breakdown.windows.toLocaleString()} <span className="text-xs text-slate-400 font-normal">分</span></div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

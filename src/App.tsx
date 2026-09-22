@@ -17,6 +17,7 @@ import {
   getLatestRateLimit,
 } from './services/githubApi';
 import { Header } from './components/Header';
+import { DashboardSummaryBar } from './components/DashboardSummaryBar';
 import { ActionsUsageCard } from './components/ActionsUsageCard';
 import { RepoCard } from './components/RepoCard';
 import { RunnersCard } from './components/RunnersCard';
@@ -31,6 +32,8 @@ import {
   DEMO_RUNNERS,
 } from './data/mockData';
 
+const VIEW_MODE_STORAGE_KEY = 'dashboard_view_mode';
+
 export function App() {
   const isDemoMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
 
@@ -39,6 +42,34 @@ export function App() {
     return loadSettings();
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // 表示モード（簡易 / 詳細）。デフォルトはスマホ・タブレット幅なら compact、PCなら expanded
+  const [viewMode, setViewMode] = useState<'compact' | 'expanded'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+      if (saved === 'compact' || saved === 'expanded') {
+        return saved;
+      }
+      if (window.innerWidth < 768) {
+        return 'compact';
+      }
+    }
+    return 'expanded';
+  });
+
+  const handleToggleViewMode = () => {
+    setViewMode((prev) => {
+      const next = prev === 'compact' ? 'expanded' : 'compact';
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(VIEW_MODE_STORAGE_KEY, next);
+        } catch {
+          // localStorage 使用不可時は何もしない
+        }
+      }
+      return next;
+    });
+  };
 
   const [selectedUsageAccount, setSelectedUsageAccount] = useState<string>(() => {
     if (isDemoMode) return 'demo-developer';
@@ -380,12 +411,14 @@ export function App() {
         isRefreshing={state.isRefreshing}
         lastRefreshedAt={state.lastRefreshedAt}
         rateLimit={state.rateLimit}
+        viewMode={viewMode}
+        onToggleViewMode={handleToggleViewMode}
         onRefresh={() => refreshData()}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {isDemoMode && (
           <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
             <div className="flex items-center gap-2">
@@ -414,6 +447,22 @@ export function App() {
           </div>
         )}
 
+        {/* Dashboard Status Highlights */}
+        {(() => {
+          const currentAcc = selectedUsageAccount || settings.username;
+          const item = state.usageMap?.[currentAcc];
+          const usageData = item ? item.usage : (currentAcc === settings.username ? state.usage : null);
+
+          return (
+            <DashboardSummaryBar
+              projects={state.projects}
+              usage={usageData}
+              runners={state.runners}
+              showRunners={Boolean(settings.showSelfHostedRunners)}
+            />
+          );
+        })()}
+
         {/* 1. Actions Usage Summary */}
         {(() => {
           const currentAcc = selectedUsageAccount || settings.username;
@@ -428,6 +477,7 @@ export function App() {
               isLoading={state.isRefreshing && !usageData && !usageErr}
               accounts={accounts}
               selectedAccount={currentAcc}
+              isCompact={viewMode === 'compact'}
               onSelectAccount={(name) => setSelectedUsageAccount(name)}
             />
           );
@@ -439,6 +489,7 @@ export function App() {
             runners={state.runners}
             isLoading={state.isLoadingRunners}
             error={state.runnersError}
+            isCompact={viewMode === 'compact'}
           />
         )}
 
@@ -491,6 +542,7 @@ export function App() {
                 <RepoCard
                   key={repo.fullName}
                   repo={repo}
+                  isCompact={viewMode === 'compact'}
                   onRemove={handleRemoveRepo}
                 />
               ))}

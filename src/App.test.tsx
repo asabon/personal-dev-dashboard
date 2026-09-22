@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { App } from './App';
 
 describe('App Demo Mode (?demo=true)', () => {
@@ -51,5 +51,27 @@ describe('App Demo Mode (?demo=true)', () => {
 
     // オンボーディングモーダルの開始ボタンが表示されること
     expect(screen.getByText('ダッシュボードを開始')).toBeInTheDocument();
+  });
+
+  it('表示モード（簡易 / 詳細）の切り替えトグルが正しく動作すること', async () => {
+    delete (window as any).location;
+    window.location = {
+      ...originalLocation,
+      search: '?demo=true',
+    } as any;
+
+    window.innerWidth = 1200;
+
+    render(<App />);
+
+    // トグルボタンの取得
+    const toggleBtn = screen.getByRole('button', { name: /詳細表示に切り替え|簡易表示に切り替え/ });
+    expect(toggleBtn).toBeInTheDocument();
+
+    fireEvent.click(toggleBtn);
+    expect(localStorage.getItem('dashboard_view_mode')).toBe('compact');
+
+    fireEvent.click(toggleBtn);
+    expect(localStorage.getItem('dashboard_view_mode')).toBe('expanded');
   });
 });
