@@ -14,31 +14,72 @@ import { RepoCard } from './components/RepoCard';
 import { RunnersCard } from './components/RunnersCard';
 import { SettingsModal } from './components/SettingsModal';
 import { OnboardingModal } from './components/OnboardingModal';
+import {
+  DEMO_SETTINGS,
+  DEMO_USAGE,
+  DEMO_PROJECTS,
+  DEMO_RUNNERS,
+} from './data/mockData';
 
 export function App() {
-  const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
+  const isDemoMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
+
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    if (isDemoMode) return DEMO_SETTINGS;
+    return loadSettings();
+  });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const [state, setState] = useState<DashboardState>({
-    isLoading: false,
-    isRefreshing: false,
-    lastRefreshedAt: null,
-    rateLimit: null,
-    usage: null,
-    projects: [],
-    runners: [],
-    isLoadingRunners: false,
-    runnersError: null,
-    error: null,
+  const [state, setState] = useState<DashboardState>(() => {
+    if (isDemoMode) {
+      return {
+        isLoading: false,
+        isRefreshing: false,
+        lastRefreshedAt: new Date(),
+        rateLimit: {
+          remaining: 4892,
+          limit: 5000,
+          resetAt: new Date(Date.now() + 1000 * 60 * 45),
+        },
+        usage: DEMO_USAGE,
+        projects: DEMO_PROJECTS,
+        runners: DEMO_RUNNERS,
+        isLoadingRunners: false,
+        runnersError: null,
+        error: null,
+      };
+    }
+    return {
+      isLoading: false,
+      isRefreshing: false,
+      lastRefreshedAt: null,
+      rateLimit: null,
+      usage: null,
+      projects: [],
+      runners: [],
+      isLoadingRunners: false,
+      runnersError: null,
+      error: null,
+    };
   });
 
   const [actionsError, setActionsError] = useState<string | null>(null);
 
-  // 初回アクセス（PAT 未設定）の判定
-  const needsOnboarding = !settings.pat;
+  // 初回アクセス（PAT 未設定）の判定（デモモード時はオンボーディング非表示）
+  const needsOnboarding = !isDemoMode && !settings.pat;
 
   // データ取得関数
   const refreshData = useCallback(async (isSilent = false) => {
+    if (isDemoMode) {
+      if (!isSilent) {
+        setState((prev) => ({ ...prev, isRefreshing: true }));
+        setTimeout(() => {
+          setState((prev) => ({ ...prev, isRefreshing: false, lastRefreshedAt: new Date() }));
+        }, 500);
+      }
+      return;
+    }
+
     if (!settings.pat || !settings.username) return;
 
     if (!isSilent) {
@@ -228,6 +269,27 @@ export function App() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {isDemoMode && (
+          <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
+              </span>
+              <span>
+                <strong className="font-semibold text-indigo-200">デモモード表示中:</strong>{' '}
+                サンプルデータで各機能をプレビューしています（実際の GitHub API 通信は行われません）。
+              </span>
+            </div>
+            <a
+              href="./"
+              className="inline-flex items-center gap-1 font-medium text-indigo-400 hover:text-indigo-300 hover:underline shrink-0"
+            >
+              通常モード（PAT入力）へ戻る &rarr;
+            </a>
+          </div>
+        )}
+
         {state.error && (
           <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm flex items-center gap-3">
             <AlertCircle className="w-5 h-5 shrink-0 text-rose-400" />
