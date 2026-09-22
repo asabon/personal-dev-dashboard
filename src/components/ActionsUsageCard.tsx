@@ -1,6 +1,7 @@
 import React from 'react';
 import { Cpu, AlertTriangle, AlertCircle, CheckCircle2, Monitor, Apple, Terminal } from 'lucide-react';
 import type { ActionsUsage } from '../types';
+import { calculateActionsPacing } from '../utils/actionsUsage';
 
 interface ActionsUsageCardProps {
   usage: ActionsUsage | null;
@@ -34,43 +35,22 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({ usage, error
   if (!usage) return null;
 
   const { totalMinutesUsed, includedMinutes, usagePercentage, breakdown } = usage;
-  const remainingMinutes = Math.max(0, includedMinutes - totalMinutesUsed);
+  const {
+    daysInMonth,
+    expectedPercentage,
+    expectedMinutes,
+    remainingMinutes,
+    paceStatusText,
+    barGradient,
+    badgeColor,
+  } = calculateActionsPacing(totalMinutesUsed, includedMinutes, usagePercentage);
 
-  // 当月の日付と経過目安の計算
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const currentDay = now.getDate();
-  const expectedPercentage = Math.round((currentDay / daysInMonth) * 100);
-  const expectedMinutes = Math.round((includedMinutes * currentDay) / daysInMonth);
-
-  // ペース判定に基づくカラー・テキスト設定
-  // 1. 全体使用率が 90% 以上: 危険（赤）
-  // 2. 目安比 +15% 超過 かつ 使用量 >= 100分: ハイペース（赤）
-  // 3. 目安比 +5% 超過 かつ 使用量 >= 100分: やや速い（黄）
-  // 4. それ以外: 順調（緑）
-  let barGradient = 'from-emerald-500 to-teal-400';
-  let badgeColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-  let paceStatusText = '順調 (目安内)';
-  let PaceIcon = CheckCircle2;
-
-  if (usagePercentage >= 90) {
-    barGradient = 'from-rose-500 to-red-600';
-    badgeColor = 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-    paceStatusText = '残り僅か';
-    PaceIcon = AlertTriangle;
-  } else if (usagePercentage > expectedPercentage + 15 && totalMinutesUsed >= 100) {
-    barGradient = 'from-rose-500 to-red-600';
-    badgeColor = 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-    paceStatusText = 'ハイペース';
-    PaceIcon = AlertTriangle;
-  } else if (usagePercentage > expectedPercentage + 5 && totalMinutesUsed >= 100) {
-    barGradient = 'from-amber-500 to-yellow-400';
-    badgeColor = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-    paceStatusText = 'やや速い';
-    PaceIcon = AlertCircle;
-  }
+  const PaceIcon =
+    paceStatusText === '残り僅か' || paceStatusText === 'ハイペース'
+      ? AlertTriangle
+      : paceStatusText === 'やや速い'
+        ? AlertCircle
+        : CheckCircle2;
 
   return (
     <div className="glass-panel rounded-2xl p-6 border border-slate-800/80 shadow-xl relative overflow-hidden">

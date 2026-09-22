@@ -49,6 +49,7 @@ GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合
 ## 🛠 主要コマンド
 
 - `npm run dev`: ローカル開発サーバーを起動 (`http://localhost:5173/`)
+- `npm test`: 単体テストを実行 (`vitest run`)
 - `npm run typecheck`: TypeScript 型チェックを実行 (`tsc --noEmit`)
 - `npm run build`: プロダクションビルドを実行 (`tsc && vite build`)
 - `npm run preview`: 本番ビルド成果物をローカルでプレビュー
@@ -66,4 +67,5 @@ GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合
 - 🧩 [データモデル & State 定義 (`docs/dev/data-model.md`)](docs/dev/data-model.md)
 - 🖥️ [UI / UX コンポーネント設計 (`docs/dev/ui-design.md`)](docs/dev/ui-design.md)
 - 🚀 [開発・ブランチ・リリース運用ガイド (`docs/dev/release-flow.md`)](docs/dev/release-flow.md)
+- 🧪 [テスト方針 & テスト観点仕様書 (`docs/dev/testing.md`)](docs/dev/testing.md)
 - 🗺️ [開発ロードマップ & 実装実績 (`docs/dev/roadmap.md`)](docs/dev/roadmap.md)
