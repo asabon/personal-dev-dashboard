@@ -49,6 +49,7 @@ GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合
 ## 🛠 主要コマンド
 
 - `npm run dev`: ローカル開発サーバーを起動 (`http://localhost:5173/`)
+- `npm test`: 単体テストを実行 (`vitest run`)
 - `npm run typecheck`: TypeScript 型チェックを実行 (`tsc --noEmit`)
 - `npm run build`: プロダクションビルドを実行 (`tsc && vite build`)
 - `npm run preview`: 本番ビルド成果物をローカルでプレビュー
