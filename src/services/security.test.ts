@@ -140,4 +140,26 @@ describe('PAT セキュリティ・漏洩防止テスト (Zero-Backend Privacy G
       expect(logContent).not.toContain(TEST_PAT);
     }
   });
+
+  it('index.html に厳格な CSP (Content Security Policy) が設定されており、api.github.com 以外の外部通信が遮断されていること', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const htmlPath = path.resolve(__dirname, '../../index.html');
+    const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+
+    // CSP メタタグの存在確認
+    const cspMatch = htmlContent.match(/<meta\s+http-equiv="Content-Security-Policy"\s+content="([^"]+)"/i);
+    expect(cspMatch).not.toBeNull();
+
+    const cspContent = cspMatch![1];
+
+    // connect-src ディレクティブの検証
+    const connectSrcMatch = cspContent.match(/connect-src\s+([^;]+)/);
+    expect(connectSrcMatch).not.toBeNull();
+
+    const allowedConnectSources = connectSrcMatch![1].trim().split(/\s+/);
+
+    // connect-src は 'self' と 'https://api.github.com/' のみ許可されていることを保証
+    expect(allowedConnectSources).toEqual(['\'self\'', 'https://api.github.com/']);
+  });
 });

@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Personal Dev Dashboard</title>
     <meta name="description" content="GitHub Actions 無料枠使用量 & 複数リポジトリ PR × CI 統合ダッシュボード" />
+    <!-- Content Security Policy: api.github.com 以外の外部通信をブラウザレベルで強制遮断 -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self' https://api.github.com/; img-src 'self' data: https://avatars.githubusercontent.com/ https://github.githubassets.com/; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; script-src 'self';"
+    />
     <!-- Google Fonts: Inter & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

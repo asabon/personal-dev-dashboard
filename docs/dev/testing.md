@@ -37,6 +37,7 @@ Personal Access Token (PAT) が安全に取り扱われ、設計通りの局所�
 | 2 | **ヘッダー局所性検証** | トークンの送信形態を検証 | URL パスやクエリパラメータに PAT が露出せず、**HTTPS かつ `Authorization: Bearer <token>` ヘッダーでのみ送信** されていること（ブラウザ履歴やアクセスログへの残存防止） |
 | 3 | **保存先局所性検証** | トークン保存処理（`saveSettings`）実行後のブラウザ内ストレージを検証 | `localStorage` の特定設定キー（`personal_dev_dashboard_settings`）以外、すなわち **Cookie や `sessionStorage` などに PAT が書き込まれない** こと |
 | 4 | **コンソールログ漏洩防止検証** | 通常実行時および API エラー時（401 Unauthorized 等）のコンソール出力を監視 | `console.log`, `console.warn`, `console.error` に **生の PAT 文字列が出力されない** こと |
+| 5 | **CSP 厳格性検証** | `index.html` に定義された Content-Security-Policy の `connect-src` を解析 | **`'self'` と `https://api.github.com/` 以外の外部接続が一切許可されていない** ことをテストで検証（CSP 緩和改ざんの自動検知） |
 
 ---
 
