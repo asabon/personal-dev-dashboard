@@ -136,24 +136,27 @@ export const DashboardSummaryBar: React.FC<DashboardSummaryBarProps> = ({
         )}
 
         {/* 3. Actions 残り枠警告 */}
-        {isUsageWarning && warningUsage && (
-          <button
-            type="button"
-            onClick={() => scrollToElement('actions-usage-section')}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all active:scale-95 cursor-pointer ${
-              isUsageCritical
-                ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border-rose-500/30 font-semibold'
-                : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/20'
-            }`}
-            title="Actions 使用量カードへ移動"
-          >
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-            <span>
-              Actions残り僅か{warningUsage.accountName ? `: ${warningUsage.accountName}` : ''} ({warningUsage.usagePercentage}%)
-            </span>
-            <ArrowDown className="w-3 h-3 opacity-70" />
-          </button>
-        )}
+        {isUsageWarning && warningUsage && (() => {
+          const remainingPercent = Math.max(0, 100 - warningUsage.usagePercentage);
+          return (
+            <button
+              type="button"
+              onClick={() => scrollToElement('actions-usage-section')}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all active:scale-95 cursor-pointer ${
+                isUsageCritical
+                  ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border-rose-500/30 font-semibold'
+                  : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/20'
+              }`}
+              title="Actions 使用量カードへ移動"
+            >
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+              <span>
+                Actions 残{remainingPercent}%{warningUsage.accountName ? ` (${warningUsage.accountName})` : ''}
+              </span>
+              <ArrowDown className="w-3 h-3 opacity-70" />
+            </button>
+          );
+        })()}
 
         {/* 4. Runner オフライン警告 */}
         {offlineRunnerCount > 0 && (

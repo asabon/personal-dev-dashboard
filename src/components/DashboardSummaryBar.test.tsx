@@ -121,7 +121,7 @@ describe('DashboardSummaryBar', () => {
       />
     );
 
-    expect(screen.getByText(/Actions残り僅か/)).toBeDefined();
+    expect(screen.getByText(/Actions 残/)).toBeDefined();
   });
 
   it('usages 配列のうち 1 つでも 85% を超過していれば警告を表示すること', () => {
@@ -147,7 +147,7 @@ describe('DashboardSummaryBar', () => {
       />
     );
 
-    expect(screen.getByText('Actions残り僅か: my-org (90%)')).toBeDefined();
+    expect(screen.getByText('Actions 残10% (my-org)')).toBeDefined();
   });
 
   it('renders runner offline warning when runner is down and showRunners is true', () => {
