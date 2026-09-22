@@ -27,15 +27,17 @@ UI 描画のために React の State として保持する統合データ構造
 ### 2.1 Actions 使用量モデル
 ```typescript
 export interface ActionsUsage {
-  totalMinutesUsed: number;
+  totalMinutesUsed: number; // OS倍率（Ubuntu x1, macOS x10, Windows x2）適用後の換算合計分
   includedMinutes: number; // 無料枠（通常 2000 分）
   usagePercentage: number; // 使用率 (0 - 100%)
   breakdown: {
-    ubuntu: number;
-    macOS: number;
-    windows: number;
+    ubuntu: number; // 実稼働時間（分）
+    macOS: number;  // 実稼働時間（分）
+    windows: number; // 実稼働時間（分）
   };
   lastUpdated: string; // ISO 8601
+  accountName?: string;
+  accountType?: 'user' | 'org';
 }
 ```
 

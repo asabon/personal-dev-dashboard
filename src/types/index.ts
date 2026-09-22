@@ -33,12 +33,19 @@ export interface ActionsUsageItem {
 }
 
 export interface ActionsUsage {
+  /** OS倍率（Ubuntu x1, macOS x10, Windows x2）適用後の換算合計分 */
   totalMinutesUsed: number;
-  includedMinutes: number; // 通常 2000 分
-  usagePercentage: number; // 0 - 100
+  /** 無料枠（通常 2000 分） */
+  includedMinutes: number;
+  /** 使用率 (0 - 100) */
+  usagePercentage: number;
+  /** 各 OS の実稼働時間（分）内訳 */
   breakdown: ActionsUsageBreakdown;
-  lastUpdated: string; // ISO 8601
+  /** 最終更新日時 (ISO 8601) */
+  lastUpdated: string;
+  /** アカウント名（個人ユーザー名または Organization 名） */
   accountName?: string;
+  /** アカウント種別 ('user' | 'org') */
   accountType?: ActionsUsageAccountType;
 }
 
