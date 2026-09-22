@@ -67,7 +67,7 @@ describe('DashboardSummaryBar', () => {
     scopeName: 'test-org',
   };
 
-  it('renders "全リポジトリ・Actions正常" when everything is healthy', () => {
+  it('renders "異常なし" when everything is healthy', () => {
     render(
       <DashboardSummaryBar
         projects={[dummyRepoSuccess]}
@@ -77,7 +77,7 @@ describe('DashboardSummaryBar', () => {
       />
     );
 
-    expect(screen.getByText('全リポジトリ・Actions正常')).toBeDefined();
+    expect(screen.getByText('異常なし')).toBeDefined();
   });
 
   it('renders CI failure button and scrolls when clicked', () => {

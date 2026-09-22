@@ -101,7 +101,7 @@ export const DashboardSummaryBar: React.FC<DashboardSummaryBarProps> = ({
         {isAllClear && (
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>全リポジトリ・Actions正常</span>
+            <span>異常なし</span>
           </div>
         )}
       </div>
