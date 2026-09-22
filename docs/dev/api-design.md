@@ -10,7 +10,12 @@
 
 ### 2.1 GitHub Actions 使用量取得 (REST API)
 
-ユーザー個人の今月の GitHub Actions 無料枠（月2000分）の使用状況を取得します。
+ユーザー個人の今月の GitHub Actions 使用状況を取得します。
+
+> [!IMPORTANT]
+> **API 仕様上の制約事項 (パブリックリポジトリ合算)**  
+> GitHub の旧製品別課金 API (`billing/actions`) が 410 Gone で廃止され、現行の最新 API (`billing/usage/summary`) に一本化されたことに伴い、API レスポンス（`grossQuantity`）には **パブリックリポジトリでの無料実行時間もすべて合算されて返却** されます（API 上でプライベートのみを分離抽出することはできません）。  
+> そのため、本アプリの集計値は「総稼働時間（Gross Metered Usage）に OS 倍率を適用した換算値」となり、GitHub Web サイトの無料枠ゲージ（プライベートのみ）とは数値が乖離する場合があります。
 
 - **Endpoint**: `GET https://api.github.com/users/{username}/settings/billing/usage/summary?product=actions`
 - **権限 (Scopes)**: `user` (Classic PAT)

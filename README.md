@@ -1,6 +1,6 @@
 # Personal Dev Dashboard 🚀
 
-> 個人開発者のための **GitHub Actions 無料枠使用量 & 複数リポジトリ PR × CI 統合ダッシュボード**
+> 個人開発者のための **GitHub Actions 使用状況 & 複数リポジトリ PR × CI 統合ダッシュボード**
 
 [![CI](https://github.com/asabon/personal-dev-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/asabon/personal-dev-dashboard/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/asabon/personal-dev-dashboard)](https://github.com/asabon/personal-dev-dashboard/releases)
@@ -12,7 +12,7 @@
 
 個人開発で複数のリポジトリを並行して動かしていると、以下のような不便が生じがちです：
 
-- **「今月 Actions の無料枠（2,000分）をどれくらい消費したか」** を確認するために設定の課金画面まで潜る必要がある
+- **「今月 Actions をどれくらい稼働・消費させたか」** を確認するために設定の課金画面まで潜る必要がある
 - 各リポジトリの **「どの PR の CI が動いていて、どれが落ちたか」** を 1 画面でパッと一覧できない
 - 自前で動かしている **セルフホステッドランナー（Self-Hosted Runner）** が今動いているのかオフラインなのか分からない
 
@@ -32,7 +32,14 @@
   - 月間クォータ（2,000分）を基準に、当月の使用量（換算目安）と残り無料枠（目安）を直感的に可視化。
   - OS ごとの消費倍率（**Ubuntu: 1倍、macOS: 10倍、Windows: 2倍**）を自動適用して無料枠換算消費量を算出。
   - 当日の暦日進捗に応じた「本日目安」インジケーターと、消費ペース判定（`順調` / `やや速い` / `ハイペース` / `残り僅か`）を自動表示。
-  - OS 別（Ubuntu / macOS / Windows）の実稼働時間内訳も確認可能（※ GitHub API の仕様上、パブリックリポジトリでの無料実行時間も含んだ総稼働時間が集計されます）。
+  - OS 別（Ubuntu / macOS / Windows）の実稼働時間内訳も確認可能。
+
+> [!IMPORTANT]
+> **GitHub Actions 使用量の集計仕様（制約事項）について**  
+> 本アプリケーションが表示する Actions 使用量は、GitHub 公式 API（`billing/usage/summary`）から取得した **「パブリックおよびプライベートリポジトリを合算した総稼働時間（Gross Metered Usage）」** に基づいて算出されています。  
+> GitHub Web サイトの Billing 画面に表示される無料枠ゲージ（プライベートリポジトリのみを対象とした Included minutes）とは異なり、**パブリックリポジトリでの無料実行時間も合算されてカウントされます**（GitHub 公式 API 仕様上の制約です）。  
+> そのため、本ダッシュボードの残り枠やペース判定は、**「月間 2,000 分のクォータを基準とした全体の稼働ペース管理の目安」** としてご活用ください。
+
 - **🔍 複数リポジトリの PR & CI 統合ビュー**:
   - 監視対象リポジトリの Open な Pull Request と CI チェック結果（Check Runs）を 1 画面に集約。
   - 失敗したチェックの詳細ログへワンクリックでジャンプ可能。
