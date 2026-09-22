@@ -16,6 +16,7 @@ description: Publish a new release for Personal Dev Dashboard. Pushes the releas
 ```bash
 git switch main
 git pull origin main
+git fetch --prune
 git branch -d chore/release-vX.Y.Z
 ```
 
