@@ -18,28 +18,9 @@
 
 **Personal Dev Dashboard** は、これらの情報をブラウザ 1 画面でリアルタイムに俯瞰できる、**完全クライアント完結型 (Zero-Backend SPA)** のダッシュボードです。
 
-```text
-+-----------------------------------------------------------------------------------+
-|  [Logo] Personal Dev Dashboard       [残りAPI: 4920] [最終更新: 12:30] [🔄更新] [⚙️]  |
-+-----------------------------------------------------------------------------------+
-|                                                                                   |
-|  ■ Actions 無料枠使用状況 (今月)                            [ 順調 (目安内) ]     |
-|  当月の使用量: 550 / 2,000 分 (28%)                 残り無料枠: 1,450 分 (枠の 72%)|
-|  [=======>------------------------]                                               |
-|  0 分                   ▲ 本日目安: 667 分 (33%)                         2,000 分 |
-|  ・Ubuntu: 550 分  ・macOS: 0 分  ・Windows: 0 分                                 |
-|                                                                                   |
-+-----------------------------------------------------------------------------------+
-|                                                                                   |
-|  ■ 監視リポジトリ一覧 (+ リポジトリ追加)                                            |
-|  ▼ owner/frontend (Open PR: 2)                                                    |
-|  | #42 feat: Add OAuth login flow                   [ CI: 失敗 ❌ ]  [👤 alice]   |
-|  | #39 fix: Button alignment                        [ CI: 成功 ✅ ]  [👤 bob]     |
-|                                                                                   |
-|  ■ セルフホステッドランナー (任意表示)                                             |
-|  | [🟢 online] gpu-runner-01  |  [🟡 busy] m2-mac-mini  |  [🔴 offline] ci-box-02 |
-+-----------------------------------------------------------------------------------+
-```
+<p align="center">
+  <img src="docs/assets/dashboard-preview.png" alt="Personal Dev Dashboard Preview" width="900" />
+</p>
 
 ---
 
@@ -56,6 +37,8 @@
   - 失敗したチェックの詳細ログへワンクリックでジャンプ可能。
 - **🖥️ セルフホステッドランナー監視 (任意)**:
   - リポジトリまたは Organization の Self-Hosted Runners の稼働状況（online / busy / offline）を一覧表示。
+- **🎮 トークン不要のデモモード (?demo=true)**:
+  - URL に `?demo=true` を付けるだけで、PAT なしで誰でもすぐに動くダッシュボードを体験可能。
 - **🎨 開発者向けモダンダークテーマ**:
   - サブモニターやデスクトップの片隅に常時表示しやすい、洗練されたダークテーマ UI。
 
@@ -76,7 +59,11 @@
 
 ## 🌐 今すぐ使う (Live Demo) & 🚀 はじめかた (Quick Start)
 
-👉 **[https://asabon.github.io/personal-dev-dashboard/](https://asabon.github.io/personal-dev-dashboard/)**
+トークンを入力せずに実際の動く画面を試したい方は、デモモードですぐに体験いただけます：  
+👉 **[🌟 デモモードを開く (https://asabon.github.io/personal-dev-dashboard/?demo=true)](https://asabon.github.io/personal-dev-dashboard/?demo=true)**
+
+ご自身の GitHub データで本格的に利用する場合は、インストール不要で 3 ステップですぐに利用できます：  
+👉 **[🚀 通常モードを開く (https://asabon.github.io/personal-dev-dashboard/)](https://asabon.github.io/personal-dev-dashboard/)**
 
 インストール不要で、ブラウザから 3 ステップですぐに利用できます：
 
