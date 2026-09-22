@@ -1,5 +1,6 @@
 import type {
   ActionsUsage,
+  ActionsUsageItem,
   AppSettings,
   RepositoryDashboardData,
   SelfHostedRunner,
@@ -19,6 +20,8 @@ export const DEMO_SETTINGS: AppSettings = {
 };
 
 export const DEMO_USAGE: ActionsUsage = {
+  accountName: 'demo-developer',
+  accountType: 'user',
   totalMinutesUsed: 550,
   includedMinutes: 2000,
   usagePercentage: 28,
@@ -28,6 +31,31 @@ export const DEMO_USAGE: ActionsUsage = {
     windows: 0,
   },
   lastUpdated: new Date().toISOString(),
+};
+
+export const DEMO_ORG_USAGE: ActionsUsage = {
+  accountName: 'demo-org',
+  accountType: 'org',
+  totalMinutesUsed: 1240,
+  includedMinutes: 2000,
+  usagePercentage: 62,
+  breakdown: {
+    ubuntu: 1100,
+    macOS: 140,
+    windows: 0,
+  },
+  lastUpdated: new Date().toISOString(),
+};
+
+export const DEMO_USAGE_MAP: Record<string, ActionsUsageItem> = {
+  'demo-developer': {
+    usage: DEMO_USAGE,
+    error: null,
+  },
+  'demo-org': {
+    usage: DEMO_ORG_USAGE,
+    error: null,
+  },
 };
 
 export const DEMO_PROJECTS: RepositoryDashboardData[] = [

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   validateToken,
   fetchActionsUsage,
+  fetchOrgActionsUsage,
   fetchRepositoryPRs,
   fetchUserRepositories,
 } from './githubApi';
@@ -59,6 +60,7 @@ describe('PAT セキュリティ・漏洩防止テスト (Zero-Backend Privacy G
     // 複数の主要 API を呼び出し
     await validateToken(TEST_PAT);
     await fetchActionsUsage(TEST_PAT, 'test-user');
+    await fetchOrgActionsUsage(TEST_PAT, 'test-org');
     await fetchRepositoryPRs(TEST_PAT, 'test-user', 'test-repo');
     await fetchUserRepositories(TEST_PAT);
 

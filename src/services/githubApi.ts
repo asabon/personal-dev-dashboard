@@ -64,6 +64,61 @@ export async function validateToken(pat: string): Promise<{ username: string; av
   };
 }
 
+function parseActionsUsageResponse(
+  data: any,
+  accountName?: string,
+  accountType?: 'user' | 'org'
+): ActionsUsage {
+  const includedMinutes = data.included_minutes || 2000;
+
+  let totalMinutes = 0;
+  let ubuntuMinutes = 0;
+  let macMinutes = 0;
+  let windowsMinutes = 0;
+
+  if (Array.isArray(data.usageItems)) {
+    for (const item of data.usageItems) {
+      if (item.unitType && item.unitType !== 'minutes') {
+        continue;
+      }
+      const sku = (item.sku || '').toLowerCase();
+      const qty = item.grossQuantity ?? item.quantity ?? 0;
+      totalMinutes += qty;
+
+      if (sku.includes('linux') || sku.includes('ubuntu')) {
+        ubuntuMinutes += qty;
+      } else if (sku.includes('mac') || sku.includes('darwin')) {
+        macMinutes += qty;
+      } else if (sku.includes('win')) {
+        windowsMinutes += qty;
+      } else {
+        ubuntuMinutes += qty;
+      }
+    }
+  } else if (typeof data.total_minutes_used === 'number') {
+    totalMinutes = data.total_minutes_used;
+    ubuntuMinutes = data.minutes_used_breakdown?.UBUNTU || 0;
+    macMinutes = data.minutes_used_breakdown?.MACOS || 0;
+    windowsMinutes = data.minutes_used_breakdown?.WINDOWS || 0;
+  }
+
+  const percentage = includedMinutes > 0 ? Math.min(100, Math.round((totalMinutes / includedMinutes) * 100)) : 0;
+
+  return {
+    totalMinutesUsed: Math.round(totalMinutes),
+    includedMinutes,
+    usagePercentage: percentage,
+    breakdown: {
+      ubuntu: Math.round(ubuntuMinutes),
+      macOS: Math.round(macMinutes),
+      windows: Math.round(windowsMinutes),
+    },
+    lastUpdated: new Date().toISOString(),
+    accountName,
+    accountType,
+  };
+}
+
 /**
  * ユーザーの Actions 無料枠使用量を取得する
  */
@@ -101,49 +156,47 @@ export async function fetchActionsUsage(pat: string, username: string): Promise<
   }
 
   const data = await res.json();
-  const includedMinutes = data.included_minutes || 2000;
+  return parseActionsUsageResponse(data, username, 'user');
+}
 
-  let totalMinutes = 0;
-  let ubuntuMinutes = 0;
-  let macMinutes = 0;
-  let windowsMinutes = 0;
-
-  if (Array.isArray(data.usageItems)) {
-    for (const item of data.usageItems) {
-      const sku = (item.sku || '').toLowerCase();
-      const qty = item.grossQuantity ?? item.quantity ?? 0;
-      totalMinutes += qty;
-
-      if (sku.includes('linux') || sku.includes('ubuntu')) {
-        ubuntuMinutes += qty;
-      } else if (sku.includes('mac') || sku.includes('darwin')) {
-        macMinutes += qty;
-      } else if (sku.includes('win')) {
-        windowsMinutes += qty;
-      } else {
-        ubuntuMinutes += qty;
-      }
+/**
+ * Organization の Actions 無料枠使用量を取得する
+ */
+export async function fetchOrgActionsUsage(pat: string, orgName: string): Promise<ActionsUsage> {
+  const res = await fetch(
+    `https://api.github.com/organizations/${encodeURIComponent(orgName)}/settings/billing/usage/summary?product=actions`,
+    {
+      headers: {
+        Authorization: `Bearer ${pat.trim()}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
     }
-  } else if (typeof data.total_minutes_used === 'number') {
-    totalMinutes = data.total_minutes_used;
-    ubuntuMinutes = data.minutes_used_breakdown?.UBUNTU || 0;
-    macMinutes = data.minutes_used_breakdown?.MACOS || 0;
-    windowsMinutes = data.minutes_used_breakdown?.WINDOWS || 0;
+  );
+
+  updateRateLimitFromHeaders(res.headers);
+
+  if (!res.ok) {
+    let errorDetail = '';
+    try {
+      const errorJson = await res.json();
+      if (errorJson.message) {
+        errorDetail = ` (${errorJson.message})`;
+      }
+    } catch {
+      // JSON パース失敗時は無視
+    }
+
+    if (res.status === 403 || res.status === 404) {
+      throw new Error(
+        `Organization (${orgName}) の Actions 使用量を取得できませんでした。Classic PAT に \`admin:org\` スコープが付与されているか、または管理者権限があるかご確認ください。${errorDetail}`
+      );
+    }
+    throw new Error(`Organization (${orgName}) の Actions 使用量取得失敗 (${res.status}${errorDetail})`);
   }
 
-  const percentage = includedMinutes > 0 ? Math.min(100, Math.round((totalMinutes / includedMinutes) * 100)) : 0;
-
-  return {
-    totalMinutesUsed: Math.round(totalMinutes),
-    includedMinutes,
-    usagePercentage: percentage,
-    breakdown: {
-      ubuntu: Math.round(ubuntuMinutes),
-      macOS: Math.round(macMinutes),
-      windows: Math.round(windowsMinutes),
-    },
-    lastUpdated: new Date().toISOString(),
-  };
+  const data = await res.json();
+  return parseActionsUsageResponse(data, orgName, 'org');
 }
 
 const REPO_PRS_QUERY = `
