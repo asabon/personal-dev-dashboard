@@ -33,6 +33,10 @@
     }
   }
   ```
+- **集計仕様**:
+  - `usageItems` 配列から各ランナー OS（Linux/Ubuntu, macOS, Windows）の実稼働時間を抽出。
+  - GitHub Actions の課金・無料枠ルールに基づき、各 OS の消費倍率（**Ubuntu: 1倍、macOS: 10倍、Windows: 2倍**）を適用して無料枠換算使用量（`totalMinutesUsed`）を算出。
+  - 内訳（`breakdown`）には各 OS の実稼働時間を保持。
 - **更新頻度**: 15分〜30分おき（または手動リフレッシュ）。毎分更新する必要はないため、キャッシュしてレートリミットを節約します。
 
 ---

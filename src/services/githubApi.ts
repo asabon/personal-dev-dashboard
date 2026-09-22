@@ -83,7 +83,6 @@ function parseActionsUsageResponse(
       }
       const sku = (item.sku || '').toLowerCase();
       const qty = item.grossQuantity ?? item.quantity ?? 0;
-      totalMinutes += qty;
 
       if (sku.includes('linux') || sku.includes('ubuntu')) {
         ubuntuMinutes += qty;
@@ -95,6 +94,8 @@ function parseActionsUsageResponse(
         ubuntuMinutes += qty;
       }
     }
+    // OS ごとの消費倍率（Ubuntu x1, macOS x10, Windows x2）を適用して無料枠換算値を算出
+    totalMinutes = (ubuntuMinutes * 1) + (macMinutes * 10) + (windowsMinutes * 2);
   } else if (typeof data.total_minutes_used === 'number') {
     totalMinutes = data.total_minutes_used;
     ubuntuMinutes = data.minutes_used_breakdown?.UBUNTU || 0;
