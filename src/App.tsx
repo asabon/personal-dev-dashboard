@@ -1,9 +1,17 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Plus, FolderGit2, AlertCircle } from 'lucide-react';
-import type { AppSettings, DashboardState, RepositoryDashboardData } from './types';
+import type {
+  AppSettings,
+  DashboardState,
+  RepositoryDashboardData,
+  ActionsUsageAccount,
+  ActionsUsageItem,
+} from './types';
 import { loadSettings, saveSettings, clearSettings } from './services/storage';
 import {
   fetchActionsUsage,
+  fetchOrgActionsUsage,
+  fetchUserOrganizations,
   fetchRepositoryPRs,
   fetchAllSelfHostedRunners,
   getLatestRateLimit,
@@ -17,6 +25,8 @@ import { OnboardingModal } from './components/OnboardingModal';
 import {
   DEMO_SETTINGS,
   DEMO_USAGE,
+  DEMO_ORG_USAGE,
+  DEMO_USAGE_MAP,
   DEMO_PROJECTS,
   DEMO_RUNNERS,
 } from './data/mockData';
@@ -30,6 +40,12 @@ export function App() {
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  const [selectedUsageAccount, setSelectedUsageAccount] = useState<string>(() => {
+    if (isDemoMode) return 'demo-developer';
+    return settings.username || '';
+  });
+  const [discoveredOrgs, setDiscoveredOrgs] = useState<string[]>([]);
+
   const [state, setState] = useState<DashboardState>(() => {
     if (isDemoMode) {
       return {
@@ -42,6 +58,8 @@ export function App() {
           resetAt: new Date(Date.now() + 1000 * 60 * 45),
         },
         usage: DEMO_USAGE,
+        usageMap: DEMO_USAGE_MAP,
+        selectedUsageAccount: 'demo-developer',
         projects: DEMO_PROJECTS,
         runners: DEMO_RUNNERS,
         isLoadingRunners: false,
@@ -55,6 +73,8 @@ export function App() {
       lastRefreshedAt: null,
       rateLimit: null,
       usage: null,
+      usageMap: {},
+      selectedUsageAccount: settings.username || '',
       projects: [],
       runners: [],
       isLoadingRunners: false,
@@ -64,6 +84,35 @@ export function App() {
   });
 
   const [actionsError, setActionsError] = useState<string | null>(null);
+
+  // 利用可能なアカウント（個人 + 所属/監視対象 Organization）一覧の算出
+  const accounts: ActionsUsageAccount[] = useMemo(() => {
+    if (isDemoMode) {
+      return [
+        { name: 'demo-developer', type: 'user' },
+        { name: 'demo-org', type: 'org' },
+      ];
+    }
+    const list: ActionsUsageAccount[] = [];
+    if (settings.username) {
+      list.push({ name: settings.username, type: 'user' });
+    }
+    const orgs = Array.from(
+      new Set([...(settings.monitoredOrgs || []), ...discoveredOrgs])
+    ).filter((o) => o && o !== settings.username);
+
+    for (const org of orgs) {
+      list.push({ name: org, type: 'org' });
+    }
+    return list;
+  }, [isDemoMode, settings.username, settings.monitoredOrgs, discoveredOrgs]);
+
+  // アカウント選択の自動同期
+  useEffect(() => {
+    if (!selectedUsageAccount && settings.username) {
+      setSelectedUsageAccount(settings.username);
+    }
+  }, [selectedUsageAccount, settings.username]);
 
   // 初回アクセス（PAT 未設定）の判定（デモモード時はオンボーディング非表示）
   const needsOnboarding = !isDemoMode && !settings.pat;
@@ -89,14 +138,64 @@ export function App() {
     setActionsError(null);
 
     try {
-      // 1. Actions 使用量の取得
+      // 1. Actions 使用量の取得 (ユーザー個人 + Org)
+      const newUsageMap: Record<string, ActionsUsageItem> = {};
+
+      // 1-1. ユーザー個人の使用量取得
       try {
         const usageData = await fetchActionsUsage(settings.pat, settings.username);
-        setState((prev) => ({ ...prev, usage: usageData }));
+        newUsageMap[settings.username] = { usage: usageData, error: null };
       } catch (err: any) {
         console.warn('Actions usage fetch failed:', err);
-        setActionsError(err.message || 'Actions 使用量の取得に失敗しました');
+        const errMsg = err.message || 'Actions 使用量の取得に失敗しました';
+        newUsageMap[settings.username] = { usage: null, error: errMsg };
+        setActionsError(errMsg);
       }
+
+      // 1-2. 所属 Org の取得（未取得の場合）
+      let currentOrgs = Array.from(
+        new Set([...(settings.monitoredOrgs || []), ...discoveredOrgs])
+      ).filter(Boolean);
+
+      if (currentOrgs.length === 0) {
+        try {
+          const orgs = await fetchUserOrganizations(settings.pat);
+          if (orgs.length > 0) {
+            setDiscoveredOrgs(orgs);
+            currentOrgs = orgs;
+          }
+        } catch (err) {
+          console.warn('Failed to discover user orgs:', err);
+        }
+      }
+
+      // 1-3. 各 Organization の使用量取得 (並行処理)
+      if (currentOrgs.length > 0) {
+        await Promise.allSettled(
+          currentOrgs.map(async (org) => {
+            try {
+              const orgUsage = await fetchOrgActionsUsage(settings.pat, org);
+              newUsageMap[org] = { usage: orgUsage, error: null };
+            } catch (err: any) {
+              console.warn(`Org (${org}) actions usage fetch failed:`, err);
+              newUsageMap[org] = {
+                usage: null,
+                error: err.message || 'Organization の使用量取得に失敗しました',
+              };
+            }
+          })
+        );
+      }
+
+      setState((prev) => {
+        const updatedMap = { ...(prev.usageMap || {}), ...newUsageMap };
+        const activeAcc = selectedUsageAccount || settings.username;
+        return {
+          ...prev,
+          usageMap: updatedMap,
+          usage: updatedMap[activeAcc]?.usage ?? updatedMap[settings.username]?.usage ?? null,
+        };
+      });
 
       // 2. 監視対象リポジトリの PR / CI 取得
       if (settings.repositories.length > 0) {
@@ -164,14 +263,29 @@ export function App() {
         error: err.message || 'データの取得中にエラーが発生しました',
       }));
     }
-  }, [settings.pat, settings.username, settings.repositories, settings.showSelfHostedRunners, settings.monitoredOrgs]);
+  }, [
+    settings.pat,
+    settings.username,
+    settings.repositories,
+    settings.showSelfHostedRunners,
+    settings.monitoredOrgs,
+    discoveredOrgs,
+    selectedUsageAccount,
+  ]);
 
   // 設定変更または初回ロード時のデータ取得
   useEffect(() => {
     if (settings.pat && settings.username) {
       refreshData();
     }
-  }, [settings.pat, settings.username, settings.repositories, settings.showSelfHostedRunners, settings.monitoredOrgs, refreshData]);
+  }, [
+    settings.pat,
+    settings.username,
+    settings.repositories,
+    settings.showSelfHostedRunners,
+    settings.monitoredOrgs,
+    refreshData,
+  ]);
 
   // 自動更新タイマーの設定
   const timerRef = useRef<number | null>(null);
@@ -181,7 +295,7 @@ export function App() {
       timerRef.current = null;
     }
 
-    if (settings.refreshIntervalSec > 0 && settings.pat) {
+    if (settings.refreshIntervalSec > 0 && settings.pat && !isDemoMode) {
       timerRef.current = window.setInterval(() => {
         refreshData(true);
       }, settings.refreshIntervalSec * 1000);
@@ -192,7 +306,7 @@ export function App() {
         window.clearInterval(timerRef.current);
       }
     };
-  }, [settings.refreshIntervalSec, settings.pat, refreshData]);
+  }, [settings.refreshIntervalSec, settings.pat, isDemoMode, refreshData]);
 
   // オンボーディング完了ハンドラ
   const handleOnboardingComplete = (pat: string, username: string) => {
@@ -203,6 +317,7 @@ export function App() {
     };
     saveSettings(updated);
     setSettings(updated);
+    setSelectedUsageAccount(username);
   };
 
   // 設定保存ハンドラ
@@ -224,6 +339,8 @@ export function App() {
   const handleLogout = () => {
     if (window.confirm('ダッシュボードの設定とトークンを消去して初期化しますか？')) {
       clearSettings();
+      setSelectedUsageAccount('');
+      setDiscoveredOrgs([]);
       setSettings({
         pat: '',
         username: '',
@@ -298,11 +415,23 @@ export function App() {
         )}
 
         {/* 1. Actions Usage Summary */}
-        <ActionsUsageCard
-          usage={state.usage}
-          error={actionsError}
-          isLoading={state.isRefreshing && !state.usage}
-        />
+        {(() => {
+          const currentAcc = selectedUsageAccount || settings.username;
+          const item = state.usageMap?.[currentAcc];
+          const usageData = item ? item.usage : (currentAcc === settings.username ? state.usage : null);
+          const usageErr = item ? item.error : (currentAcc === settings.username ? actionsError : null);
+
+          return (
+            <ActionsUsageCard
+              usage={usageData}
+              error={usageErr}
+              isLoading={state.isRefreshing && !usageData && !usageErr}
+              accounts={accounts}
+              selectedAccount={currentAcc}
+              onSelectAccount={(name) => setSelectedUsageAccount(name)}
+            />
+          );
+        })()}
 
         {/* 2. Self-hosted Runners Panel (設定で有効時のみ表示) */}
         {settings.showSelfHostedRunners && (

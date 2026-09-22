@@ -19,12 +19,27 @@ export interface ActionsUsageBreakdown {
   windows: number;
 }
 
+export type ActionsUsageAccountType = 'user' | 'org';
+
+export interface ActionsUsageAccount {
+  name: string;
+  type: ActionsUsageAccountType;
+}
+
+export interface ActionsUsageItem {
+  usage: ActionsUsage | null;
+  error: string | null;
+  isLoading?: boolean;
+}
+
 export interface ActionsUsage {
   totalMinutesUsed: number;
   includedMinutes: number; // 通常 2000 分
   usagePercentage: number; // 0 - 100
   breakdown: ActionsUsageBreakdown;
   lastUpdated: string; // ISO 8601
+  accountName?: string;
+  accountType?: ActionsUsageAccountType;
 }
 
 export type CheckStatus = 'QUEUED' | 'IN_PROGRESS' | 'COMPLETED' | 'WAITING' | 'PENDING';
@@ -98,6 +113,8 @@ export interface DashboardState {
     resetAt: Date;
   } | null;
   usage: ActionsUsage | null;
+  usageMap?: Record<string, ActionsUsageItem>;
+  selectedUsageAccount?: string;
   projects: RepositoryDashboardData[];
   runners: SelfHostedRunner[];
   isLoadingRunners: boolean;

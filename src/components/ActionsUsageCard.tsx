@@ -1,32 +1,122 @@
 import React from 'react';
-import { Cpu, AlertTriangle, AlertCircle, CheckCircle2, Monitor, Apple, Terminal } from 'lucide-react';
-import type { ActionsUsage } from '../types';
+import {
+  Cpu,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle2,
+  Monitor,
+  Apple,
+  Terminal,
+  User,
+  Building2,
+} from 'lucide-react';
+import type { ActionsUsage, ActionsUsageAccount } from '../types';
 import { calculateActionsPacing } from '../utils/actionsUsage';
 
 interface ActionsUsageCardProps {
   usage: ActionsUsage | null;
   error?: string | null;
   isLoading?: boolean;
+  accounts?: ActionsUsageAccount[];
+  selectedAccount?: string;
+  onSelectAccount?: (accountName: string) => void;
 }
 
-export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({ usage, error, isLoading }) => {
-  if (isLoading && !usage) {
+export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
+  usage,
+  error,
+  isLoading,
+  accounts = [],
+  selectedAccount,
+  onSelectAccount,
+}) => {
+  const currentAccountName = selectedAccount || usage?.accountName;
+  const currentAccount = accounts.find((a) => a.name === currentAccountName);
+  const isOrg = currentAccount?.type === 'org' || usage?.accountType === 'org';
+
+  const renderAccountTabs = () => {
+    if (!accounts || accounts.length <= 1) return null;
+
+    return (
+      <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-900/90 rounded-xl border border-slate-800">
+        {accounts.map((acc) => {
+          const isSelected = acc.name === (selectedAccount || usage?.accountName);
+          const Icon = acc.type === 'org' ? Building2 : User;
+          const label = acc.type === 'org' ? 'Org' : '個人';
+          return (
+            <button
+              key={acc.name}
+              type="button"
+              aria-label={`${acc.name} (${acc.type === 'org' ? 'Org' : '個人'})`}
+              onClick={() => onSelectAccount?.(acc.name)}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                isSelected
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{acc.name}</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                  isSelected ? 'bg-indigo-700/70 text-indigo-100' : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                {label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  if (isLoading && !usage && !error) {
     return (
       <div className="glass-panel rounded-2xl p-6 border border-slate-800 animate-pulse">
-        <div className="h-6 w-48 bg-slate-800 rounded mb-4" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div className="h-6 w-56 bg-slate-800 rounded" />
+          {accounts.length > 1 && <div className="h-8 w-48 bg-slate-800 rounded-xl" />}
+        </div>
         <div className="h-4 w-full bg-slate-800 rounded mb-3" />
         <div className="h-8 w-64 bg-slate-800 rounded" />
       </div>
     );
   }
 
+  // アカウント切り替えがある場合、エラーになってもタブは保持して表示する
   if (error) {
     return (
-      <div className="glass-panel rounded-2xl p-5 border border-amber-500/20 bg-amber-500/5 text-amber-200 flex items-start gap-3">
-        <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-        <div className="text-sm">
-          <p className="font-semibold text-amber-300">Actions 使用量の取得に失敗しました</p>
-          <p className="text-xs text-amber-400/80 mt-1">{error}</p>
+      <div className="glass-panel rounded-2xl p-6 border border-slate-800/80 shadow-xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 shadow-inner">
+              <Cpu className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-100">GitHub Actions 無料枠使用状況</h2>
+                {currentAccountName && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-xs border border-slate-700">
+                    {isOrg ? <Building2 className="w-3 h-3 text-indigo-400" /> : <User className="w-3 h-3 text-indigo-400" />}
+                    <span>{currentAccountName}</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400">使用量データの取得に失敗しました</p>
+            </div>
+          </div>
+          {renderAccountTabs()}
+        </div>
+
+        <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5 text-amber-200 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold text-amber-300">
+              {currentAccountName ? `「${currentAccountName}」の使用量を取得できませんでした` : 'Actions 使用量の取得に失敗しました'}
+            </p>
+            <p className="text-xs text-amber-400/80 mt-1">{error}</p>
+          </div>
         </div>
       </div>
     );
@@ -58,22 +148,31 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({ usage, error
       <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 shadow-inner">
             <Cpu className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
-              GitHub Actions 無料枠使用状況
-            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-base font-bold text-slate-100">
+                GitHub Actions 無料枠使用状況
+              </h2>
+              {currentAccountName && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800/90 text-slate-300 text-xs border border-slate-700 font-medium">
+                  {isOrg ? <Building2 className="w-3 h-3 text-indigo-400" /> : <User className="w-3 h-3 text-indigo-400" />}
+                  <span>{currentAccountName}</span>
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400">
               月間クォータ: {includedMinutes.toLocaleString()} 分（当月 1日〜{daysInMonth}日）
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          {renderAccountTabs()}
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${badgeColor} flex items-center gap-1.5`}>
             <PaceIcon className="w-3.5 h-3.5 shrink-0" />
             <span>{paceStatusText}</span>
