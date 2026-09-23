@@ -168,7 +168,8 @@ describe('ActionsUsageCard', () => {
     expect(screen.queryByText(/残り無料枠/)).not.toBeInTheDocument();
 
     // 折りたたまれていても、ヘッダーの残枠サマリーは表示されていること
-    expect(screen.getByText('残1,450分 (72%)')).toBeInTheDocument();
+    expect(screen.getByText('残1,450分')).toBeInTheDocument();
+    expect(screen.getByText('(72%)')).toBeInTheDocument();
 
     // 再度クリックして展開
     fireEvent.click(screen.getByText('個人'));
@@ -212,9 +213,10 @@ describe('ActionsUsageCard', () => {
 
     // 個人側は展開されたまま（「1,450」は残る）
     expect(screen.getByText('1,450')).toBeInTheDocument();
-    // Org 側の本文「2,313」は非表示になり、サマリーバッジ（残2,313分 (77%)）として存在
+    // Org 側の本文「2,313」は非表示になり、サマリーバッジ（残2,313分 / (77%)）として存在
     expect(screen.queryByText('2,313')).not.toBeInTheDocument();
-    expect(screen.getByText('残2,313分 (77%)')).toBeInTheDocument();
+    expect(screen.getByText('残2,313分')).toBeInTheDocument();
+    expect(screen.getByText('(77%)')).toBeInTheDocument();
   });
 
   it('isCompact 時、余裕のあるアカウントはデフォルト折りたたみ、警告/エラーのあるアカウントは展開されること', () => {
@@ -252,9 +254,10 @@ describe('ActionsUsageCard', () => {
       />
     );
 
-    // safe-user は折りたたまれているため本文の「1,800」は出ず、ヘッダーサマリー「残1,800分 (90%)」が出る
+    // safe-user は折りたたまれているため本文の「1,800」は出ず、ヘッダーサマリー「残1,800分」「(90%)」が出る
     expect(screen.queryByText('1,800')).not.toBeInTheDocument();
-    expect(screen.getByText('残1,800分 (90%)')).toBeInTheDocument();
+    expect(screen.getByText('残1,800分')).toBeInTheDocument();
+    expect(screen.getByText('(90%)')).toBeInTheDocument();
 
     // critical-org は警告があるためデフォルト展開され、本文の「100」が出る
     expect(screen.getByText('100')).toBeInTheDocument();

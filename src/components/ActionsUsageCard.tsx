@@ -162,15 +162,20 @@ export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
 
         <div className="flex items-center gap-2 shrink-0">
           {/* サマリー残量バッジ */}
-          <span
-            className={`text-xs font-mono font-semibold px-2 py-0.5 rounded-md border ${
+          <div
+            className={`text-xs font-mono font-semibold px-2 py-0.5 rounded-md border flex items-baseline gap-1 ${
               isLowRemaining
                 ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
-                : 'bg-slate-900/80 text-emerald-400 border-slate-700/80'
+                : 'bg-slate-900/80 text-slate-300 border-slate-700/80'
             }`}
           >
-            残{remainingMinutes.toLocaleString()}分 ({remPercent}%)
-          </span>
+            <span className={isLowRemaining ? 'text-rose-400' : 'text-emerald-400'}>
+              残{remainingMinutes.toLocaleString()}分
+            </span>
+            <span className="text-[10px] text-slate-400 font-normal">
+              ({remPercent}%)
+            </span>
+          </div>
 
           {/* ペースバッジ（画面幅に余裕があるとき） */}
           <span
