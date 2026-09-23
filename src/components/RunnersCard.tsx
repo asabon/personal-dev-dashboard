@@ -83,17 +83,17 @@ export const RunnersCard: React.FC<RunnersCardProps> = ({
               {busyCount > 0 && (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 border border-sky-500/20">
                   <PlayCircle className="w-3 h-3 animate-spin shrink-0" />
-                  <span>{busyCount}<span className="hidden sm:inline"> 実行中</span></span>
+                  <span>{busyCount} Running</span>
                 </span>
               )}
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <CheckCircle2 className="w-3 h-3 shrink-0" />
-                <span>{onlineCount}<span className="hidden sm:inline"> Online</span></span>
+                <span>{onlineCount} Online</span>
               </span>
               {offlineCount > 0 && (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20">
                   <AlertCircle className="w-3 h-3 shrink-0" />
-                  <span>{offlineCount}<span className="hidden sm:inline"> Offline</span></span>
+                  <span>{offlineCount} Offline</span>
                 </span>
               )}
             </div>
