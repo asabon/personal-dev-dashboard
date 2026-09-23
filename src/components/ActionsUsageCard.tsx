@@ -489,27 +489,33 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
         </div>
       </div>
 
-      {/* Account Cards List (アコーディオン開閉) */}
+      {/* Account Cards Grid (アコーディオン開閉) */}
       {!isCollapsed && (
-        <div className="p-4 sm:p-5 pt-3 border-t border-slate-800/60 space-y-3">
-          {resolvedAccounts.map((acc) => {
-            const item = usageMap[acc.name];
-            const isSingleTarget = accounts.length === 0 || acc.name === selectedAccount || acc.name === usage?.accountName;
-            const accUsage = item ? item.usage : (isSingleTarget ? (usage ?? null) : null);
-            const accError = item ? item.error : (isSingleTarget ? (error ?? null) : null);
-            const accLoading = item?.isLoading ?? isLoading;
+        <div className="p-4 sm:p-5 pt-3 border-t border-slate-800/60">
+          <div
+            className={`grid grid-cols-1 ${
+              resolvedAccounts.length > 1 ? 'lg:grid-cols-2' : ''
+            } gap-3 items-start`}
+          >
+            {resolvedAccounts.map((acc) => {
+              const item = usageMap[acc.name];
+              const isSingleTarget = accounts.length === 0 || acc.name === selectedAccount || acc.name === usage?.accountName;
+              const accUsage = item ? item.usage : (isSingleTarget ? (usage ?? null) : null);
+              const accError = item ? item.error : (isSingleTarget ? (error ?? null) : null);
+              const accLoading = item?.isLoading ?? isLoading;
 
-            return (
-              <AccountUsageCard
-                key={acc.name}
-                account={acc}
-                usage={accUsage}
-                error={accError}
-                isLoading={accLoading}
-                isCompact={isCompact}
-              />
-            );
-          })}
+              return (
+                <AccountUsageCard
+                  key={acc.name}
+                  account={acc}
+                  usage={accUsage}
+                  error={accError}
+                  isLoading={accLoading}
+                  isCompact={isCompact}
+                />
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
