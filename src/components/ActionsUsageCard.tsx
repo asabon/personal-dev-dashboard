@@ -39,10 +39,28 @@ export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
     : 0;
   const isLowRemaining = remainingMinutes < 200;
   const isHighUsage = usage ? usage.usagePercentage >= 85 : false;
-  const hasWarning = Boolean(error || isLowRemaining || isHighUsage);
+  const pace = usage
+    ? calculateActionsPacing(usage.totalMinutesUsed, usage.includedMinutes, usage.usagePercentage)
+    : null;
+  const isPaceWarning = pace ? pace.paceStatusText !== '順調 (目安内)' : false;
+  const hasWarning = Boolean(error || isLowRemaining || isHighUsage || isPaceWarning);
 
-  // 個別アカウントの開閉状態: 最上位展開時は各アカウント1行表示（折りたたみ）で並ぶようにデフォルト false
-  const [isExpanded, setIsExpanded] = useState(false);
+  // 個別アカウントの開閉状態:
+  // 詳細表示時 (isCompact=false) は詳細まで全開、簡易表示時 (isCompact=true) は警告/エラーがあるもののみ展開（正常アカウントは1行表示）
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (isCompact) {
+      return hasWarning;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (isCompact) {
+      setIsExpanded(hasWarning);
+    } else {
+      setIsExpanded(true);
+    }
+  }, [isCompact, hasWarning]);
 
   const [showBreakdown, setShowBreakdown] = useState(!isCompact);
 
@@ -106,7 +124,7 @@ export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
   }
 
   // 3. データなし
-  if (!usage) {
+  if (!usage || !pace) {
     return null;
   }
 
@@ -117,7 +135,7 @@ export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
     paceStatusText,
     barGradient,
     badgeColor,
-  } = calculateActionsPacing(totalMinutesUsed, includedMinutes, usagePercentage);
+  } = pace;
 
   const PaceIcon =
     paceStatusText === '残り僅か' || paceStatusText === 'ハイペース'
