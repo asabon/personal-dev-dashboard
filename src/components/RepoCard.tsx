@@ -79,29 +79,26 @@ export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false, onR
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* CI ステータスサマリーアイコン */}
-          {failedPrs.length > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0 font-mono">
-              <XCircle className="w-3 h-3 shrink-0" />
-              <span>{failedPrs.length} failed</span>
+          {totalPrs === 0 ? (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
+              0 PRs
+            </span>
+          ) : failedPrs.length > 0 ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0 font-mono">
+              <XCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{failedPrs.length}/{totalPrs} {totalPrs === 1 ? 'PR' : 'PRs'} failed</span>
+            </span>
+          ) : runningPrs.length > 0 ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0 font-mono">
+              <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+              <span>{runningPrs.length}/{totalPrs} {totalPrs === 1 ? 'PR' : 'PRs'} running</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0 font-mono">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>{passedPrs.length}/{totalPrs} {totalPrs === 1 ? 'PR' : 'PRs'} passed</span>
             </span>
           )}
-          {runningPrs.length > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0 font-mono">
-              <Loader2 className="w-3 h-3 animate-spin shrink-0" />
-              <span>{runningPrs.length} running</span>
-            </span>
-          )}
-          {failedPrs.length === 0 && runningPrs.length === 0 && passedPrs.length > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0 font-mono">
-              <CheckCircle2 className="w-3 h-3 shrink-0" />
-              <span>All passed</span>
-            </span>
-          )}
-
-          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 shrink-0">
-            {totalPrs} PRs
-          </span>
 
           <button
             type="button"
