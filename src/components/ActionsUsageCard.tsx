@@ -31,14 +31,37 @@ export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
   isLoading,
   isCompact = false,
 }) => {
+  const Icon = account.type === 'org' ? Building2 : User;
+  const label = account.type === 'org' ? 'Org' : '個人';
+
+  const remainingMinutes = usage
+    ? Math.max(0, usage.includedMinutes - usage.totalMinutesUsed)
+    : 0;
+  const isLowRemaining = remainingMinutes < 200;
+  const isHighUsage = usage ? usage.usagePercentage >= 85 : false;
+  const hasWarning = Boolean(error || isLowRemaining || isHighUsage);
+
+  // 個別アカウントの開閉状態: isCompact のときは警告/エラーがあるもののみデフォルト展開
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (isCompact) {
+      return hasWarning;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (isCompact) {
+      setIsExpanded(hasWarning);
+    } else {
+      setIsExpanded(true);
+    }
+  }, [isCompact, hasWarning]);
+
   const [showBreakdown, setShowBreakdown] = useState(!isCompact);
 
   useEffect(() => {
     setShowBreakdown(!isCompact);
   }, [isCompact]);
-
-  const Icon = account.type === 'org' ? Building2 : User;
-  const label = account.type === 'org' ? 'Org' : '個人';
 
   // 1. ローディング状態
   if (isLoading && !usage && !error) {
@@ -57,26 +80,40 @@ export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
   // 2. エラー状態
   if (error) {
     return (
-      <div className="rounded-xl bg-slate-900/60 border border-slate-800/80 p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Icon className="w-4 h-4 text-indigo-400" />
-            <span className="font-bold text-slate-200 text-sm font-mono">{account.name}</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-medium">
+      <div className="rounded-xl bg-slate-900/60 border border-slate-800/80 overflow-hidden shadow-md transition-all">
+        <div
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="p-3.5 sm:p-4 bg-slate-900/40 flex items-center justify-between gap-2.5 cursor-pointer hover:bg-slate-900/60 transition-colors select-none"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 shrink-0">
+              <Icon className="w-3.5 h-3.5" />
+            </div>
+            <span className="font-bold text-slate-200 text-sm font-mono truncate">{account.name}</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-medium shrink-0">
               {label}
             </span>
           </div>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">
-            取得エラー
-          </span>
-        </div>
-        <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-amber-300 text-xs flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold">使用量を取得できませんでした</p>
-            <p className="text-amber-400/80 mt-0.5 text-[11px]">{error}</p>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">
+              取得エラー
+            </span>
+            <div className="p-0.5 text-slate-400 hover:text-slate-200 transition-colors shrink-0">
+              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
           </div>
         </div>
+        {isExpanded && (
+          <div className="p-4 pt-2 border-t border-slate-800/60">
+            <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-amber-300 text-xs flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">使用量を取得できませんでした</p>
+                <p className="text-amber-400/80 mt-0.5 text-[11px]">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -90,7 +127,6 @@ export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
   const {
     expectedPercentage,
     expectedMinutes,
-    remainingMinutes,
     paceStatusText,
     barGradient,
     badgeColor,
@@ -103,12 +139,15 @@ export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
         ? AlertCircle
         : CheckCircle2;
 
-  const isLowRemaining = remainingMinutes < 200;
+  const remPercent = Math.max(0, 100 - usagePercentage);
 
   return (
-    <div className="rounded-xl bg-slate-900/60 hover:bg-slate-900/80 border border-slate-800/80 hover:border-slate-700/80 p-4 sm:p-5 flex flex-col justify-between space-y-3.5 transition-all shadow-md">
-      {/* Header: Account Name & Pace Badge */}
-      <div className="flex items-center justify-between gap-2">
+    <div className="rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700/80 overflow-hidden transition-all shadow-md">
+      {/* Header: Click to collapse / expand */}
+      <div
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="p-3.5 sm:p-4 bg-slate-900/40 hover:bg-slate-900/60 flex items-center justify-between gap-2.5 cursor-pointer transition-colors select-none"
+      >
         <div className="flex items-center gap-2 min-w-0">
           <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 shrink-0">
             <Icon className="w-3.5 h-3.5" />
@@ -121,120 +160,150 @@ export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
           </span>
         </div>
 
-        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${badgeColor} flex items-center gap-1 shrink-0`}>
-          <PaceIcon className="w-3 h-3 shrink-0" />
-          <span>{paceStatusText}</span>
-        </span>
-      </div>
-
-      {/* Main Metrics: Remaining Minutes First */}
-      <div className="flex items-baseline justify-between gap-3 pt-1">
-        <div>
-          <span className="text-[11px] text-slate-400 block font-medium">残り無料枠 (目安)</span>
-          <div className="flex items-baseline gap-1.5 mt-0.5">
-            <span
-              className={`text-2xl sm:text-3xl font-bold font-mono ${
-                isLowRemaining ? 'text-rose-400' : 'text-emerald-400'
-              }`}
-            >
-              {remainingMinutes.toLocaleString()}
-            </span>
-            <span className="text-xs text-slate-400 font-medium">分</span>
-            <span className="text-[11px] text-slate-500 font-mono">
-              (枠の {100 - usagePercentage}%)
-            </span>
-          </div>
-        </div>
-
-        <div className="text-right">
-          <span className="text-[11px] text-slate-400 block font-medium">当月使用量</span>
-          <div className="mt-0.5">
-            <span className="text-base sm:text-lg font-bold font-mono text-slate-200">
-              {totalMinutesUsed.toLocaleString()}
-            </span>
-            <span className="text-xs text-slate-400 font-normal"> / {includedMinutes.toLocaleString()} 分</span>
-          </div>
-          <span className="text-[10px] text-slate-400 font-mono">
-            {usagePercentage}% 消費
+        <div className="flex items-center gap-2 shrink-0">
+          {/* サマリー残量バッジ */}
+          <span
+            className={`text-xs font-mono font-semibold px-2 py-0.5 rounded-md border ${
+              isLowRemaining
+                ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                : 'bg-slate-900/80 text-emerald-400 border-slate-700/80'
+            }`}
+          >
+            残{remainingMinutes.toLocaleString()}分 ({remPercent}%)
           </span>
+
+          {/* ペースバッジ（画面幅に余裕があるとき） */}
+          <span
+            className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${badgeColor} hidden sm:flex items-center gap-1`}
+          >
+            <PaceIcon className="w-3 h-3 shrink-0" />
+            <span>{paceStatusText}</span>
+          </span>
+
+          {/* 開閉アイコン */}
+          <div className="p-0.5 text-slate-400 hover:text-slate-200 transition-colors shrink-0">
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Progress Bar with Pacing Line Overlay */}
-      <div className="space-y-1">
-        <div className="relative">
-          <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800 relative">
-            <div
-              className={`h-full rounded-full bg-gradient-to-r ${barGradient} transition-all duration-700 ease-out`}
-              style={{ width: `${Math.min(100, Math.max(totalMinutesUsed > 0 ? 1 : 0, usagePercentage))}%` }}
-            />
-            {/* Target Pace Marker Line */}
-            <div
-              className="absolute top-0 bottom-0 w-0.5 bg-sky-300 shadow-[0_0_6px_rgba(56,189,248,0.9)] pointer-events-none z-10"
-              style={{ left: `${Math.min(99.5, Math.max(0.5, expectedPercentage))}%` }}
-              title={`本日の目安: ${expectedPercentage}% (${expectedMinutes.toLocaleString()} 分)`}
-            />
+      {/* Body: 詳細メトリクス・プログレスバー・OS内訳 */}
+      {isExpanded && (
+        <div className="p-4 sm:p-5 pt-3 border-t border-slate-800/60 space-y-3.5">
+          {/* Main Metrics: Remaining Minutes First */}
+          <div className="flex items-baseline justify-between gap-3 pt-1">
+            <div>
+              <span className="text-[11px] text-slate-400 block font-medium">残り無料枠 (目安)</span>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span
+                  className={`text-2xl sm:text-3xl font-bold font-mono ${
+                    isLowRemaining ? 'text-rose-400' : 'text-emerald-400'
+                  }`}
+                >
+                  {remainingMinutes.toLocaleString()}
+                </span>
+                <span className="text-xs text-slate-400 font-medium">分</span>
+                <span className="text-[11px] text-slate-500 font-mono">
+                  (枠の {remPercent}%)
+                </span>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <span className="text-[11px] text-slate-400 block font-medium">当月使用量</span>
+              <div className="mt-0.5">
+                <span className="text-base sm:text-lg font-bold font-mono text-slate-200">
+                  {totalMinutesUsed.toLocaleString()}
+                </span>
+                <span className="text-xs text-slate-400 font-normal"> / {includedMinutes.toLocaleString()} 分</span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {usagePercentage}% 消費
+              </span>
+            </div>
+          </div>
+
+          {/* Progress Bar with Pacing Line Overlay */}
+          <div className="space-y-1">
+            <div className="relative">
+              <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800 relative">
+                <div
+                  className={`h-full rounded-full bg-gradient-to-r ${barGradient} transition-all duration-700 ease-out`}
+                  style={{ width: `${Math.min(100, Math.max(totalMinutesUsed > 0 ? 1 : 0, usagePercentage))}%` }}
+                />
+                {/* Target Pace Marker Line */}
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-sky-300 shadow-[0_0_6px_rgba(56,189,248,0.9)] pointer-events-none z-10"
+                  style={{ left: `${Math.min(99.5, Math.max(0.5, expectedPercentage))}%` }}
+                  title={`本日の目安: ${expectedPercentage}% (${expectedMinutes.toLocaleString()} 分)`}
+                />
+              </div>
+            </div>
+            <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
+              <span>0 分</span>
+              <div className="flex items-center gap-1 text-slate-400 font-sans">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 shadow-[0_0_4px_rgba(56,189,248,0.8)]" />
+                <span>目安: {expectedMinutes.toLocaleString()} 分 ({expectedPercentage}%)</span>
+              </div>
+              <span>{includedMinutes.toLocaleString()} 分</span>
+            </div>
+          </div>
+
+          {/* OS Breakdown Collapsible Section */}
+          <div className="pt-2 border-t border-slate-800/60">
+            <button
+              type="button"
+              onClick={() => setShowBreakdown(!showBreakdown)}
+              className="flex items-center justify-between w-full text-[11px] text-slate-400 hover:text-slate-200 transition-colors py-0.5 cursor-pointer"
+              aria-expanded={showBreakdown}
+            >
+              <span>OS別 実稼働内訳</span>
+              <div className="flex items-center gap-1 text-indigo-400 hover:text-indigo-300">
+                <span>{showBreakdown ? '内訳を隠す' : '内訳を表示'}</span>
+                {showBreakdown ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </div>
+            </button>
+
+            {showBreakdown && (
+              <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-slate-800/40">
+                <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-slate-950/60 border border-slate-800/60">
+                  <Terminal className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-[10px] text-slate-400 font-medium truncate">Ubuntu (x1)</div>
+                    <div className="text-xs font-semibold font-mono text-slate-200 truncate">
+                      {breakdown.ubuntu.toLocaleString()} <span className="text-[10px] font-normal text-slate-400">分</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-slate-950/60 border border-slate-800/60">
+                  <Apple className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-[10px] text-slate-400 font-medium truncate">macOS (x10)</div>
+                    <div className="text-xs font-semibold font-mono text-slate-200 truncate">
+                      {breakdown.macOS.toLocaleString()} <span className="text-[10px] font-normal text-slate-400">分</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-slate-950/60 border border-slate-800/60">
+                  <Monitor className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-[10px] text-slate-400 font-medium truncate">Windows (x2)</div>
+                    <div className="text-xs font-semibold font-mono text-slate-200 truncate">
+                      {breakdown.windows.toLocaleString()} <span className="text-[10px] font-normal text-slate-400">分</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-        <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono">
-          <span>0 分</span>
-          <div className="flex items-center gap-1 text-slate-400 font-sans">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 shadow-[0_0_4px_rgba(56,189,248,0.8)]" />
-            <span>目安: {expectedMinutes.toLocaleString()} 分 ({expectedPercentage}%)</span>
-          </div>
-          <span>{includedMinutes.toLocaleString()} 分</span>
-        </div>
-      </div>
-
-      {/* OS Breakdown Collapsible Section */}
-      <div className="pt-2 border-t border-slate-800/60">
-        <button
-          type="button"
-          onClick={() => setShowBreakdown(!showBreakdown)}
-          className="flex items-center justify-between w-full text-[11px] text-slate-400 hover:text-slate-200 transition-colors py-0.5 cursor-pointer"
-          aria-expanded={showBreakdown}
-        >
-          <span>OS別 実稼働内訳</span>
-          <div className="flex items-center gap-1 text-indigo-400 hover:text-indigo-300">
-            <span>{showBreakdown ? '内訳を隠す' : '内訳を表示'}</span>
-            {showBreakdown ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </div>
-        </button>
-
-        {showBreakdown && (
-          <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-slate-800/40">
-            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-slate-950/60 border border-slate-800/60">
-              <Terminal className="w-3.5 h-3.5 text-orange-400 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-[10px] text-slate-400 font-medium truncate">Ubuntu (x1)</div>
-                <div className="text-xs font-semibold font-mono text-slate-200 truncate">
-                  {breakdown.ubuntu.toLocaleString()} <span className="text-[10px] font-normal text-slate-400">分</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-slate-950/60 border border-slate-800/60">
-              <Apple className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-[10px] text-slate-400 font-medium truncate">macOS (x10)</div>
-                <div className="text-xs font-semibold font-mono text-slate-200 truncate">
-                  {breakdown.macOS.toLocaleString()} <span className="text-[10px] font-normal text-slate-400">分</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-slate-950/60 border border-slate-800/60">
-              <Monitor className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-[10px] text-slate-400 font-medium truncate">Windows (x2)</div>
-                <div className="text-xs font-semibold font-mono text-slate-200 truncate">
-                  {breakdown.windows.toLocaleString()} <span className="text-[10px] font-normal text-slate-400">分</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 };
@@ -437,7 +506,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
           <div
             className={`grid grid-cols-1 ${
               resolvedAccounts.length > 1 ? 'lg:grid-cols-2' : ''
-            } gap-4 pt-3`}
+            } gap-4 pt-3 items-start`}
           >
             {resolvedAccounts.map((acc) => {
               const item = usageMap[acc.name];
