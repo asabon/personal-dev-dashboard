@@ -363,46 +363,59 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
           </div>
         </div>
 
-        {/* ヘッダー右側（スマホ時は2行目）: ミニ残量サマリーチップ & PC時開閉アイコン */}
+        {/* ヘッダー右側（スマホ時は2行目）: アカウント別残量サマリー & PC時開閉アイコン */}
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-0.5 sm:pt-0">
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full sm:w-auto">
             {resolvedAccounts.map((acc) => {
               const item = usageMap[acc.name];
               const isSingleTarget = accounts.length === 0 || acc.name === selectedAccount || acc.name === usage?.accountName;
               const accUsage = item ? item.usage : (isSingleTarget ? (usage ?? null) : null);
               const accError = item ? item.error : (isSingleTarget ? (error ?? null) : null);
+              const AccIcon = acc.type === 'org' ? Building2 : User;
 
               if (accError) {
                 return (
-                  <span
+                  <div
                     key={acc.name}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                    className="flex items-center justify-between sm:justify-start gap-2 px-2.5 py-1 rounded-lg text-xs font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20 w-full sm:w-auto"
                   >
-                    <span>{acc.name}:</span>
-                    <span>エラー</span>
-                  </span>
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <AccIcon className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                      <span className="truncate">{acc.name}:</span>
+                    </span>
+                    <span className="shrink-0 font-semibold">エラー</span>
+                  </div>
                 );
               }
 
               if (!accUsage) return null;
               const rem = Math.max(0, accUsage.includedMinutes - accUsage.totalMinutesUsed);
+              const remPercent = Math.max(0, 100 - accUsage.usagePercentage);
               const isLow = rem < 200;
 
               return (
-                <span
+                <div
                   key={acc.name}
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-mono border shrink-0 ${
+                  className={`flex items-center justify-between sm:justify-start gap-2.5 sm:gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono border transition-colors w-full sm:w-auto ${
                     isLow
-                      ? 'bg-rose-500/10 text-rose-300 border-rose-500/30 font-semibold'
-                      : 'bg-slate-900/90 text-slate-300 border-slate-700/80'
+                      ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                      : 'bg-slate-900/80 text-slate-300 border-slate-700/80'
                   }`}
-                  title={`${acc.name}: 残り ${rem.toLocaleString()} 分 / 上限 ${accUsage.includedMinutes.toLocaleString()} 分`}
+                  title={`${acc.name}: 残り ${rem.toLocaleString()} 分 (${remPercent}%) / 上限 ${accUsage.includedMinutes.toLocaleString()} 分`}
                 >
-                  <span className="text-slate-400">{acc.name}:</span>
-                  <span className={`font-bold ${isLow ? 'text-rose-400' : 'text-emerald-400'}`}>
-                    残{rem.toLocaleString()}分
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <AccIcon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                    <span className="text-slate-300 truncate font-semibold">{acc.name}:</span>
                   </span>
-                </span>
+                  <div className="flex items-baseline gap-1 shrink-0 ml-auto sm:ml-0 font-semibold">
+                    <span className={isLow ? 'text-rose-400' : 'text-emerald-400'}>
+                      残{rem.toLocaleString()}分
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      ({remPercent}%)
+                    </span>
+                  </div>
+                </div>
               );
             })}
           </div>
