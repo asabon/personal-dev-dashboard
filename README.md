@@ -18,8 +18,18 @@
 
 **Personal Dev Dashboard** は、これらの情報をブラウザ 1 画面でリアルタイムに俯瞰できる、**完全クライアント完結型 (Zero-Backend SPA)** のダッシュボードです。
 
+### 🖥️ デスクトップ表示（詳細モード）
+
 <p align="center">
-  <img src="docs/assets/dashboard-preview.png" alt="Personal Dev Dashboard Preview" width="900" />
+  <img src="docs/assets/dashboard-preview.png" alt="Personal Dev Dashboard - PC版 (詳細モード)" width="900" />
+</p>
+
+### 📱 スマホ表示（簡易表示モード / 最小構成）
+
+<p align="center">
+  <img src="docs/assets/dashboard-mobile-preview.png" alt="Personal Dev Dashboard - スマホ版 (最小構成)" width="360" />
+  <br />
+  <sub>スマートフォンや狭小画面でも 1 画面に収まるアコーディオン最小構成</sub>
 </p>
 
 ---
