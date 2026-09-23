@@ -39,9 +39,14 @@ export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
     : 0;
   const isLowRemaining = remainingMinutes < 200;
   const isHighUsage = usage ? usage.usagePercentage >= 85 : false;
-  const hasWarning = Boolean(error || isLowRemaining || isHighUsage);
+  const pace = usage
+    ? calculateActionsPacing(usage.totalMinutesUsed, usage.includedMinutes, usage.usagePercentage)
+    : null;
+  const isPaceWarning = pace ? pace.paceStatusText !== '順調 (目安内)' : false;
+  const hasWarning = Boolean(error || isLowRemaining || isHighUsage || isPaceWarning);
 
-  // 個別アカウントの開閉状態: isCompact のときは警告/エラーがあるもののみデフォルト展開
+  // 個別アカウントの開閉状態:
+  // 詳細表示時 (isCompact=false) は詳細まで全開、簡易表示時 (isCompact=true) は警告/エラーがあるもののみ展開（正常アカウントは1行表示）
   const [isExpanded, setIsExpanded] = useState(() => {
     if (isCompact) {
       return hasWarning;
@@ -119,7 +124,7 @@ export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
   }
 
   // 3. データなし
-  if (!usage) {
+  if (!usage || !pace) {
     return null;
   }
 
@@ -130,7 +135,7 @@ export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
     paceStatusText,
     barGradient,
     badgeColor,
-  } = calculateActionsPacing(totalMinutesUsed, includedMinutes, usagePercentage);
+  } = pace;
 
   const PaceIcon =
     paceStatusText === '残り僅か' || paceStatusText === 'ハイペース'
@@ -358,14 +363,38 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
           },
         ];
 
-  // いずれかのアカウントで残枠警告（85%消費以上）またはエラーがあるか判定
-  const hasWarningOrError = resolvedAccounts.some((acc) => {
+  // 全アカウントの使用量ステータス集約（監視リポジトリカードと同様のサマリー計算）
+  let hasError = false;
+  let hasOverPace = false; // 目安越え (残り僅か / ハイペース / 残り200分未満 / 使用率90%以上)
+  let hasNearPace = false; // 目安間近 (やや速い / 使用率85%以上)
+
+  for (const acc of resolvedAccounts) {
     const item = usageMap[acc.name];
     const isSingleTarget = accounts.length === 0 || acc.name === selectedAccount || acc.name === usage?.accountName;
     const accUsage = item ? item.usage : (isSingleTarget ? (usage ?? null) : null);
     const accError = item ? item.error : (isSingleTarget ? (error ?? null) : null);
-    return Boolean(accError || (accUsage && accUsage.usagePercentage >= 85));
-  });
+
+    if (accError) {
+      hasError = true;
+    } else if (accUsage) {
+      const { totalMinutesUsed, includedMinutes, usagePercentage } = accUsage;
+      const { paceStatusText } = calculateActionsPacing(totalMinutesUsed, includedMinutes, usagePercentage);
+      const remainingMinutes = Math.max(0, includedMinutes - totalMinutesUsed);
+
+      if (
+        paceStatusText === '残り僅か' ||
+        paceStatusText === 'ハイペース' ||
+        remainingMinutes < 200 ||
+        usagePercentage >= 90
+      ) {
+        hasOverPace = true;
+      } else if (paceStatusText === 'やや速い' || usagePercentage >= 85) {
+        hasNearPace = true;
+      }
+    }
+  }
+
+  const hasWarningOrError = hasError || hasOverPace || hasNearPace;
 
   // isCompact 時は警告/エラーがない限り初期折りたたみ
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -437,69 +466,35 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
           </div>
         </div>
 
-        {/* ヘッダー右側（スマホ時は折りたたみ時のみ2行目表示）: アカウント別残量サマリー & PC時開閉アイコン */}
-        <div
-          className={`flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto ${
-            isCollapsed ? 'pt-0.5 sm:pt-0' : 'hidden sm:flex'
-          }`}
-        >
-          {/* 折りたたみ時のみ表示（展開時は各カード自体にヘッダーがあるため重複を防ぐ） */}
-          {isCollapsed && (
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full sm:w-auto">
-              {resolvedAccounts.map((acc) => {
-                const item = usageMap[acc.name];
-                const isSingleTarget = accounts.length === 0 || acc.name === selectedAccount || acc.name === usage?.accountName;
-                const accUsage = item ? item.usage : (isSingleTarget ? (usage ?? null) : null);
-                const accError = item ? item.error : (isSingleTarget ? (error ?? null) : null);
-                const AccIcon = acc.type === 'org' ? Building2 : User;
-
-                if (accError) {
-                  return (
-                    <div
-                      key={acc.name}
-                      className="flex items-center justify-between sm:justify-start gap-2 px-2.5 py-1 rounded-lg text-xs font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20 w-full sm:w-auto"
-                    >
-                      <span className="flex items-center gap-1.5 min-w-0">
-                        <AccIcon className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                        <span className="truncate">{acc.name}:</span>
-                      </span>
-                      <span className="shrink-0 font-semibold">エラー</span>
-                    </div>
-                  );
-                }
-
-                if (!accUsage) return null;
-                const rem = Math.max(0, accUsage.includedMinutes - accUsage.totalMinutesUsed);
-                const remPercent = Math.max(0, 100 - accUsage.usagePercentage);
-                const isLow = rem < 200;
-
-                return (
-                  <div
-                    key={acc.name}
-                    className={`flex items-center justify-between sm:justify-start gap-2.5 sm:gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono border transition-colors w-full sm:w-auto ${
-                      isLow
-                        ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
-                        : 'bg-slate-900/80 text-slate-300 border-slate-700/80'
-                    }`}
-                    title={`${acc.name}: 残り ${rem.toLocaleString()} 分 (${remPercent}%) / 上限 ${accUsage.includedMinutes.toLocaleString()} 分`}
-                  >
-                    <span className="flex items-center gap-1.5 min-w-0">
-                      <AccIcon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                      <span className="text-slate-300 truncate font-semibold">{acc.name}:</span>
-                    </span>
-                    <div className="flex items-baseline gap-1 shrink-0 ml-auto sm:ml-0 font-semibold">
-                      <span className={isLow ? 'text-rose-400' : 'text-emerald-400'}>
-                        残{rem.toLocaleString()}分
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-normal">
-                        ({remPercent}%)
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+        {/* ヘッダー右側（スマホ時は2行目）: 全体サマリーバッジ & PC開閉アイコン */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto pt-0.5 sm:pt-0">
+          {/* 全体サマリーバッジ（監視リポジトリと同様に全体の概要をラベル形式で表示） */}
+          <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
+            {hasError && (
+              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
+                <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                <span>取得エラーあり</span>
+              </span>
+            )}
+            {hasOverPace && (
+              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
+                <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />
+                <span>目安越えあり</span>
+              </span>
+            )}
+            {!hasOverPace && hasNearPace && (
+              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
+                <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
+                <span>目安間近あり</span>
+              </span>
+            )}
+            {!hasError && !hasOverPace && !hasNearPace && (
+              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
+                <CheckCircle2 className="w-3 h-3 shrink-0" />
+                <span>全部目安以下</span>
+              </span>
+            )}
+          </div>
 
           {/* PC表示時の開閉アイコン */}
           <div className="hidden sm:block p-0.5 sm:p-1 rounded-lg text-slate-400 hover:text-slate-200 transition-colors shrink-0">
@@ -514,11 +509,11 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
 
       {/* Account Cards Grid (アコーディオン開閉) */}
       {!isCollapsed && (
-        <div className="p-4 sm:p-5 pt-0 border-t border-slate-800/50 mt-1">
+        <div className="p-4 sm:p-5 pt-3 border-t border-slate-800/60">
           <div
             className={`grid grid-cols-1 ${
               resolvedAccounts.length > 1 ? 'lg:grid-cols-2' : ''
-            } gap-4 pt-3 items-start`}
+            } gap-3 items-start`}
           >
             {resolvedAccounts.map((acc) => {
               const item = usageMap[acc.name];
