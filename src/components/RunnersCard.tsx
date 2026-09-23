@@ -66,33 +66,33 @@ export const RunnersCard: React.FC<RunnersCardProps> = ({
         </div>
 
         {/* サマリーと開閉ボタン */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {runners.length > 0 && (
-            <div className="hidden sm:flex items-center gap-2 text-xs font-mono">
+            <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs font-mono">
               {busyCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 border border-sky-500/20">
                   <PlayCircle className="w-3 h-3 animate-spin" />
-                  {busyCount} 実行中
+                  <span>{busyCount}<span className="hidden sm:inline"> 実行中</span></span>
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <CheckCircle2 className="w-3 h-3" />
-                {onlineCount} Online
+                <span>{onlineCount}<span className="hidden sm:inline"> Online</span></span>
               </span>
               {offlineCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20">
                   <AlertCircle className="w-3 h-3" />
-                  {offlineCount} Offline
+                  <span>{offlineCount}<span className="hidden sm:inline"> Offline</span></span>
                 </span>
               )}
             </div>
           )}
 
-          <div className="p-1 rounded-lg text-slate-400 hover:text-slate-100 transition-colors">
+          <div className="p-0.5 sm:p-1 rounded-lg text-slate-400 hover:text-slate-100 transition-colors">
             {isCollapsed ? (
-              <ChevronDown className="w-5 h-5" />
+              <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
             ) : (
-              <ChevronUp className="w-5 h-5" />
+              <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5" />
             )}
           </div>
         </div>

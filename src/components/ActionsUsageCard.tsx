@@ -284,30 +284,58 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
           },
         ];
 
+  // いずれかのアカウントで残枠警告（85%消費以上）またはエラーがあるか判定
+  const hasWarningOrError = resolvedAccounts.some((acc) => {
+    const item = usageMap[acc.name];
+    const isSingleTarget = accounts.length === 0 || acc.name === selectedAccount || acc.name === usage?.accountName;
+    const accUsage = item ? item.usage : (isSingleTarget ? (usage ?? null) : null);
+    const accError = item ? item.error : (isSingleTarget ? (error ?? null) : null);
+    return Boolean(accError || (accUsage && accUsage.usagePercentage >= 85));
+  });
+
+  // isCompact 時は警告/エラーがない限り初期折りたたみ
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (isCompact) {
+      return !hasWarningOrError;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isCompact) {
+      setIsCollapsed(!hasWarningOrError);
+    } else {
+      setIsCollapsed(false);
+    }
+  }, [isCompact, hasWarningOrError]);
+
   return (
     <div
       id="actions-usage-section"
-      className="glass-panel rounded-2xl p-4 sm:p-6 border border-slate-800/80 shadow-xl relative overflow-hidden transition-all space-y-4"
+      className="glass-panel rounded-2xl border border-slate-800/80 shadow-xl relative overflow-hidden transition-all duration-200"
     >
       {/* Background ambient glow */}
       <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/60 pb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 shadow-inner shrink-0">
-            <Cpu className="w-4 h-4 sm:w-5 sm:h-5" />
+      {/* Header Row (クリックで開閉) */}
+      <div
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="p-4 sm:p-5 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-900/40 transition-colors select-none"
+      >
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 shadow-inner shrink-0">
+            <Cpu className="w-4 h-4" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-slate-100">GitHub Actions 使用状況</h2>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono">
+              <h2 className="text-sm sm:text-base font-bold text-slate-100 truncate">GitHub Actions 使用状況</h2>
+              <span className="text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono shrink-0">
                 {resolvedAccounts.length}アカウント
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+            <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 hidden sm:flex items-center gap-1.5">
               <span>当月無料枠の残量・稼働ペース</span>
-              <span className="text-slate-600 hidden sm:inline">•</span>
+              <span className="text-slate-600">•</span>
               <span className="relative group inline-flex items-center">
                 <Info className="w-3.5 h-3.5 text-slate-400 hover:text-indigo-400 cursor-help transition-colors" />
                 <span className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 top-full mt-2 hidden group-hover:block z-40 w-72 sm:w-80 p-3 bg-slate-900 border border-slate-700/90 rounded-xl text-[11px] leading-relaxed text-slate-300 shadow-2xl backdrop-blur-md pointer-events-none">
@@ -321,33 +349,90 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
             </p>
           </div>
         </div>
+
+        {/* ヘッダー右側: ミニ残量サマリーチップ & 開閉アイコン */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+            {resolvedAccounts.map((acc) => {
+              const item = usageMap[acc.name];
+              const isSingleTarget = accounts.length === 0 || acc.name === selectedAccount || acc.name === usage?.accountName;
+              const accUsage = item ? item.usage : (isSingleTarget ? (usage ?? null) : null);
+              const accError = item ? item.error : (isSingleTarget ? (error ?? null) : null);
+
+              if (accError) {
+                return (
+                  <span
+                    key={acc.name}
+                    className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md text-[10px] font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                  >
+                    <span>{acc.name}:</span>
+                    <span>エラー</span>
+                  </span>
+                );
+              }
+
+              if (!accUsage) return null;
+              const rem = Math.max(0, accUsage.includedMinutes - accUsage.totalMinutesUsed);
+              const isLow = rem < 200;
+
+              return (
+                <span
+                  key={acc.name}
+                  className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-mono border ${
+                    isLow
+                      ? 'bg-rose-500/10 text-rose-300 border-rose-500/30 font-semibold'
+                      : 'bg-slate-900/90 text-slate-300 border-slate-700/80'
+                  }`}
+                  title={`${acc.name}: 残り ${rem.toLocaleString()} 分 / 上限 ${accUsage.includedMinutes.toLocaleString()} 分`}
+                >
+                  <span className="text-slate-400 truncate max-w-[80px] sm:max-w-[120px]">{acc.name}:</span>
+                  <span className={`font-bold ${isLow ? 'text-rose-400' : 'text-emerald-400'}`}>
+                    残{rem.toLocaleString()}分
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+
+          <div className="p-0.5 sm:p-1 rounded-lg text-slate-400 hover:text-slate-200 transition-colors">
+            {isCollapsed ? (
+              <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
+            ) : (
+              <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5" />
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Account Cards Grid (同時並列表示) */}
-      <div
-        className={`grid grid-cols-1 ${
-          resolvedAccounts.length > 1 ? 'lg:grid-cols-2' : ''
-        } gap-4`}
-      >
-        {resolvedAccounts.map((acc) => {
-          const item = usageMap[acc.name];
-          const isSingleTarget = accounts.length === 0 || acc.name === selectedAccount || acc.name === usage?.accountName;
-          const accUsage = item ? item.usage : (isSingleTarget ? (usage ?? null) : null);
-          const accError = item ? item.error : (isSingleTarget ? (error ?? null) : null);
-          const accLoading = item?.isLoading ?? isLoading;
+      {/* Account Cards Grid (アコーディオン開閉) */}
+      {!isCollapsed && (
+        <div className="p-4 sm:p-5 pt-0 border-t border-slate-800/50 mt-1">
+          <div
+            className={`grid grid-cols-1 ${
+              resolvedAccounts.length > 1 ? 'lg:grid-cols-2' : ''
+            } gap-4 pt-3`}
+          >
+            {resolvedAccounts.map((acc) => {
+              const item = usageMap[acc.name];
+              const isSingleTarget = accounts.length === 0 || acc.name === selectedAccount || acc.name === usage?.accountName;
+              const accUsage = item ? item.usage : (isSingleTarget ? (usage ?? null) : null);
+              const accError = item ? item.error : (isSingleTarget ? (error ?? null) : null);
+              const accLoading = item?.isLoading ?? isLoading;
 
-          return (
-            <AccountUsageCard
-              key={acc.name}
-              account={acc}
-              usage={accUsage}
-              error={accError}
-              isLoading={accLoading}
-              isCompact={isCompact}
-            />
-          );
-        })}
-      </div>
+              return (
+                <AccountUsageCard
+                  key={acc.name}
+                  account={acc}
+                  usage={accUsage}
+                  error={accError}
+                  isLoading={accLoading}
+                  isCompact={isCompact}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
