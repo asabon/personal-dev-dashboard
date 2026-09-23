@@ -395,14 +395,6 @@ export function App() {
     }
   };
 
-  // リポジトリ個別削除ハンドラ
-  const handleRemoveRepo = (targetFullName: string) => {
-    const updatedRepos = settings.repositories.filter((r) => r !== targetFullName);
-    const updated: AppSettings = { ...settings, repositories: updatedRepos };
-    saveSettings(updated);
-    setSettings(updated);
-  };
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500/30 selection:text-indigo-200">
       {/* Header */}
@@ -489,8 +481,7 @@ export function App() {
           repositories={settings.repositories}
           projects={state.projects}
           isCompact={viewMode === 'compact'}
-          onAddRepo={() => setIsSettingsOpen(true)}
-          onRemoveRepo={handleRemoveRepo}
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
       </main>
 

@@ -3,7 +3,6 @@ import {
   FolderGit2,
   Lock,
   Globe,
-  Trash2,
   AlertCircle,
   CheckCircle2,
   XCircle,
@@ -17,10 +16,9 @@ import { PullRequestCard } from './PullRequestCard';
 interface RepoCardProps {
   repo: RepositoryDashboardData;
   isCompact?: boolean;
-  onRemove: (fullName: string) => void;
 }
 
-export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false, onRemove }) => {
+export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false }) => {
   const totalPrs = repo.pullRequests.length;
   const failedPrs = repo.pullRequests.filter((pr) => pr.overallCiState === 'FAILURE');
   const runningPrs = repo.pullRequests.filter((pr) => pr.overallCiState === 'PENDING');
@@ -99,18 +97,6 @@ export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false, onR
               <span>{passedPrs.length}/{totalPrs} {totalPrs === 1 ? 'PR' : 'PRs'} passed</span>
             </span>
           )}
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove(repo.fullName);
-            }}
-            className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-            title="監視リストから削除"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
 
           <div className="p-0.5 text-slate-400 hover:text-slate-200">
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   FolderGit2,
-  Plus,
   ChevronDown,
   ChevronUp,
   XCircle,
   Loader2,
   CheckCircle2,
+  Settings,
 } from 'lucide-react';
 import type { RepositoryDashboardData } from '../types';
 import { RepoCard } from './RepoCard';
@@ -15,16 +15,14 @@ interface RepositoriesCardProps {
   repositories: string[];
   projects: RepositoryDashboardData[];
   isCompact?: boolean;
-  onAddRepo: () => void;
-  onRemoveRepo: (fullName: string) => void;
+  onOpenSettings?: () => void;
 }
 
 export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
   repositories,
   projects,
   isCompact = false,
-  onAddRepo,
-  onRemoveRepo,
+  onOpenSettings,
 }) => {
   // サマリー計算
   // 監視中の全リポジトリに含まれる PR を集約
@@ -97,24 +95,10 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
           </div>
         </div>
 
-        {/* ヘッダー右側（スマホ時は2行目）: 「追加」ボタン & サマリーバッジ & PC開閉アイコン */}
+        {/* ヘッダー右側（スマホ時は2行目）: サマリーバッジ & PC開閉アイコン */}
         <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto pt-0.5 sm:pt-0">
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddRepo();
-              }}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-xs font-semibold active:scale-95 transition-all cursor-pointer shrink-0"
-              title="リポジトリを追加"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>追加</span>
-            </button>
-
-            {/* サマリーバッジ */}
-            <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
+          {/* サマリーバッジ */}
+          <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
               {erroredRepos.length > 0 && (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
                   <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
@@ -151,7 +135,6 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                 </span>
               )}
             </div>
-          </div>
 
           {/* PC表示時の開閉アイコン */}
           <div className="hidden sm:block p-0.5 sm:p-1 rounded-lg text-slate-400 hover:text-slate-200 transition-colors shrink-0">
@@ -177,16 +160,18 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                   監視対象のリポジトリが登録されていません
                 </p>
                 <p className="text-xs text-slate-500 max-w-sm">
-                  「追加」ボタンから監視したいリポジトリ（例: <code className="text-slate-400">owner/repo</code>）を登録してください。
+                  設定（⚙️）から監視したいリポジトリ（例: <code className="text-slate-400">owner/repo</code>）を登録してください。
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={onAddRepo}
-                className="mt-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" /> リポジトリを追加する
-              </button>
+              {onOpenSettings && (
+                <button
+                  type="button"
+                  onClick={onOpenSettings}
+                  className="mt-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer"
+                >
+                  <Settings className="w-4 h-4" /> 設定を開く
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 pt-3">
@@ -195,7 +180,6 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                   key={repo.fullName}
                   repo={repo}
                   isCompact={isCompact}
-                  onRemove={onRemoveRepo}
                 />
               ))}
             </div>

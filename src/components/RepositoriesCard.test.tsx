@@ -54,8 +54,6 @@ describe('RepositoriesCard', () => {
       <RepositoriesCard
         repositories={['asabon/personal-dev-dashboard', 'octocat/frontend-app']}
         projects={mockProjects}
-        onAddRepo={vi.fn()}
-        onRemoveRepo={vi.fn()}
       />
     );
 
@@ -70,28 +68,25 @@ describe('RepositoriesCard', () => {
       <RepositoriesCard
         repositories={['asabon/personal-dev-dashboard']}
         projects={[mockProjects[0]]}
-        onAddRepo={vi.fn()}
-        onRemoveRepo={vi.fn()}
       />
     );
 
     expect(screen.getByText('1 PRs All passed')).toBeInTheDocument();
   });
 
-  it('「追加」ボタンをクリックしたときに onAddRepo が呼ばれ、開閉がバブリングしないこと', () => {
-    const handleAdd = vi.fn();
+  it('リポジトリが0件のときに「設定を開く」ボタンをクリックすると onOpenSettings が呼ばれること', () => {
+    const handleOpenSettings = vi.fn();
     render(
       <RepositoriesCard
-        repositories={['asabon/personal-dev-dashboard']}
-        projects={[mockProjects[0]]}
-        onAddRepo={handleAdd}
-        onRemoveRepo={vi.fn()}
+        repositories={[]}
+        projects={[]}
+        onOpenSettings={handleOpenSettings}
       />
     );
 
-    const addBtn = screen.getByRole('button', { name: /追加/ });
-    fireEvent.click(addBtn);
-    expect(handleAdd).toHaveBeenCalledTimes(1);
+    const settingsBtn = screen.getByRole('button', { name: /設定を開く/ });
+    fireEvent.click(settingsBtn);
+    expect(handleOpenSettings).toHaveBeenCalledTimes(1);
   });
 
   it('ヘッダークリックでカード全体を開閉できること', () => {
@@ -100,8 +95,6 @@ describe('RepositoriesCard', () => {
         repositories={['asabon/personal-dev-dashboard']}
         projects={[mockProjects[0]]}
         isCompact={false}
-        onAddRepo={vi.fn()}
-        onRemoveRepo={vi.fn()}
       />
     );
 
