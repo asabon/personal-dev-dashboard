@@ -21,9 +21,11 @@ interface RepoCardProps {
 }
 
 export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false, onRemove }) => {
-  const hasFailure = repo.pullRequests.some((pr) => pr.overallCiState === 'FAILURE');
-  const hasRunning = repo.pullRequests.some((pr) => pr.overallCiState === 'PENDING');
-  const hasSuccess = repo.pullRequests.some((pr) => pr.overallCiState === 'SUCCESS');
+  const totalPrs = repo.pullRequests.length;
+  const failedPrs = repo.pullRequests.filter((pr) => pr.overallCiState === 'FAILURE');
+  const runningPrs = repo.pullRequests.filter((pr) => pr.overallCiState === 'PENDING');
+  const passedPrs = repo.pullRequests.filter((pr) => pr.overallCiState === 'SUCCESS');
+  const hasFailure = failedPrs.length > 0;
 
   // isCompact 時は失敗またはエラーがある場合のみデフォルト展開、それ以外は折りたたみ
   const [isExpanded, setIsExpanded] = useState(() => {
@@ -78,27 +80,27 @@ export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false, onR
 
         <div className="flex items-center gap-2 shrink-0">
           {/* CI ステータスサマリーアイコン */}
-          {hasFailure && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
-              <XCircle className="w-3 h-3" />
-              <span className="hidden sm:inline">Failed</span>
+          {failedPrs.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0 font-mono">
+              <XCircle className="w-3 h-3 shrink-0" />
+              <span>{failedPrs.length} failed</span>
             </span>
           )}
-          {!hasFailure && hasRunning && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              <span className="hidden sm:inline">Running</span>
+          {runningPrs.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0 font-mono">
+              <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+              <span>{runningPrs.length} running</span>
             </span>
           )}
-          {!hasFailure && !hasRunning && hasSuccess && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <CheckCircle2 className="w-3 h-3" />
-              <span className="hidden sm:inline">Passed</span>
+          {failedPrs.length === 0 && runningPrs.length === 0 && passedPrs.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0 font-mono">
+              <CheckCircle2 className="w-3 h-3 shrink-0" />
+              <span>All passed</span>
             </span>
           )}
 
-          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700">
-            {repo.pullRequests.length} PRs
+          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 shrink-0">
+            {totalPrs} PRs
           </span>
 
           <button

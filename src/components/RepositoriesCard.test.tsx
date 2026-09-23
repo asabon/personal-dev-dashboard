@@ -61,7 +61,21 @@ describe('RepositoriesCard', () => {
 
     expect(screen.getByText('監視リポジトリ')).toBeInTheDocument();
     expect(screen.getByText('2リポジトリ')).toBeInTheDocument();
-    expect(screen.getByText('失敗: 1')).toBeInTheDocument();
+    expect(screen.getByText('1 PR failed')).toBeInTheDocument();
+    expect(screen.getByText('1 PR passed')).toBeInTheDocument();
+  });
+
+  it('失敗がない場合は All passed バッジが表示されること', () => {
+    render(
+      <RepositoriesCard
+        repositories={['asabon/personal-dev-dashboard']}
+        projects={[mockProjects[0]]}
+        onAddRepo={vi.fn()}
+        onRemoveRepo={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('1 PRs All passed')).toBeInTheDocument();
   });
 
   it('「追加」ボタンをクリックしたときに onAddRepo が呼ばれ、開閉がバブリングしないこと', () => {

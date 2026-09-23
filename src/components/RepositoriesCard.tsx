@@ -27,19 +27,16 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
   onRemoveRepo,
 }) => {
   // サマリー計算
-  const failedCount = projects.filter(
-    (p) => Boolean(p.error) || p.pullRequests.some((pr) => pr.overallCiState === 'FAILURE')
-  ).length;
+  // 監視中の全リポジトリに含まれる PR を集約
+  const allPrs = projects.flatMap((p) => p.pullRequests);
+  const totalPrs = allPrs.length;
+  const failedPrs = allPrs.filter((pr) => pr.overallCiState === 'FAILURE');
+  const runningPrs = allPrs.filter((pr) => pr.overallCiState === 'PENDING');
+  const passedPrs = allPrs.filter((pr) => pr.overallCiState === 'SUCCESS');
 
-  const runningCount = projects.filter(
-    (p) =>
-      !p.error &&
-      !p.pullRequests.some((pr) => pr.overallCiState === 'FAILURE') &&
-      p.pullRequests.some((pr) => pr.overallCiState === 'PENDING')
-  ).length;
-
-  const totalPrs = projects.reduce((sum, p) => sum + p.pullRequests.length, 0);
-  const hasFailure = failedCount > 0;
+  // リポジトリ自体のエラー
+  const erroredRepos = projects.filter((p) => Boolean(p.error));
+  const hasFailure = failedPrs.length > 0 || erroredRepos.length > 0;
 
   // isCompact 時は失敗リポジトリがある場合を除き初期折りたたみ
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -118,27 +115,38 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
 
             {/* サマリーバッジ */}
             <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
-              {failedCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold">
+              {erroredRepos.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
                   <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
-                  <span>失敗: {failedCount}</span>
+                  <span>{erroredRepos.length} リポエラー</span>
                 </span>
               )}
-              {runningCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20">
+              {failedPrs.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
+                  <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                  <span>{failedPrs.length} {failedPrs.length === 1 ? 'PR' : 'PRs'} failed</span>
+                </span>
+              )}
+              {runningPrs.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 shrink-0">
                   <Loader2 className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
-                  <span>実行中: {runningCount}</span>
+                  <span>{runningPrs.length} {runningPrs.length === 1 ? 'PR' : 'PRs'} running</span>
                 </span>
               )}
-              {failedCount === 0 && (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              {failedPrs.length === 0 && erroredRepos.length === 0 && runningPrs.length === 0 && (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
-                  <span className="hidden sm:inline">全リポジトリ正常</span>
-                  <span className="sm:hidden">正常</span>
+                  <span>{totalPrs > 0 ? `${totalPrs} PRs All passed` : 'PRなし'}</span>
                 </span>
               )}
-              {totalPrs > 0 && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-400">
+              {(failedPrs.length > 0 || runningPrs.length > 0) && passedPrs.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                  <CheckCircle2 className="w-3 h-3 shrink-0" />
+                  <span>{passedPrs.length} {passedPrs.length === 1 ? 'PR' : 'PRs'} passed</span>
+                </span>
+              )}
+              {totalPrs > 0 && (failedPrs.length > 0 || runningPrs.length > 0) && passedPrs.length === 0 && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-400 shrink-0">
                   {totalPrs} PRs
                 </span>
               )}

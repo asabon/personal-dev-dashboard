@@ -20,36 +20,84 @@ interface PullRequestCardProps {
 export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact = false }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  const totalChecks = pr.checks.length;
+  const failedChecks = pr.checks.filter(
+    (c) => c.conclusion === 'FAILURE' || c.conclusion === 'TIMED_OUT' || c.conclusion === 'CANCELLED'
+  ).length;
+  const runningChecks = pr.checks.filter(
+    (c) => c.status === 'IN_PROGRESS' || c.status === 'QUEUED' || c.status === 'PENDING' || c.status === 'WAITING'
+  ).length;
+  const passedChecks = pr.checks.filter((c) => c.conclusion === 'SUCCESS').length;
+
   const getStatusBadge = () => {
+    if (totalChecks > 0) {
+      if (failedChecks > 0) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 font-mono shrink-0">
+            <XCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>{failedChecks} failed</span>
+          </span>
+        );
+      }
+      if (runningChecks > 0) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono shrink-0">
+            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+            <span>{runningChecks} running</span>
+          </span>
+        );
+      }
+      if (passedChecks === totalChecks) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono shrink-0">
+            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+            <span>All passed ({passedChecks}/{totalChecks})</span>
+          </span>
+        );
+      }
+    }
+
     switch (pr.overallCiState) {
       case 'SUCCESS':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Passed</span>
+          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+            <span>All passed</span>
           </span>
         );
       case 'FAILURE':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
-            <XCircle className="w-3.5 h-3.5" />
+          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
+            <XCircle className="w-3.5 h-3.5 shrink-0" />
             <span>Failed</span>
           </span>
         );
       case 'PENDING':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
             <span>Running</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
+          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
             <span>No CI</span>
           </span>
         );
     }
+  };
+
+  const getChecksButtonLabel = () => {
+    if (totalChecks === 0) return null;
+    if (passedChecks === totalChecks) {
+      return `${totalChecks} Checks (All passed)`;
+    }
+    const parts: string[] = [];
+    if (passedChecks > 0) parts.push(`${passedChecks} passed`);
+    if (failedChecks > 0) parts.push(`${failedChecks} failed`);
+    if (runningChecks > 0) parts.push(`${runningChecks} running`);
+    return `${totalChecks} Checks (${parts.join(', ')})`;
   };
 
   const getCheckIcon = (check: ActionCheck) => {
@@ -111,14 +159,14 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact 
             <span>{formatRelativeTime(pr.updatedAt)}</span>
           </div>
 
-          {pr.checks.length > 0 && (
+          {totalChecks > 0 && (
             <button
               type="button"
               onClick={() => setIsExpanded(!isExpanded)}
               className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition-colors"
             >
-              <span>{pr.checks.length} Checks</span>
-              {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              <span>{getChecksButtonLabel()}</span>
+              {isExpanded ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />}
             </button>
           )}
         </div>
@@ -147,14 +195,14 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact 
             <span>{formatRelativeTime(pr.updatedAt)}</span>
           </div>
 
-          {pr.checks.length > 0 && (
+          {totalChecks > 0 && (
             <button
               type="button"
               onClick={() => setIsExpanded(!isExpanded)}
               className="ml-auto text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition-colors"
             >
-              <span>{pr.checks.length} Checks</span>
-              {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              <span>{getChecksButtonLabel()}</span>
+              {isExpanded ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />}
             </button>
           )}
         </div>
