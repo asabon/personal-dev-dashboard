@@ -32,8 +32,8 @@ export const RunnersCard: React.FC<RunnersCardProps> = ({
     setIsCollapsed(isCompact);
   }, [isCompact]);
 
-  const onlineCount = runners.filter((r) => r.status === 'online').length;
   const busyCount = runners.filter((r) => r.busy).length;
+  const idleCount = runners.filter((r) => r.status === 'online' && !r.busy).length;
   const offlineCount = runners.filter((r) => r.status === 'offline').length;
 
   return (
@@ -86,10 +86,12 @@ export const RunnersCard: React.FC<RunnersCardProps> = ({
                   <span>{busyCount} Running</span>
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <CheckCircle2 className="w-3 h-3 shrink-0" />
-                <span>{onlineCount} Online</span>
-              </span>
+              {idleCount > 0 && (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <CheckCircle2 className="w-3 h-3 shrink-0" />
+                  <span>{idleCount} Idle</span>
+                </span>
+              )}
               {offlineCount > 0 && (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20">
                   <AlertCircle className="w-3 h-3 shrink-0" />
