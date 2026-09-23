@@ -19,7 +19,7 @@ import {
 import { Header } from './components/Header';
 import { DashboardSummaryBar } from './components/DashboardSummaryBar';
 import { ActionsUsageCard } from './components/ActionsUsageCard';
-import { RepoCard } from './components/RepoCard';
+import { RepositoriesCard } from './components/RepositoriesCard';
 import { RunnersCard } from './components/RunnersCard';
 import { SettingsModal } from './components/SettingsModal';
 import { OnboardingModal } from './components/OnboardingModal';
@@ -484,62 +484,14 @@ export function App() {
           />
         )}
 
-        {/* 3. Repositories Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FolderGit2 className="w-5 h-5 text-indigo-400" />
-              <h2 className="text-lg font-bold text-slate-100 tracking-tight">監視リポジトリ</h2>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-                {settings.repositories.length}
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setIsSettingsOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-xs font-semibold active:scale-95 transition-all cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>リポジトリを追加</span>
-            </button>
-          </div>
-
-          {/* Repo Grid */}
-          {settings.repositories.length === 0 ? (
-            <div className="glass-panel rounded-2xl border border-dashed border-slate-800 p-12 text-center flex flex-col items-center justify-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
-                <FolderGit2 className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-slate-200">
-                  監視対象のリポジトリが登録されていません
-                </p>
-                <p className="text-xs text-slate-500 max-w-sm">
-                  「リポジトリを追加」ボタンから監視したいリポジトリ（例: <code className="text-slate-400">owner/repo</code>）を登録してください。
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsSettingsOpen(true)}
-                className="mt-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" /> リポジトリを追加する
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {state.projects.map((repo) => (
-                <RepoCard
-                  key={repo.fullName}
-                  repo={repo}
-                  isCompact={viewMode === 'compact'}
-                  onRemove={handleRemoveRepo}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        {/* 3. Repositories Section (統一親カード) */}
+        <RepositoriesCard
+          repositories={settings.repositories}
+          projects={state.projects}
+          isCompact={viewMode === 'compact'}
+          onAddRepo={() => setIsSettingsOpen(true)}
+          onRemoveRepo={handleRemoveRepo}
+        />
       </main>
 
       {/* Footer */}
