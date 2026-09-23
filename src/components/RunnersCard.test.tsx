@@ -37,109 +37,182 @@ describe('RunnersCard', () => {
     scopeName: 'test-org',
   };
 
-  it('1台登録で待機中の場合、"1 Idle" のみ表示され "Running" や "Offline" は表示されないこと', () => {
-    render(
-      <RunnersCard
-        runners={[dummyRunnerIdle]}
-        isLoading={false}
-        error={null}
-      />
-    );
+  describe('ヘッダーサマリーバッジ（分数表示とステータス）', () => {
+    it('1台登録で待機中の場合、"1/1 Online"（緑色）のみ表示されること', () => {
+      render(
+        <RunnersCard
+          runners={[dummyRunnerIdle]}
+          isLoading={false}
+          error={null}
+        />
+      );
 
-    expect(screen.getByText('1 Idle')).toBeInTheDocument();
-    expect(screen.queryByText(/Running/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Offline/)).not.toBeInTheDocument();
-    expect(screen.getByText('1台')).toBeInTheDocument();
+      expect(screen.getByText('1/1 Online')).toBeInTheDocument();
+      expect(screen.queryByText(/Running/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Offline/)).not.toBeInTheDocument();
+      expect(screen.getByText('1台')).toBeInTheDocument();
+    });
+
+    it('1台登録でジョブ実行中の場合、"1/1 Online"（緑色）と "1台 Running"（黄色）が表示されること', () => {
+      render(
+        <RunnersCard
+          runners={[dummyRunnerBusy]}
+          isLoading={false}
+          error={null}
+        />
+      );
+
+      expect(screen.getByText('1/1 Online')).toBeInTheDocument();
+      expect(screen.getByText('1台 Running')).toBeInTheDocument();
+      expect(screen.queryByText(/Offline/)).not.toBeInTheDocument();
+      expect(screen.getByText('1台')).toBeInTheDocument();
+    });
+
+    it('2台登録（1台実行中、1台待機中）の場合、"2/2 Online" と "1台 Running" が表示されること', () => {
+      render(
+        <RunnersCard
+          runners={[dummyRunnerIdle, dummyRunnerBusy]}
+          isLoading={false}
+          error={null}
+        />
+      );
+
+      expect(screen.getByText('2/2 Online')).toBeInTheDocument();
+      expect(screen.getByText('1台 Running')).toBeInTheDocument();
+      expect(screen.queryByText(/Offline/)).not.toBeInTheDocument();
+      expect(screen.getByText('2台')).toBeInTheDocument();
+    });
+
+    it('3台登録（実行中1台、待機中1台、オフライン1台）の場合、"1台 Offline"（赤）、"2/3 Online"、"1台 Running"（黄）が表示されること', () => {
+      render(
+        <RunnersCard
+          runners={[dummyRunnerIdle, dummyRunnerBusy, dummyRunnerOffline]}
+          isLoading={false}
+          error={null}
+        />
+      );
+
+      expect(screen.getByText('1台 Offline')).toBeInTheDocument();
+      expect(screen.getByText('2/3 Online')).toBeInTheDocument();
+      expect(screen.getByText('1台 Running')).toBeInTheDocument();
+      expect(screen.getByText('3台')).toBeInTheDocument();
+    });
+
+    it('エラー発生時は親ヘッダーに "取得エラーあり" が表示されること', () => {
+      render(
+        <RunnersCard
+          runners={[]}
+          isLoading={false}
+          error="API エラー"
+        />
+      );
+
+      expect(screen.getByText('取得エラーあり')).toBeInTheDocument();
+    });
   });
 
-  it('1台登録でジョブ実行中の場合、"1 Running" のみ表示され "Idle" や "Offline" は重複表示されないこと (#37)', () => {
-    render(
-      <RunnersCard
-        runners={[dummyRunnerBusy]}
-        isLoading={false}
-        error={null}
-      />
-    );
+  describe('表示モード連動と開閉ポリシー', () => {
+    it('詳細モード（isCompact=false）では常に展開され、OSやタグ一覧が最初から表示されること', () => {
+      render(
+        <RunnersCard
+          runners={[dummyRunnerIdle]}
+          isLoading={false}
+          error={null}
+          isCompact={false}
+        />
+      );
 
-    expect(screen.getByText('1 Running')).toBeInTheDocument();
-    expect(screen.queryByText(/Idle/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Online/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Offline/)).not.toBeInTheDocument();
-    expect(screen.getByText('1台')).toBeInTheDocument();
-  });
+      // ランナー名、スコープ、OS、タグが表示されていること
+      expect(screen.getByText('worker-node-1')).toBeInTheDocument();
+      expect(screen.getByText(/Org: test-org/)).toBeInTheDocument();
+      expect(screen.getByText('Linux')).toBeInTheDocument();
+      expect(screen.getByText('X64')).toBeInTheDocument();
 
-  it('2台登録（1台実行中、1台待機中）の場合、"1 Running" と "1 Idle" の両方が正確に表示されること', () => {
-    render(
-      <RunnersCard
-        runners={[dummyRunnerIdle, dummyRunnerBusy]}
-        isLoading={false}
-        error={null}
-      />
-    );
+      // 各ランナー行をクリックして折りたためること
+      fireEvent.click(screen.getByText('worker-node-1'));
+      expect(screen.queryByText('X64')).not.toBeInTheDocument();
 
-    expect(screen.getByText('1 Running')).toBeInTheDocument();
-    expect(screen.getByText('1 Idle')).toBeInTheDocument();
-    expect(screen.queryByText(/Offline/)).not.toBeInTheDocument();
-    expect(screen.getByText('2台')).toBeInTheDocument();
-  });
+      // 再度クリックして展開できること
+      fireEvent.click(screen.getByText('worker-node-1'));
+      expect(screen.getByText('X64')).toBeInTheDocument();
+    });
 
-  it('3台登録（実行中1台、待機中1台、オフライン1台）の場合、各ステータスが排他的に集計されること', () => {
-    render(
-      <RunnersCard
-        runners={[dummyRunnerIdle, dummyRunnerBusy, dummyRunnerOffline]}
-        isLoading={false}
-        error={null}
-      />
-    );
+    it('簡易モード（isCompact=true）で全台Onlineの正常時は親カードが初期折りたたみとなり、親展開で1行表示、個別クリックで詳細が開くこと', () => {
+      render(
+        <RunnersCard
+          runners={[dummyRunnerIdle]}
+          isLoading={false}
+          error={null}
+          isCompact={true}
+        />
+      );
 
-    expect(screen.getByText('1 Running')).toBeInTheDocument();
-    expect(screen.getByText('1 Idle')).toBeInTheDocument();
-    expect(screen.getByText('1 Offline')).toBeInTheDocument();
-    expect(screen.getByText('3台')).toBeInTheDocument();
-  });
+      // サマリーバッジは見えるが、中身は折りたたまれている
+      expect(screen.getByText('1/1 Online')).toBeInTheDocument();
+      expect(screen.queryByText('worker-node-1')).not.toBeInTheDocument();
 
-  it('アコーディオンの開閉ができること', () => {
-    render(
-      <RunnersCard
-        runners={[dummyRunnerIdle]}
-        isLoading={false}
-        error={null}
-      />
-    );
+      // 1. ヘッダーをクリックして親カードを開くと、1行表示でランナーが表示されること
+      fireEvent.click(screen.getByText('Self-hosted Runners'));
+      expect(screen.getByText('worker-node-1')).toBeInTheDocument();
+      expect(screen.getByText(/Org: test-org/)).toBeInTheDocument();
+      expect(screen.getByText('Online')).toBeInTheDocument();
+      // 簡易モードの1行初期状態ではタグは非表示
+      expect(screen.queryByText('X64')).not.toBeInTheDocument();
 
-    // デフォルトでは開いているのでランナー名が表示されている
-    expect(screen.getByText('worker-node-1')).toBeInTheDocument();
+      // 2. 個別ランナー行をクリックすると、詳細（OSやタグ）が展開されること
+      fireEvent.click(screen.getByText('worker-node-1'));
+      expect(screen.getByText('Linux')).toBeInTheDocument();
+      expect(screen.getByText('X64')).toBeInTheDocument();
+    });
 
-    // ヘッダーをクリックして閉じる
-    fireEvent.click(screen.getByText('Self-hosted Runners'));
-    expect(screen.queryByText('worker-node-1')).not.toBeInTheDocument();
+    it('簡易モード（isCompact=true）でもオフラインがある場合は自動で親カードが展開されること', () => {
+      render(
+        <RunnersCard
+          runners={[dummyRunnerOffline]}
+          isLoading={false}
+          error={null}
+          isCompact={true}
+        />
+      );
 
-    // 再度クリックして開く
-    fireEvent.click(screen.getByText('Self-hosted Runners'));
-    expect(screen.getByText('worker-node-1')).toBeInTheDocument();
-  });
+      // オフラインがあるため初期状態から展開されている
+      expect(screen.getByText('worker-node-3')).toBeInTheDocument();
+      expect(screen.getByText('Offline')).toBeInTheDocument();
+    });
 
-  it('ローディング表示が正しく行われること', () => {
-    render(
-      <RunnersCard
-        runners={[]}
-        isLoading={true}
-        error={null}
-      />
-    );
+    it('簡易モード（isCompact=true）でもエラーがある場合は自動で親カードが展開されること', () => {
+      render(
+        <RunnersCard
+          runners={[]}
+          isLoading={false}
+          error="Runner API error"
+          isCompact={true}
+        />
+      );
 
-    expect(screen.getByText('セルフホステッドランナーの稼働状況を確認中...')).toBeInTheDocument();
-  });
+      // エラーメッセージが表示されていること
+      expect(screen.getByText('Runner API error')).toBeInTheDocument();
+    });
 
-  it('エラーメッセージが表示されること', () => {
-    render(
-      <RunnersCard
-        runners={[]}
-        isLoading={false}
-        error="ランナー取得エラー"
-      />
-    );
+    it('ヘッダークリックでアコーディオンの開閉ができること', () => {
+      render(
+        <RunnersCard
+          runners={[dummyRunnerIdle]}
+          isLoading={false}
+          error={null}
+          isCompact={false}
+        />
+      );
 
-    expect(screen.getByText('ランナー取得エラー')).toBeInTheDocument();
+      expect(screen.getByText('worker-node-1')).toBeInTheDocument();
+
+      // ヘッダーをクリックして閉じる
+      fireEvent.click(screen.getByText('Self-hosted Runners'));
+      expect(screen.queryByText('worker-node-1')).not.toBeInTheDocument();
+
+      // 再度クリックして開く
+      fireEvent.click(screen.getByText('Self-hosted Runners'));
+      expect(screen.getByText('worker-node-1')).toBeInTheDocument();
+    });
   });
 });
