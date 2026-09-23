@@ -259,5 +259,47 @@ describe('ActionsUsageCard', () => {
     // critical-org は警告があるためデフォルト展開され、本文の「100」が出る
     expect(screen.getByText('100')).toBeInTheDocument();
   });
+
+  it('親セクション展開時は親ヘッダーのアカウント別サマリーは非表示となり、親セクション折りたたみ時のみ親ヘッダーにサマリーが表示されること（パターンA）', () => {
+    const accounts: ActionsUsageAccount[] = [
+      { name: 'asabon', type: 'user' },
+      { name: 'asabon-lab', type: 'org' },
+    ];
+
+    const orgUsage: ActionsUsage = {
+      totalMinutesUsed: 687,
+      includedMinutes: 3000,
+      usagePercentage: 23,
+      breakdown: { ubuntu: 687, macOS: 0, windows: 0 },
+      lastUpdated: '2026-09-22T00:00:00Z',
+      accountName: 'asabon-lab',
+      accountType: 'org',
+    };
+
+    const usageMap: Record<string, ActionsUsageItem> = {
+      asabon: { usage: mockUsage, error: null },
+      'asabon-lab': { usage: orgUsage, error: null },
+    };
+
+    render(
+      <ActionsUsageCard
+        accounts={accounts}
+        usageMap={usageMap}
+      />
+    );
+
+    // 展開状態（デフォルト）:
+    // 親ヘッダーの「asabon:」や「asabon-lab:」コロン付きラベルは非表示
+    expect(screen.queryByText('asabon:')).not.toBeInTheDocument();
+    expect(screen.queryByText('asabon-lab:')).not.toBeInTheDocument();
+
+    // 親セクションヘッダー（GitHub Actions 使用状況）をクリックして折りたたむ
+    fireEvent.click(screen.getByText('GitHub Actions 使用状況'));
+
+    // 折りたたみ状態:
+    // 子カードは隠れ、親ヘッダー右側にサマリー（「asabon:」「asabon-lab:」）が出現する
+    expect(screen.getByText('asabon:')).toBeInTheDocument();
+    expect(screen.getByText('asabon-lab:')).toBeInTheDocument();
+  });
 });
 
