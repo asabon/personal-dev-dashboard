@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Settings, ShieldCheck, Activity, Clock } from 'lucide-react';
+import { RefreshCw, Settings, ShieldCheck, Activity, Clock, Minimize2, Maximize2 } from 'lucide-react';
 import type { RateLimitInfo } from '../services/githubApi';
 
 interface HeaderProps {
@@ -7,6 +7,8 @@ interface HeaderProps {
   isRefreshing: boolean;
   lastRefreshedAt: Date | null;
   rateLimit: RateLimitInfo | null;
+  viewMode?: 'compact' | 'expanded';
+  onToggleViewMode?: () => void;
   onRefresh: () => void;
   onOpenSettings: () => void;
 }
@@ -16,6 +18,8 @@ export const Header: React.FC<HeaderProps> = ({
   isRefreshing,
   lastRefreshedAt,
   rateLimit,
+  viewMode = 'expanded',
+  onToggleViewMode,
   onRefresh,
   onOpenSettings,
 }) => {
@@ -23,6 +27,8 @@ export const Header: React.FC<HeaderProps> = ({
     if (!date) return '未更新';
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
+
+  const isCompact = viewMode === 'compact';
 
   return (
     <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-30">
@@ -59,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Status & Actions */}
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Rate Limit Badge */}
           {rateLimit && (
             <div
@@ -80,6 +86,33 @@ export const Header: React.FC<HeaderProps> = ({
             <Clock className="w-3.5 h-3.5 text-slate-500" />
             <span>{formatTime(lastRefreshedAt)}</span>
           </div>
+
+          {/* View Mode Toggle Button */}
+          {onToggleViewMode && (
+            <button
+              type="button"
+              onClick={onToggleViewMode}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all active:scale-95 cursor-pointer ${
+                isCompact
+                  ? 'bg-indigo-600/20 text-indigo-300 border-indigo-500/40 hover:bg-indigo-600/30'
+                  : 'bg-slate-900 text-slate-300 hover:text-slate-100 border-slate-800 hover:bg-slate-800'
+              }`}
+              title={isCompact ? '詳細表示モードに切り替え' : '簡易表示モードに切り替え'}
+              aria-label={isCompact ? '詳細表示に切り替え' : '簡易表示に切り替え'}
+            >
+              {isCompact ? (
+                <>
+                  <Maximize2 className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="hidden sm:inline">簡易表示</span>
+                </>
+              ) : (
+                <>
+                  <Minimize2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">詳細表示</span>
+                </>
+              )}
+            </button>
+          )}
 
           {/* Refresh Button */}
           <button

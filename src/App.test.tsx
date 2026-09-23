@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { App } from './App';
 
 describe('App Demo Mode (?demo=true)', () => {
@@ -36,8 +36,10 @@ describe('App Demo Mode (?demo=true)', () => {
     expect(screen.getByText('asabon/personal-dev-dashboard')).toBeInTheDocument();
     expect(screen.getByText('octocat/frontend-app')).toBeInTheDocument();
 
-    // デモ用 Actions 使用量が表示されること
-    expect(screen.getByText(/当月の使用量/)).toBeInTheDocument();
+    // デモ用 Actions 使用量が個人・Orgの両方同時に表示されること
+    expect(screen.getAllByText(/当月使用量/)).toHaveLength(2);
+    expect(screen.getByText('demo-developer')).toBeInTheDocument();
+    expect(screen.getByText('demo-org')).toBeInTheDocument();
   });
 
   it('通常アクセス（demoパラメータなし & PAT未設定）の場合はオンボーディングモーダルが表示されること', () => {
@@ -51,5 +53,27 @@ describe('App Demo Mode (?demo=true)', () => {
 
     // オンボーディングモーダルの開始ボタンが表示されること
     expect(screen.getByText('ダッシュボードを開始')).toBeInTheDocument();
+  });
+
+  it('表示モード（簡易 / 詳細）の切り替えトグルが正しく動作すること', async () => {
+    delete (window as any).location;
+    window.location = {
+      ...originalLocation,
+      search: '?demo=true',
+    } as any;
+
+    window.innerWidth = 1200;
+
+    render(<App />);
+
+    // トグルボタンの取得
+    const toggleBtn = screen.getByRole('button', { name: /詳細表示に切り替え|簡易表示に切り替え/ });
+    expect(toggleBtn).toBeInTheDocument();
+
+    fireEvent.click(toggleBtn);
+    expect(localStorage.getItem('dashboard_view_mode')).toBe('compact');
+
+    fireEvent.click(toggleBtn);
+    expect(localStorage.getItem('dashboard_view_mode')).toBe('expanded');
   });
 });

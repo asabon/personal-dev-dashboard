@@ -17,8 +17,9 @@ import {
   getLatestRateLimit,
 } from './services/githubApi';
 import { Header } from './components/Header';
+import { DashboardSummaryBar } from './components/DashboardSummaryBar';
 import { ActionsUsageCard } from './components/ActionsUsageCard';
-import { RepoCard } from './components/RepoCard';
+import { RepositoriesCard } from './components/RepositoriesCard';
 import { RunnersCard } from './components/RunnersCard';
 import { SettingsModal } from './components/SettingsModal';
 import { OnboardingModal } from './components/OnboardingModal';
@@ -31,6 +32,8 @@ import {
   DEMO_RUNNERS,
 } from './data/mockData';
 
+const VIEW_MODE_STORAGE_KEY = 'dashboard_view_mode';
+
 export function App() {
   const isDemoMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
 
@@ -39,6 +42,34 @@ export function App() {
     return loadSettings();
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // 表示モード（簡易 / 詳細）。デフォルトはスマホ・タブレット幅なら compact、PCなら expanded
+  const [viewMode, setViewMode] = useState<'compact' | 'expanded'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+      if (saved === 'compact' || saved === 'expanded') {
+        return saved;
+      }
+      if (window.innerWidth < 768) {
+        return 'compact';
+      }
+    }
+    return 'expanded';
+  });
+
+  const handleToggleViewMode = () => {
+    setViewMode((prev) => {
+      const next = prev === 'compact' ? 'expanded' : 'compact';
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(VIEW_MODE_STORAGE_KEY, next);
+        } catch {
+          // localStorage 使用不可時は何もしない
+        }
+      }
+      return next;
+    });
+  };
 
   const [selectedUsageAccount, setSelectedUsageAccount] = useState<string>(() => {
     if (isDemoMode) return 'demo-developer';
@@ -364,14 +395,6 @@ export function App() {
     }
   };
 
-  // リポジトリ個別削除ハンドラ
-  const handleRemoveRepo = (targetFullName: string) => {
-    const updatedRepos = settings.repositories.filter((r) => r !== targetFullName);
-    const updated: AppSettings = { ...settings, repositories: updatedRepos };
-    saveSettings(updated);
-    setSettings(updated);
-  };
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500/30 selection:text-indigo-200">
       {/* Header */}
@@ -380,12 +403,14 @@ export function App() {
         isRefreshing={state.isRefreshing}
         lastRefreshedAt={state.lastRefreshedAt}
         rateLimit={state.rateLimit}
+        viewMode={viewMode}
+        onToggleViewMode={handleToggleViewMode}
         onRefresh={() => refreshData()}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {isDemoMode && (
           <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
             <div className="flex items-center gap-2">
@@ -414,24 +439,32 @@ export function App() {
           </div>
         )}
 
-        {/* 1. Actions Usage Summary */}
+        {/* Dashboard Status Highlights */}
         {(() => {
-          const currentAcc = selectedUsageAccount || settings.username;
-          const item = state.usageMap?.[currentAcc];
-          const usageData = item ? item.usage : (currentAcc === settings.username ? state.usage : null);
-          const usageErr = item ? item.error : (currentAcc === settings.username ? actionsError : null);
+          const allUsages = accounts.map((acc) => {
+            const item = state.usageMap?.[acc.name];
+            return item ? item.usage : (acc.name === settings.username ? state.usage : null);
+          });
 
           return (
-            <ActionsUsageCard
-              usage={usageData}
-              error={usageErr}
-              isLoading={state.isRefreshing && !usageData && !usageErr}
-              accounts={accounts}
-              selectedAccount={currentAcc}
-              onSelectAccount={(name) => setSelectedUsageAccount(name)}
+            <DashboardSummaryBar
+              projects={state.projects}
+              usages={allUsages}
+              runners={state.runners}
+              showRunners={Boolean(settings.showSelfHostedRunners)}
             />
           );
         })()}
+
+        {/* 1. Actions Usage Summary (全アカウント常時並列表示) */}
+        <ActionsUsageCard
+          accounts={accounts}
+          usageMap={state.usageMap}
+          isLoading={state.isRefreshing}
+          isCompact={viewMode === 'compact'}
+          usage={state.usage}
+          error={actionsError}
+        />
 
         {/* 2. Self-hosted Runners Panel (設定で有効時のみ表示) */}
         {settings.showSelfHostedRunners && (
@@ -439,64 +472,17 @@ export function App() {
             runners={state.runners}
             isLoading={state.isLoadingRunners}
             error={state.runnersError}
+            isCompact={viewMode === 'compact'}
           />
         )}
 
-        {/* 3. Repositories Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FolderGit2 className="w-5 h-5 text-indigo-400" />
-              <h2 className="text-lg font-bold text-slate-100 tracking-tight">監視リポジトリ</h2>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-                {settings.repositories.length}
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setIsSettingsOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-xs font-semibold active:scale-95 transition-all cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>リポジトリを追加</span>
-            </button>
-          </div>
-
-          {/* Repo Grid */}
-          {settings.repositories.length === 0 ? (
-            <div className="glass-panel rounded-2xl border border-dashed border-slate-800 p-12 text-center flex flex-col items-center justify-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
-                <FolderGit2 className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-slate-200">
-                  監視対象のリポジトリが登録されていません
-                </p>
-                <p className="text-xs text-slate-500 max-w-sm">
-                  「リポジトリを追加」ボタンから監視したいリポジトリ（例: <code className="text-slate-400">owner/repo</code>）を登録してください。
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsSettingsOpen(true)}
-                className="mt-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" /> リポジトリを追加する
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {state.projects.map((repo) => (
-                <RepoCard
-                  key={repo.fullName}
-                  repo={repo}
-                  onRemove={handleRemoveRepo}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        {/* 3. Repositories Section (統一親カード) */}
+        <RepositoriesCard
+          repositories={settings.repositories}
+          projects={state.projects}
+          isCompact={viewMode === 'compact'}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
       </main>
 
       {/* Footer */}
