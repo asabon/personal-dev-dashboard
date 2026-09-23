@@ -44,51 +44,63 @@ export const RunnersCard: React.FC<RunnersCardProps> = ({
       {/* Header */}
       <div
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-800/30 transition-colors select-none"
+        className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 cursor-pointer hover:bg-slate-800/30 transition-colors select-none"
       >
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-            <Cpu className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-slate-100 tracking-tight">
-                Self-hosted Runners
-              </h2>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono">
-                {runners.length}台
-              </span>
+        <div className="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 shadow-inner shrink-0">
+              <Cpu className="w-4 h-4 shrink-0" />
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              自前マシン・自宅サーバーの稼働ステータス監視
-            </p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-bold text-slate-100 tracking-tight whitespace-nowrap">
+                  Self-hosted Runners
+                </h2>
+                <span className="text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono shrink-0">
+                  {runners.length}台
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 hidden md:block">
+                自前マシン・自宅サーバーの稼働ステータス監視
+              </p>
+            </div>
+          </div>
+
+          {/* スマホ表示時の開閉アイコン（1行目右端） */}
+          <div className="sm:hidden p-0.5 text-slate-400 hover:text-slate-100 shrink-0">
+            {isCollapsed ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronUp className="w-4 h-4" />
+            )}
           </div>
         </div>
 
-        {/* サマリーと開閉ボタン */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* サマリーと開閉ボタン（スマホ時は2行目） */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto pt-0.5 sm:pt-0">
           {runners.length > 0 && (
-            <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs font-mono">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono">
               {busyCount > 0 && (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                  <PlayCircle className="w-3 h-3 animate-spin" />
+                  <PlayCircle className="w-3 h-3 animate-spin shrink-0" />
                   <span>{busyCount}<span className="hidden sm:inline"> 実行中</span></span>
                 </span>
               )}
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <CheckCircle2 className="w-3 h-3" />
+                <CheckCircle2 className="w-3 h-3 shrink-0" />
                 <span>{onlineCount}<span className="hidden sm:inline"> Online</span></span>
               </span>
               {offlineCount > 0 && (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                  <AlertCircle className="w-3 h-3" />
+                  <AlertCircle className="w-3 h-3 shrink-0" />
                   <span>{offlineCount}<span className="hidden sm:inline"> Offline</span></span>
                 </span>
               )}
             </div>
           )}
 
-          <div className="p-0.5 sm:p-1 rounded-lg text-slate-400 hover:text-slate-100 transition-colors">
+          {/* PC表示時の開閉アイコン */}
+          <div className="hidden sm:block p-0.5 sm:p-1 rounded-lg text-slate-400 hover:text-slate-100 transition-colors shrink-0">
             {isCollapsed ? (
               <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
             ) : (

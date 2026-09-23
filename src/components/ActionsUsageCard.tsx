@@ -320,39 +320,52 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
       {/* Header Row (クリックで開閉) */}
       <div
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="p-4 sm:p-5 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-900/40 transition-colors select-none"
+        className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 cursor-pointer hover:bg-slate-900/40 transition-colors select-none"
       >
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 shadow-inner shrink-0">
-            <Cpu className="w-4 h-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-bold text-slate-100 truncate">GitHub Actions 使用状況</h2>
-              <span className="text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono shrink-0">
-                {resolvedAccounts.length}アカウント
-              </span>
+        <div className="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 shadow-inner shrink-0">
+              <Cpu className="w-4 h-4 shrink-0" />
             </div>
-            <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 hidden sm:flex items-center gap-1.5">
-              <span>当月無料枠の残量・稼働ペース</span>
-              <span className="text-slate-600">•</span>
-              <span className="relative group inline-flex items-center">
-                <Info className="w-3.5 h-3.5 text-slate-400 hover:text-indigo-400 cursor-help transition-colors" />
-                <span className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 top-full mt-2 hidden group-hover:block z-40 w-72 sm:w-80 p-3 bg-slate-900 border border-slate-700/90 rounded-xl text-[11px] leading-relaxed text-slate-300 shadow-2xl backdrop-blur-md pointer-events-none">
-                  <span className="block font-semibold text-slate-200 mb-1 flex items-center gap-1.5 text-xs">
-                    <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                    GitHub API の集計仕様について
-                  </span>
-                  GitHub 公式の課金 API (Usage Summary) の仕様上、パブリックリポジトリでの無料実行時間も含んだ総稼働時間が集計されます。また、無料枠の消費計算には各 OS の消費倍率（Ubuntu: 1倍、macOS: 10倍、Windows: 2倍）が適用されています。
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-bold text-slate-100 whitespace-nowrap">
+                  GitHub Actions 使用状況
+                </h2>
+                <span className="text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono shrink-0">
+                  {resolvedAccounts.length}アカウント
                 </span>
-              </span>
-            </p>
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 hidden md:flex items-center gap-1.5">
+                <span>当月無料枠の残量・稼働ペース</span>
+                <span className="text-slate-600">•</span>
+                <span className="relative group inline-flex items-center">
+                  <Info className="w-3.5 h-3.5 text-slate-400 hover:text-indigo-400 cursor-help transition-colors" />
+                  <span className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 top-full mt-2 hidden group-hover:block z-40 w-72 sm:w-80 p-3 bg-slate-900 border border-slate-700/90 rounded-xl text-[11px] leading-relaxed text-slate-300 shadow-2xl backdrop-blur-md pointer-events-none">
+                    <span className="block font-semibold text-slate-200 mb-1 flex items-center gap-1.5 text-xs">
+                      <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                      GitHub API の集計仕様について
+                    </span>
+                    GitHub 公式の課金 API (Usage Summary) の仕様上、パブリックリポジトリでの無料実行時間も含んだ総稼働時間が集計されます。また、無料枠の消費計算には各 OS の消費倍率（Ubuntu: 1倍、macOS: 10倍、Windows: 2倍）が適用されています。
+                  </span>
+                </span>
+              </p>
+            </div>
+          </div>
+
+          {/* スマホ表示時の開閉アイコン（1行目右端） */}
+          <div className="sm:hidden p-0.5 text-slate-400 hover:text-slate-200 shrink-0">
+            {isCollapsed ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronUp className="w-4 h-4" />
+            )}
           </div>
         </div>
 
-        {/* ヘッダー右側: ミニ残量サマリーチップ & 開閉アイコン */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+        {/* ヘッダー右側（スマホ時は2行目）: ミニ残量サマリーチップ & PC時開閉アイコン */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-0.5 sm:pt-0">
+          <div className="flex flex-wrap items-center gap-1.5">
             {resolvedAccounts.map((acc) => {
               const item = usageMap[acc.name];
               const isSingleTarget = accounts.length === 0 || acc.name === selectedAccount || acc.name === usage?.accountName;
@@ -363,7 +376,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
                 return (
                   <span
                     key={acc.name}
-                    className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md text-[10px] font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20"
                   >
                     <span>{acc.name}:</span>
                     <span>エラー</span>
@@ -378,14 +391,14 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
               return (
                 <span
                   key={acc.name}
-                  className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-mono border ${
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-mono border shrink-0 ${
                     isLow
                       ? 'bg-rose-500/10 text-rose-300 border-rose-500/30 font-semibold'
                       : 'bg-slate-900/90 text-slate-300 border-slate-700/80'
                   }`}
                   title={`${acc.name}: 残り ${rem.toLocaleString()} 分 / 上限 ${accUsage.includedMinutes.toLocaleString()} 分`}
                 >
-                  <span className="text-slate-400 truncate max-w-[80px] sm:max-w-[120px]">{acc.name}:</span>
+                  <span className="text-slate-400">{acc.name}:</span>
                   <span className={`font-bold ${isLow ? 'text-rose-400' : 'text-emerald-400'}`}>
                     残{rem.toLocaleString()}分
                   </span>
@@ -394,7 +407,8 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
             })}
           </div>
 
-          <div className="p-0.5 sm:p-1 rounded-lg text-slate-400 hover:text-slate-200 transition-colors">
+          {/* PC表示時の開閉アイコン */}
+          <div className="hidden sm:block p-0.5 sm:p-1 rounded-lg text-slate-400 hover:text-slate-200 transition-colors shrink-0">
             {isCollapsed ? (
               <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
             ) : (

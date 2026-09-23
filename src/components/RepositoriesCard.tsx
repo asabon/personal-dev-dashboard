@@ -68,71 +68,85 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
       {/* Header Row (クリックで開閉) */}
       <div
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="p-4 sm:p-5 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-900/40 transition-colors select-none"
+        className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 cursor-pointer hover:bg-slate-900/40 transition-colors select-none"
       >
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 shadow-inner shrink-0">
-            <FolderGit2 className="w-4 h-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-bold text-slate-100 tracking-tight truncate">
-                監視リポジトリ
-              </h2>
-              <span className="text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono shrink-0">
-                {repositories.length}リポジトリ
-              </span>
+        <div className="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 shadow-inner shrink-0">
+              <FolderGit2 className="w-4 h-4 shrink-0" />
             </div>
-            <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 hidden sm:block">
-              CIパイプライン実行状況および Open PR の監視
-            </p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-bold text-slate-100 tracking-tight whitespace-nowrap">
+                  監視リポジトリ
+                </h2>
+                <span className="text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono shrink-0">
+                  {repositories.length}リポジトリ
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 hidden md:block">
+                CIパイプライン実行状況および Open PR の監視
+              </p>
+            </div>
+          </div>
+
+          {/* スマホ表示時の開閉アイコン（1行目右端） */}
+          <div className="sm:hidden p-0.5 text-slate-400 hover:text-slate-200 shrink-0">
+            {isCollapsed ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronUp className="w-4 h-4" />
+            )}
           </div>
         </div>
 
-        {/* ヘッダー右側: 「追加」ボタン & サマリーバッジ & 開閉アイコン */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddRepo();
-            }}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-xs font-semibold active:scale-95 transition-all cursor-pointer"
-            title="リポジトリを追加"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">追加</span>
-          </button>
+        {/* ヘッダー右側（スマホ時は2行目）: 「追加」ボタン & サマリーバッジ & PC開閉アイコン */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto pt-0.5 sm:pt-0">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddRepo();
+              }}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-xs font-semibold active:scale-95 transition-all cursor-pointer shrink-0"
+              title="リポジトリを追加"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>追加</span>
+            </button>
 
-          {/* サマリーバッジ */}
-          <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
-            {failedCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold">
-                <XCircle className="w-3 h-3 text-rose-400" />
-                <span>失敗: {failedCount}</span>
-              </span>
-            )}
-            {runningCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                <Loader2 className="w-3 h-3 text-amber-400 animate-spin" />
-                <span>実行中: {runningCount}</span>
-              </span>
-            )}
-            {failedCount === 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <CheckCircle2 className="w-3 h-3" />
-                <span className="hidden sm:inline">全リポジトリ正常</span>
-                <span className="sm:hidden">正常</span>
-              </span>
-            )}
-            {totalPrs > 0 && (
-              <span className="hidden md:inline-flex items-center px-1.5 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-400">
-                {totalPrs} PRs
-              </span>
-            )}
+            {/* サマリーバッジ */}
+            <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
+              {failedCount > 0 && (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold">
+                  <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                  <span>失敗: {failedCount}</span>
+                </span>
+              )}
+              {runningCount > 0 && (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                  <Loader2 className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
+                  <span>実行中: {runningCount}</span>
+                </span>
+              )}
+              {failedCount === 0 && (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <CheckCircle2 className="w-3 h-3 shrink-0" />
+                  <span className="hidden sm:inline">全リポジトリ正常</span>
+                  <span className="sm:hidden">正常</span>
+                </span>
+              )}
+              {totalPrs > 0 && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-400">
+                  {totalPrs} PRs
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="p-0.5 sm:p-1 rounded-lg text-slate-400 hover:text-slate-200 transition-colors">
+          {/* PC表示時の開閉アイコン */}
+          <div className="hidden sm:block p-0.5 sm:p-1 rounded-lg text-slate-400 hover:text-slate-200 transition-colors shrink-0">
             {isCollapsed ? (
               <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
             ) : (
