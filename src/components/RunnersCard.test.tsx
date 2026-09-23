@@ -112,7 +112,7 @@ describe('RunnersCard', () => {
   });
 
   describe('表示モード連動と開閉ポリシー', () => {
-    it('詳細モード（isCompact=false）では常に展開され、OSやタグ一覧を含むフルカードグリッドが表示されること', () => {
+    it('詳細モード（isCompact=false）では常に展開され、OSやタグ一覧が最初から表示されること', () => {
       render(
         <RunnersCard
           runners={[dummyRunnerIdle]}
@@ -124,12 +124,20 @@ describe('RunnersCard', () => {
 
       // ランナー名、スコープ、OS、タグが表示されていること
       expect(screen.getByText('worker-node-1')).toBeInTheDocument();
-      expect(screen.getByText('Org: test-org (共有)')).toBeInTheDocument();
+      expect(screen.getByText(/Org: test-org/)).toBeInTheDocument();
       expect(screen.getByText('Linux')).toBeInTheDocument();
+      expect(screen.getByText('X64')).toBeInTheDocument();
+
+      // 各ランナー行をクリックして折りたためること
+      fireEvent.click(screen.getByText('worker-node-1'));
+      expect(screen.queryByText('X64')).not.toBeInTheDocument();
+
+      // 再度クリックして展開できること
+      fireEvent.click(screen.getByText('worker-node-1'));
       expect(screen.getByText('X64')).toBeInTheDocument();
     });
 
-    it('簡易モード（isCompact=true）で全台Onlineの正常時は親カードが初期折りたたみとなること', () => {
+    it('簡易モード（isCompact=true）で全台Onlineの正常時は親カードが初期折りたたみとなり、親展開で1行表示、個別クリックで詳細が開くこと', () => {
       render(
         <RunnersCard
           runners={[dummyRunnerIdle]}
@@ -143,13 +151,18 @@ describe('RunnersCard', () => {
       expect(screen.getByText('1/1 Online')).toBeInTheDocument();
       expect(screen.queryByText('worker-node-1')).not.toBeInTheDocument();
 
-      // ヘッダーをクリックして親カードを開くと、1行コンパクト表示でランナーが表示されること
+      // 1. ヘッダーをクリックして親カードを開くと、1行表示でランナーが表示されること
       fireEvent.click(screen.getByText('Self-hosted Runners'));
       expect(screen.getByText('worker-node-1')).toBeInTheDocument();
-      expect(screen.getByText('test-org')).toBeInTheDocument();
+      expect(screen.getByText(/Org: test-org/)).toBeInTheDocument();
       expect(screen.getByText('Online')).toBeInTheDocument();
-      // 簡易モードの1行表示ではタグは非表示
+      // 簡易モードの1行初期状態ではタグは非表示
       expect(screen.queryByText('X64')).not.toBeInTheDocument();
+
+      // 2. 個別ランナー行をクリックすると、詳細（OSやタグ）が展開されること
+      fireEvent.click(screen.getByText('worker-node-1'));
+      expect(screen.getByText('Linux')).toBeInTheDocument();
+      expect(screen.getByText('X64')).toBeInTheDocument();
     });
 
     it('簡易モード（isCompact=true）でもオフラインがある場合は自動で親カードが展開されること', () => {

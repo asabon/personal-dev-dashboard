@@ -20,6 +20,115 @@ interface RunnersCardProps {
   isCompact?: boolean;
 }
 
+interface RunnerCardProps {
+  runner: SelfHostedRunner;
+  isCompact?: boolean;
+}
+
+export const RunnerCard: React.FC<RunnerCardProps> = ({ runner, isCompact = false }) => {
+  const isOnline = runner.status === 'online';
+  const isBusy = runner.busy;
+  const isOffline = runner.status === 'offline';
+
+  // 開閉状態: 詳細モード(isCompact=false)は全開、簡易モード(isCompact=true)は初期折りたたみ（オフラインマシンのみ注意喚起のため展開）
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (isCompact) {
+      return isOffline;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (isCompact) {
+      setIsExpanded(isOffline);
+    } else {
+      setIsExpanded(true);
+    }
+  }, [isCompact, isOffline]);
+
+  return (
+    <div className="rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700/80 transition-all overflow-hidden shadow-sm">
+      {/* 1行ヘッダー (クリックで詳細開閉) */}
+      <div
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="p-3 sm:p-3.5 bg-slate-900/40 hover:bg-slate-900/60 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Laptop className="w-4 h-4 text-slate-400 shrink-0" />
+          <span className="font-bold text-xs text-slate-200 truncate font-mono" title={runner.name}>
+            {runner.name}
+          </span>
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700 shrink-0 truncate">
+            {runner.scopeType === 'org' ? (
+              <>
+                <Building2 className="w-2.5 h-2.5 text-purple-400 shrink-0" />
+                <span>Org: {runner.scopeName}</span>
+              </>
+            ) : (
+              <>
+                <FolderGit2 className="w-2.5 h-2.5 text-blue-400 shrink-0" />
+                <span>Repo: {runner.scopeName}</span>
+              </>
+            )}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {/* ステータスバッジ */}
+          {isBusy ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping" />
+              Busy (実行中)
+            </span>
+          ) : isOnline ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              Online
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+              Offline
+            </span>
+          )}
+
+          {/* 開閉 Chevron アイコン */}
+          <div className="p-0.5 text-slate-400 hover:text-slate-200 transition-colors shrink-0">
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </div>
+        </div>
+      </div>
+
+      {/* 詳細アコーディオン (OS + ラベル一覧) */}
+      {isExpanded && (
+        <div className="px-3.5 sm:px-4 py-2.5 sm:py-3 border-t border-slate-800/60 bg-slate-950/40 flex flex-wrap items-center justify-between gap-2.5 text-[11px]">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-slate-400 font-medium">OS:</span>
+            <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 font-mono text-[10px] font-semibold">
+              {runner.os}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] text-slate-400 font-medium">Labels:</span>
+            {runner.labels
+              .filter((l) => l !== 'self-hosted' && l.toLowerCase() !== runner.os.toLowerCase())
+              .map((label) => (
+                <span
+                  key={label}
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/60 text-slate-300 font-mono text-[10px]"
+                >
+                  <Tag className="w-2.5 h-2.5 text-indigo-400" />
+                  {label}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const RunnersCard: React.FC<RunnersCardProps> = ({
   runners,
   isLoading,
@@ -163,141 +272,15 @@ export const RunnersCard: React.FC<RunnersCardProps> = ({
                 ※ セルフホステッドランナーをご利用でない場合は、右上の設定（歯車アイコン）から本パネルを非表示にできます。
               </p>
             </div>
-          ) : isCompact ? (
-            /* 簡易表示モード: 各ランナーが1行でスッキリ並ぶコンパクト表示 */
-            <div className="space-y-2">
-              {runners.map((runner) => {
-                const isOnline = runner.status === 'online';
-                const isBusy = runner.busy;
-
-                return (
-                  <div
-                    key={`${runner.scopeType}-${runner.scopeName}-${runner.id}`}
-                    className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700/80 transition-colors flex items-center justify-between gap-3"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Laptop className="w-4 h-4 text-slate-400 shrink-0" />
-                      <span className="font-bold text-xs text-slate-200 truncate font-mono" title={runner.name}>
-                        {runner.name}
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700 shrink-0 truncate">
-                        {runner.scopeType === 'org' ? (
-                          <>
-                            <Building2 className="w-2.5 h-2.5 text-purple-400 shrink-0" />
-                            <span>{runner.scopeName}</span>
-                          </>
-                        ) : (
-                          <>
-                            <FolderGit2 className="w-2.5 h-2.5 text-blue-400 shrink-0" />
-                            <span>{runner.scopeName}</span>
-                          </>
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      {isBusy ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping" />
-                          Busy (実行中)
-                        </span>
-                      ) : isOnline ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                          Online
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                          Offline
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           ) : (
-            /* 詳細表示モード: OS・タグ付きのフルカードグリッド表示 */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {runners.map((runner) => {
-                const isOnline = runner.status === 'online';
-                const isBusy = runner.busy;
-
-                return (
-                  <div
-                    key={`${runner.scopeType}-${runner.scopeName}-${runner.id}`}
-                    className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700/80 transition-all flex flex-col justify-between space-y-3"
-                  >
-                    {/* 上部: ホスト名とステータス */}
-                    <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Laptop className="w-4 h-4 text-slate-400 shrink-0" />
-                          <span
-                            className="font-bold text-xs text-slate-200 truncate font-mono"
-                            title={runner.name}
-                          >
-                            {runner.name}
-                          </span>
-                        </div>
-
-                        {/* ステータスバッジ */}
-                        {isBusy ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0">
-                            <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping" />
-                            Busy (実行中)
-                          </span>
-                        ) : isOnline ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                            Online
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                            Offline
-                          </span>
-                        )}
-                      </div>
-
-                      {/* スコープバッジ（Org共有 vs Repo専用） */}
-                      <div className="mt-2.5 flex items-center">
-                        {runner.scopeType === 'org' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20 max-w-full truncate">
-                            <Building2 className="w-3 h-3 text-purple-400 shrink-0" />
-                            <span className="truncate">Org: {runner.scopeName} (共有)</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20 max-w-full truncate">
-                            <FolderGit2 className="w-3 h-3 text-blue-400 shrink-0" />
-                            <span className="truncate">Repo: {runner.scopeName}</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* 下部: OS と ラベル一覧 */}
-                    <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-1.5 text-[10px]">
-                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
-                        {runner.os}
-                      </span>
-                      {runner.labels
-                        .filter((l) => l !== 'self-hosted' && l.toLowerCase() !== runner.os.toLowerCase())
-                        .slice(0, 3)
-                        .map((label) => (
-                          <span
-                            key={label}
-                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-slate-800/60 text-slate-400 font-mono"
-                          >
-                            <Tag className="w-2.5 h-2.5" />
-                            {label}
-                          </span>
-                        ))}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="space-y-2.5">
+              {runners.map((runner) => (
+                <RunnerCard
+                  key={`${runner.scopeType}-${runner.scopeName}-${runner.id}`}
+                  runner={runner}
+                  isCompact={isCompact}
+                />
+              ))}
             </div>
           )}
         </div>
