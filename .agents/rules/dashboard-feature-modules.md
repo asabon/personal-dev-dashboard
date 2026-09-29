@@ -22,6 +22,13 @@ description: 任意のダッシュボード feature module を追加・変更す
 - `monitoredOrgs` は Actions と Self-hosted Runners で共有しています。変更・移動する前に利用箇所を検索してください。
 - `src/App.tsx`、`src/components/SettingsModal.tsx`、`src/features/registry.ts` に機能固有の分岐を追加しないでください。共通契約の変更が必要な場合は理由を文書化し、影響するすべての feature のテストを更新します。
 
+## localStorage 設定の移行
+
+- `localStorage` の設定形式を変えるときは、既存利用者の設定を保持する後方互換の読み込みを実装します。新しい項目には既定値を補い、保存済みの無関係な設定や未登録 feature の設定を削除しません。
+- 設定キーの名前変更・削除では、旧形式を新形式へ決定的に読み替える移行処理を追加します。読み込みを繰り返しても結果が変わらないようにし、既存値（特に Organization 選択）を保持します。
+- `src/services/storage.test.ts` で、空の初期設定、新形式の読み書き、旧形式からの移行、既存の無関係な設定が保持されることを検証します。
+- 単発の項目追加だけで `schemaVersion` や汎用 migration framework を導入しません。複数世代にまたがる段階的な変換が必要になった時点で versioned migration を検討します。
+
 ## テストと検証
 
 - module のロジックテストは、同じディレクトリに `feature.test.ts` として配置します。
