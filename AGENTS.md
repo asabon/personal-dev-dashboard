@@ -17,6 +17,9 @@
 - **改行コードの統一 (LF)**:
   - リポジトリ内のすべてのテキストファイルは **LF (`\n`)** で統一します（CRLF の混入厳禁）。
   - `.gitattributes` および `.editorconfig` の設定に従い、Windows 環境でのコミット時にも差分汚染が発生しないよう注意してください。
+- **任意ダッシュボードカードの追加**:
+  - すべてのエージェントは、カード追加・変更時に [feature module ルール](.agents/rules/dashboard-feature-modules.md) と [`src/features/types.ts`](src/features/types.ts) を確認してください。
+  - 任意カードは feature module として追加し、通常は App・設定モーダル・registry に機能固有の分岐を加えません。共有契約を変える場合は理由を示し、移行と関連テストも更新してください。
 
 ---
 
