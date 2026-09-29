@@ -88,4 +88,24 @@ describe('Actions usage feature alerts', () => {
     await loadActionsUsage({ ...context, previousData: firstLoad });
     expect(fetchUserOrganizations).toHaveBeenCalledOnce();
   });
+
+  it('Organization の検出に失敗しても個人の使用量を取得すること', async () => {
+    vi.mocked(fetchUserOrganizations).mockRejectedValue(new Error('権限がありません'));
+    vi.mocked(fetchActionsUsage).mockResolvedValue(makeUsage('octocat'));
+
+    const context: FeatureLoadContext = {
+      pat: 'test-pat',
+      username: 'octocat',
+      repositories: [],
+      monitoredOrgs: [],
+      settings: { enabled: true },
+    };
+
+    const data = await loadActionsUsage(context);
+
+    expect(data.accounts).toEqual([{ name: 'octocat', type: 'user' }]);
+    expect(data.usageMap.octocat.usage?.accountName).toBe('octocat');
+    expect(data.discoveredOrgs).toEqual([]);
+    expect(fetchActionsUsage).toHaveBeenCalledWith('test-pat', 'octocat');
+  });
 });

@@ -45,7 +45,12 @@ export async function loadActionsUsage(
     .filter((org) => org && org !== context.username);
 
   if (orgNames.length === 0) {
-    discoveredOrgs = await fetchUserOrganizations(context.pat);
+    try {
+      discoveredOrgs = await fetchUserOrganizations(context.pat);
+    } catch (error) {
+      console.warn('Failed to discover user orgs:', error);
+      discoveredOrgs = [];
+    }
     orgNames = discoveredOrgs.filter((org) => org && org !== context.username);
   }
 
