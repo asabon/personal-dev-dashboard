@@ -40,6 +40,7 @@ describe('App Demo Mode (?demo=true)', () => {
     expect(screen.getByText('demo-developer')).toBeInTheDocument();
     expect(screen.getByText('demo-org')).toBeInTheDocument();
     expect(screen.getByText('全部目安以下')).toBeInTheDocument();
+    expect(screen.getByText('Self-hosted Runners')).toBeInTheDocument();
   });
 
   it('通常アクセス（demoパラメータなし & PAT未設定）の場合はオンボーディングモーダルが表示されること', () => {

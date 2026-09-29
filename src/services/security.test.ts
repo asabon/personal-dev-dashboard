@@ -8,6 +8,7 @@ import {
 } from './githubApi';
 import { saveSettings } from './storage';
 import type { AppSettings } from '../types';
+import { SELF_HOSTED_RUNNERS_FEATURE_ID } from '../features/ids';
 
 describe('PAT セキュリティ・漏洩防止テスト (Zero-Backend Privacy Guarantee)', () => {
   const TEST_PAT = 'ghp_SECRET_PAT_TOKEN_1234567890abcdefghijklmnopqrstuvwx';
@@ -105,7 +106,7 @@ describe('PAT セキュリティ・漏洩防止テスト (Zero-Backend Privacy G
       username: 'test-user',
       repositories: ['owner/repo'],
       refreshIntervalSec: 60,
-      showSelfHostedRunners: false,
+      features: { [SELF_HOSTED_RUNNERS_FEATURE_ID]: { enabled: false, options: {} } },
       monitoredOrgs: [],
     };
 

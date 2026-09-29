@@ -1,17 +1,9 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { DashboardSummaryBar } from './DashboardSummaryBar';
-import type { RepositoryDashboardData, ActionsUsage, SelfHostedRunner } from '../types';
+import type { RepositoryDashboardData } from '../types';
 
 describe('DashboardSummaryBar', () => {
-  const dummyUsage: ActionsUsage = {
-    totalMinutesUsed: 500,
-    includedMinutes: 2000,
-    usagePercentage: 25,
-    breakdown: { ubuntu: 500, macOS: 0, windows: 0 },
-    lastUpdated: '2026-09-23T00:00:00Z',
-  };
-
   const dummyRepoSuccess: RepositoryDashboardData = {
     owner: 'test',
     name: 'repo-success',
@@ -56,24 +48,10 @@ describe('DashboardSummaryBar', () => {
     ],
   };
 
-  const dummyRunnerOffline: SelfHostedRunner = {
-    id: 1,
-    name: 'home-server',
-    os: 'Linux',
-    status: 'offline',
-    busy: false,
-    labels: ['self-hosted'],
-    scopeType: 'org',
-    scopeName: 'test-org',
-  };
-
   it('renders "異常なし" when everything is healthy', () => {
     render(
       <DashboardSummaryBar
         projects={[dummyRepoSuccess]}
-        usage={dummyUsage}
-        runners={[]}
-        showRunners={false}
       />
     );
 
@@ -90,9 +68,6 @@ describe('DashboardSummaryBar', () => {
     render(
       <DashboardSummaryBar
         projects={[dummyRepoSuccess, dummyRepoFailed]}
-        usage={dummyUsage}
-        runners={[]}
-        showRunners={false}
       />
     );
 
@@ -105,61 +80,29 @@ describe('DashboardSummaryBar', () => {
     document.body.removeChild(dummyEl);
   });
 
-  it('renders usage warning when usage exceeds 85%', () => {
-    const highUsage: ActionsUsage = {
-      ...dummyUsage,
-      totalMinutesUsed: 1800,
-      usagePercentage: 90,
-    };
+  it('renders feature alerts and scrolls to the feature card', () => {
+    const scrollIntoViewMock = vi.fn();
+    const dummyEl = document.createElement('div');
+    dummyEl.id = 'actions-usage-section';
+    dummyEl.scrollIntoView = scrollIntoViewMock;
+    document.body.appendChild(dummyEl);
 
     render(
       <DashboardSummaryBar
         projects={[dummyRepoSuccess]}
-        usage={highUsage}
-        runners={[]}
-        showRunners={false}
-      />
-    );
-
-    expect(screen.getByText(/Actions 残/)).toBeDefined();
-  });
-
-  it('usages 配列のうち 1 つでも 85% を超過していれば警告を表示すること', () => {
-    const normalUsage: ActionsUsage = {
-      ...dummyUsage,
-      accountName: 'personal',
-      usagePercentage: 20,
-    };
-    const criticalOrgUsage: ActionsUsage = {
-      ...dummyUsage,
-      accountName: 'my-org',
-      totalMinutesUsed: 2700,
-      includedMinutes: 3000,
-      usagePercentage: 90,
-    };
-
-    render(
-      <DashboardSummaryBar
-        projects={[dummyRepoSuccess]}
-        usages={[normalUsage, criticalOrgUsage]}
-        runners={[]}
-        showRunners={false}
+        featureAlerts={[{
+          id: 'runner-offline',
+          label: 'Actions 残10% (my-org)',
+          targetId: 'actions-usage-section',
+          icon: <span>R</span>,
+          tone: 'warning',
+        }]}
       />
     );
 
     expect(screen.getByText('Actions 残10% (my-org)')).toBeDefined();
-  });
-
-  it('renders runner offline warning when runner is down and showRunners is true', () => {
-    render(
-      <DashboardSummaryBar
-        projects={[dummyRepoSuccess]}
-        usage={dummyUsage}
-        runners={[dummyRunnerOffline]}
-        showRunners={true}
-      />
-    );
-
-    expect(screen.getByText('Runner 停止: 1台')).toBeDefined();
+    fireEvent.click(screen.getByText('Actions 残10% (my-org)'));
+    expect(scrollIntoViewMock).toHaveBeenCalled();
+    document.body.removeChild(dummyEl);
   });
 });

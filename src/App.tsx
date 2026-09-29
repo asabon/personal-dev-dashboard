@@ -1,35 +1,25 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, FolderGit2, AlertCircle } from 'lucide-react';
 import type {
   AppSettings,
   DashboardState,
   RepositoryDashboardData,
-  ActionsUsageAccount,
-  ActionsUsageItem,
 } from './types';
-import { loadSettings, saveSettings, clearSettings } from './services/storage';
+import { loadSettings, saveSettings, clearSettings, createDefaultSettings } from './services/storage';
 import {
-  fetchActionsUsage,
-  fetchOrgActionsUsage,
-  fetchUserOrganizations,
   fetchRepositoryPRs,
-  fetchAllSelfHostedRunners,
   getLatestRateLimit,
 } from './services/githubApi';
 import { Header } from './components/Header';
 import { DashboardSummaryBar } from './components/DashboardSummaryBar';
-import { ActionsUsageCard } from './components/ActionsUsageCard';
 import { RepositoriesCard } from './components/RepositoriesCard';
-import { RunnersCard } from './components/RunnersCard';
 import { SettingsModal } from './components/SettingsModal';
 import { OnboardingModal } from './components/OnboardingModal';
+import { dashboardFeatures, isFeatureEnabled } from './features/registry';
+import type { FeatureDataState } from './features/types';
 import {
   DEMO_SETTINGS,
-  DEMO_USAGE,
-  DEMO_ORG_USAGE,
-  DEMO_USAGE_MAP,
   DEMO_PROJECTS,
-  DEMO_RUNNERS,
 } from './data/mockData';
 
 const VIEW_MODE_STORAGE_KEY = 'dashboard_view_mode';
@@ -71,12 +61,6 @@ export function App() {
     });
   };
 
-  const [selectedUsageAccount, setSelectedUsageAccount] = useState<string>(() => {
-    if (isDemoMode) return 'demo-developer';
-    return settings.username || '';
-  });
-  const [discoveredOrgs, setDiscoveredOrgs] = useState<string[]>([]);
-
   const [state, setState] = useState<DashboardState>(() => {
     if (isDemoMode) {
       return {
@@ -88,13 +72,7 @@ export function App() {
           limit: 5000,
           resetAt: new Date(Date.now() + 1000 * 60 * 45),
         },
-        usage: DEMO_USAGE,
-        usageMap: DEMO_USAGE_MAP,
-        selectedUsageAccount: 'demo-developer',
         projects: DEMO_PROJECTS,
-        runners: DEMO_RUNNERS,
-        isLoadingRunners: false,
-        runnersError: null,
         error: null,
       };
     }
@@ -103,47 +81,23 @@ export function App() {
       isRefreshing: false,
       lastRefreshedAt: null,
       rateLimit: null,
-      usage: null,
-      usageMap: {},
-      selectedUsageAccount: settings.username || '',
       projects: [],
-      runners: [],
-      isLoadingRunners: false,
-      runnersError: null,
       error: null,
     };
   });
 
-  const [actionsError, setActionsError] = useState<string | null>(null);
-
-  // 利用可能なアカウント（個人 + 所属/監視対象 Organization）一覧の算出
-  const accounts: ActionsUsageAccount[] = useMemo(() => {
-    if (isDemoMode) {
-      return [
-        { name: 'demo-developer', type: 'user' },
-        { name: 'demo-org', type: 'org' },
-      ];
-    }
-    const list: ActionsUsageAccount[] = [];
-    if (settings.username) {
-      list.push({ name: settings.username, type: 'user' });
-    }
-    const orgs = Array.from(
-      new Set([...(settings.monitoredOrgs || []), ...discoveredOrgs])
-    ).filter((o) => o && o !== settings.username);
-
-    for (const org of orgs) {
-      list.push({ name: org, type: 'org' });
-    }
-    return list;
-  }, [isDemoMode, settings.username, settings.monitoredOrgs, discoveredOrgs]);
-
-  // アカウント選択の自動同期
+  const [featureStates, setFeatureStates] = useState<Record<string, FeatureDataState>>(() => {
+    if (!isDemoMode) return {};
+    return Object.fromEntries(
+      dashboardFeatures
+        .filter((feature) => feature.demoData !== undefined)
+        .map((feature) => [feature.id, { data: feature.demoData, error: null, isLoading: false }])
+    );
+  });
+  const featureStatesRef = useRef(featureStates);
   useEffect(() => {
-    if (!selectedUsageAccount && settings.username) {
-      setSelectedUsageAccount(settings.username);
-    }
-  }, [selectedUsageAccount, settings.username]);
+    featureStatesRef.current = featureStates;
+  }, [featureStates]);
 
   // 初回アクセス（PAT 未設定）の判定（デモモード時はオンボーディング非表示）
   const needsOnboarding = !isDemoMode && !settings.pat;
@@ -166,69 +120,8 @@ export function App() {
       setState((prev) => ({ ...prev, isRefreshing: true }));
     }
 
-    setActionsError(null);
-
     try {
-      // 1. Actions 使用量の取得 (ユーザー個人 + Org)
-      const newUsageMap: Record<string, ActionsUsageItem> = {};
-
-      // 1-1. ユーザー個人の使用量取得
-      try {
-        const usageData = await fetchActionsUsage(settings.pat, settings.username);
-        newUsageMap[settings.username] = { usage: usageData, error: null };
-      } catch (err: any) {
-        console.warn('Actions usage fetch failed:', err);
-        const errMsg = err.message || 'Actions 使用量の取得に失敗しました';
-        newUsageMap[settings.username] = { usage: null, error: errMsg };
-        setActionsError(errMsg);
-      }
-
-      // 1-2. 所属 Org の取得（未取得の場合）
-      let currentOrgs = Array.from(
-        new Set([...(settings.monitoredOrgs || []), ...discoveredOrgs])
-      ).filter(Boolean);
-
-      if (currentOrgs.length === 0) {
-        try {
-          const orgs = await fetchUserOrganizations(settings.pat);
-          if (orgs.length > 0) {
-            setDiscoveredOrgs(orgs);
-            currentOrgs = orgs;
-          }
-        } catch (err) {
-          console.warn('Failed to discover user orgs:', err);
-        }
-      }
-
-      // 1-3. 各 Organization の使用量取得 (並行処理)
-      if (currentOrgs.length > 0) {
-        await Promise.allSettled(
-          currentOrgs.map(async (org) => {
-            try {
-              const orgUsage = await fetchOrgActionsUsage(settings.pat, org);
-              newUsageMap[org] = { usage: orgUsage, error: null };
-            } catch (err: any) {
-              console.warn(`Org (${org}) actions usage fetch failed:`, err);
-              newUsageMap[org] = {
-                usage: null,
-                error: err.message || 'Organization の使用量取得に失敗しました',
-              };
-            }
-          })
-        );
-      }
-
-      setState((prev) => {
-        const updatedMap = { ...(prev.usageMap || {}), ...newUsageMap };
-        const activeAcc = selectedUsageAccount || settings.username;
-        return {
-          ...prev,
-          usageMap: updatedMap,
-          usage: updatedMap[activeAcc]?.usage ?? updatedMap[settings.username]?.usage ?? null,
-        };
-      });
-
-      // 2. 監視対象リポジトリの PR / CI 取得
+      // 監視対象リポジトリの PR / CI 取得
       if (settings.repositories.length > 0) {
         const repoPromises = settings.repositories.map(async (repoFullName) => {
           const [owner, name] = repoFullName.split('/');
@@ -251,33 +144,57 @@ export function App() {
         setState((prev) => ({ ...prev, projects: [] }));
       }
 
-      // 3. セルフホステッドランナーの取得（設定が有効な場合のみ）
-      if (settings.showSelfHostedRunners) {
-        setState((prev) => ({ ...prev, isLoadingRunners: true, runnersError: null }));
-        try {
-          const { runners: runnersData, warning } = await fetchAllSelfHostedRunners(
-            settings.pat,
-            settings.repositories,
-            settings.monitoredOrgs || [],
-            settings.username
-          );
-          setState((prev) => ({
-            ...prev,
-            runners: runnersData,
-            isLoadingRunners: false,
-            runnersError: warning || null,
-          }));
-        } catch (err: any) {
-          console.warn('Runners fetch failed:', err);
-          setState((prev) => ({
-            ...prev,
-            isLoadingRunners: false,
-            runnersError: err.message || 'ランナー情報の取得に失敗しました',
-          }));
+      const enabledFeatures = dashboardFeatures.filter(
+        (feature) => isFeatureEnabled(feature, settings.features)
+      );
+      const enabledFeatureIds = new Set(enabledFeatures.map((feature) => feature.id));
+      setFeatureStates((previous) => {
+        const next = { ...previous };
+        for (const feature of dashboardFeatures) {
+          if (!enabledFeatureIds.has(feature.id)) {
+            delete next[feature.id];
+          } else {
+            next[feature.id] = {
+              data: previous[feature.id]?.data ?? null,
+              error: null,
+              isLoading: true,
+            };
+          }
         }
-      } else {
-        setState((prev) => ({ ...prev, runners: [], isLoadingRunners: false, runnersError: null }));
-      }
+        return next;
+      });
+
+      await Promise.all(
+        enabledFeatures.map(async (feature) => {
+          try {
+            const data = await feature.loadData({
+              pat: settings.pat,
+              username: settings.username,
+              repositories: settings.repositories,
+              monitoredOrgs: settings.monitoredOrgs || [],
+              settings: settings.features[feature.id] ?? {
+                enabled: feature.alwaysEnabled ?? feature.defaultEnabled,
+                options: {},
+              },
+              previousData: featureStatesRef.current[feature.id]?.data,
+            });
+            setFeatureStates((previous) => ({
+              ...previous,
+              [feature.id]: { data, error: null, isLoading: false },
+            }));
+          } catch (err: any) {
+            console.warn(`Dashboard feature (${feature.id}) fetch failed:`, err);
+            setFeatureStates((previous) => ({
+              ...previous,
+              [feature.id]: {
+                data: previous[feature.id]?.data ?? null,
+                error: err.message || '機能データの取得に失敗しました',
+                isLoading: false,
+              },
+            }));
+          }
+        })
+      );
 
       setState((prev) => ({
         ...prev,
@@ -298,10 +215,8 @@ export function App() {
     settings.pat,
     settings.username,
     settings.repositories,
-    settings.showSelfHostedRunners,
+    settings.features,
     settings.monitoredOrgs,
-    discoveredOrgs,
-    selectedUsageAccount,
   ]);
 
   // 設定変更または初回ロード時のデータ取得
@@ -313,7 +228,7 @@ export function App() {
     settings.pat,
     settings.username,
     settings.repositories,
-    settings.showSelfHostedRunners,
+    settings.features,
     settings.monitoredOrgs,
     refreshData,
   ]);
@@ -348,7 +263,6 @@ export function App() {
     };
     saveSettings(updated);
     setSettings(updated);
-    setSelectedUsageAccount(username);
   };
 
   // 設定保存ハンドラ
@@ -370,25 +284,16 @@ export function App() {
   const handleLogout = () => {
     if (window.confirm('ダッシュボードの設定とトークンを消去して初期化しますか？')) {
       clearSettings();
-      setSelectedUsageAccount('');
-      setDiscoveredOrgs([]);
       setSettings({
-        pat: '',
-        username: '',
-        repositories: [],
-        refreshIntervalSec: 60,
-        showSelfHostedRunners: false,
+        ...createDefaultSettings(),
       });
+      setFeatureStates({});
       setState({
         isLoading: false,
         isRefreshing: false,
         lastRefreshedAt: null,
         rateLimit: null,
-        usage: null,
         projects: [],
-        runners: [],
-        isLoadingRunners: false,
-        runnersError: null,
         error: null,
       });
       setIsSettingsOpen(false);
@@ -440,41 +345,26 @@ export function App() {
         )}
 
         {/* Dashboard Status Highlights */}
-        {(() => {
-          const allUsages = accounts.map((acc) => {
-            const item = state.usageMap?.[acc.name];
-            return item ? item.usage : (acc.name === settings.username ? state.usage : null);
-          });
-
-          return (
-            <DashboardSummaryBar
-              projects={state.projects}
-              usages={allUsages}
-              runners={state.runners}
-              showRunners={Boolean(settings.showSelfHostedRunners)}
-            />
-          );
-        })()}
-
-        {/* 1. Actions Usage Summary (全アカウント常時並列表示) */}
-        <ActionsUsageCard
-          accounts={accounts}
-          usageMap={state.usageMap}
-          isLoading={state.isRefreshing}
-          isCompact={viewMode === 'compact'}
-          usage={state.usage}
-          error={actionsError}
+        <DashboardSummaryBar
+          projects={state.projects}
+          featureAlerts={dashboardFeatures.flatMap((feature) => {
+            if (!isFeatureEnabled(feature, settings.features)) return [];
+            const data = featureStates[feature.id]?.data;
+            return data == null ? [] : (feature.getAlerts?.(data) ?? []);
+          })}
         />
 
-        {/* 2. Self-hosted Runners Panel (設定で有効時のみ表示) */}
-        {settings.showSelfHostedRunners && (
-          <RunnersCard
-            runners={state.runners}
-            isLoading={state.isLoadingRunners}
-            error={state.runnersError}
-            isCompact={viewMode === 'compact'}
-          />
-        )}
+        {dashboardFeatures.map((feature) => {
+          if (!isFeatureEnabled(feature, settings.features)) return null;
+          const FeatureCard = feature.Card;
+          return (
+            <FeatureCard
+              key={feature.id}
+              state={featureStates[feature.id] ?? { data: null, error: null, isLoading: false }}
+              isCompact={viewMode === 'compact'}
+            />
+          );
+        })}
 
         {/* 3. Repositories Section (統一親カード) */}
         <RepositoriesCard

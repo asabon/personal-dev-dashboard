@@ -69,3 +69,23 @@ graph TD
 | **アイコン** | **Lucide Icons** | シンプルで統一感のある開発者向けアイコンセット |
 | **ホスティング** | **GitHub Pages** | GitHub Actions による自動ビルド＆無料配信 |
 | **CI/CD** | **GitHub Actions** | `main` ブランチへのプッシュで自動デプロイ |
+
+## 4. ダッシュボード機能の拡張
+
+### 4.1 任意カードの feature module
+
+設定で表示を切り替える追加カードは、`src/features/modules/<feature-id>/feature.tsx` に機能単位で実装します。各 module は次の役割をまとめて公開します。
+
+- 機能 ID と既定の有効状態
+- 設定画面の編集コンポーネント
+- GitHub API 等からのデータ取得
+- カード表示コンポーネント
+- 状況サマリーに出す警告とデモデータ（必要な場合）
+
+`src/features/registry.ts` は Vite の `import.meta.glob` で module を検出します。App は登録済み module を共通のデータ取得・カード表示ホストとして扱うため、任意カードの追加で App、設定モーダル、共通 state に機能固有の分岐を追加しないことを基本とします。
+
+機能の有効状態は `AppSettings.features[featureId].enabled` に保存します。保存形式を変更する場合は `src/services/storage.ts` で旧設定から移行し、既存利用者の設定を維持します。Organization 監視一覧は Actions 使用量取得でも共有するため、現時点では共通設定として保持します。
+
+### 4.2 段階的な適用範囲
+
+Self-hosted Runners に続き、Actions 使用量も feature module として扱います。Organization 監視一覧は両機能で共有する共通設定です。リポジトリ一覧は取得データや PR 集計との結び付きが異なるため、現時点ではコア機能として残します。

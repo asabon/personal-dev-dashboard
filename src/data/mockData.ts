@@ -5,6 +5,10 @@ import type {
   RepositoryDashboardData,
   SelfHostedRunner,
 } from '../types';
+import {
+  ACTIONS_USAGE_FEATURE_ID,
+  SELF_HOSTED_RUNNERS_FEATURE_ID,
+} from '../features/ids';
 
 export const DEMO_SETTINGS: AppSettings = {
   pat: 'demo-mock-token',
@@ -15,7 +19,10 @@ export const DEMO_SETTINGS: AppSettings = {
     'octocat/api-gateway',
   ],
   refreshIntervalSec: 60,
-  showSelfHostedRunners: true,
+  features: {
+    [ACTIONS_USAGE_FEATURE_ID]: { enabled: true, options: {} },
+    [SELF_HOSTED_RUNNERS_FEATURE_ID]: { enabled: true, options: {} },
+  },
   monitoredOrgs: ['demo-org'],
 };
 

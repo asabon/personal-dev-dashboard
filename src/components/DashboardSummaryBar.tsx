@@ -1,28 +1,21 @@
 import React from 'react';
 import {
-  AlertTriangle,
   XCircle,
   Loader2,
   CheckCircle2,
-  Cpu,
   ArrowDown,
 } from 'lucide-react';
-import type { RepositoryDashboardData, ActionsUsage, SelfHostedRunner } from '../types';
+import type { RepositoryDashboardData } from '../types';
+import type { FeatureAlert } from '../features/types';
 
 interface DashboardSummaryBarProps {
   projects: RepositoryDashboardData[];
-  usage?: ActionsUsage | null;
-  usages?: (ActionsUsage | null)[];
-  runners: SelfHostedRunner[];
-  showRunners?: boolean;
+  featureAlerts?: FeatureAlert[];
 }
 
 export const DashboardSummaryBar: React.FC<DashboardSummaryBarProps> = ({
   projects,
-  usage,
-  usages,
-  runners,
-  showRunners = false,
+  featureAlerts = [],
 }) => {
   // 1. CI 失敗 / 実行中 PR の集計
   let failedPrCount = 0;
@@ -42,26 +35,10 @@ export const DashboardSummaryBar: React.FC<DashboardSummaryBarProps> = ({
     }
   }
 
-  // 2. Actions 使用枠の警告判定 (全アカウントを対象にチェック)
-  const allUsages: ActionsUsage[] = [];
-  if (usages && usages.length > 0) {
-    for (const u of usages) {
-      if (u) allUsages.push(u);
-    }
-  } else if (usage) {
-    allUsages.push(usage);
-  }
-
-  const warningUsage = allUsages.find((u) => u.usagePercentage >= 85);
-  const isUsageWarning = Boolean(warningUsage);
-  const isUsageCritical = Boolean(allUsages.some((u) => u.usagePercentage >= 95));
-
-  // 3. ランナーのオフライン判定
-  const offlineRunners = showRunners ? runners.filter((r) => r.status === 'offline') : [];
-  const offlineRunnerCount = offlineRunners.length;
-
-  const hasIssues = failedPrCount > 0 || isUsageWarning || offlineRunnerCount > 0;
-  const isAllClear = !hasIssues && runningPrCount === 0;
+  const hasFeatureIssues = featureAlerts.some((alert) => alert.tone === 'danger');
+  const hasFeatureWarnings = featureAlerts.length > 0;
+  const hasIssues = failedPrCount > 0 || hasFeatureIssues;
+  const isAllClear = !hasIssues && runningPrCount === 0 && !hasFeatureWarnings;
 
   // スクロール用ヘルパー
   const scrollToElement = (id: string) => {
@@ -85,12 +62,12 @@ export const DashboardSummaryBar: React.FC<DashboardSummaryBarProps> = ({
         <span className="relative flex h-2 w-2">
           <span
             className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-              hasIssues ? 'bg-rose-400' : runningPrCount > 0 ? 'bg-amber-400' : 'bg-emerald-400'
+              hasIssues ? 'bg-rose-400' : runningPrCount > 0 || hasFeatureWarnings ? 'bg-amber-400' : 'bg-emerald-400'
             }`}
           />
           <span
             className={`relative inline-flex rounded-full h-2 w-2 ${
-              hasIssues ? 'bg-rose-500' : runningPrCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'
+              hasIssues ? 'bg-rose-500' : runningPrCount > 0 || hasFeatureWarnings ? 'bg-amber-500' : 'bg-emerald-500'
             }`}
           />
         </span>
@@ -132,42 +109,23 @@ export const DashboardSummaryBar: React.FC<DashboardSummaryBarProps> = ({
           </button>
         )}
 
-        {/* 3. Actions 残り枠警告 */}
-        {isUsageWarning && warningUsage && (() => {
-          const remainingPercent = Math.max(0, 100 - warningUsage.usagePercentage);
-          return (
-            <button
-              type="button"
-              onClick={() => scrollToElement('actions-usage-section')}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all active:scale-95 cursor-pointer ${
-                isUsageCritical
-                  ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border-rose-500/30 font-semibold'
-                  : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/20'
-              }`}
-              title="Actions 使用量カードへ移動"
-            >
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-              <span>
-                Actions 残{remainingPercent}%{warningUsage.accountName ? ` (${warningUsage.accountName})` : ''}
-              </span>
-              <ArrowDown className="w-3 h-3 opacity-70" />
-            </button>
-          );
-        })()}
-
-        {/* 4. Runner オフライン警告 */}
-        {offlineRunnerCount > 0 && (
+        {featureAlerts.map((alert) => (
           <button
+            key={alert.id}
             type="button"
-            onClick={() => scrollToElement('runners-section')}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-semibold transition-all active:scale-95 cursor-pointer"
-            title="Self-hosted Runners カードへ移動"
+            onClick={() => scrollToElement(alert.targetId)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all active:scale-95 cursor-pointer ${
+              alert.tone === 'danger'
+                ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border-rose-500/30 font-semibold'
+                : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/20'
+            }`}
+            title={`${alert.label}へ移動`}
           >
-            <Cpu className="w-3.5 h-3.5 text-rose-400" />
-            <span>Runner 停止: {offlineRunnerCount}台</span>
-            <ArrowDown className="w-3 h-3 text-rose-400 opacity-70" />
+            {alert.icon}
+            <span>{alert.label}</span>
+            <ArrowDown className={`w-3.5 h-3.5 opacity-70 ${alert.tone === 'danger' ? 'text-rose-400' : 'text-amber-400'}`} />
           </button>
-        )}
+        ))}
     </div>
   );
 };
