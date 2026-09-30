@@ -58,11 +58,11 @@ IntervalTimer プロジェクトのリリース準備パイプラインに準拠
    git push -u origin chore/release-vX.Y.Z
    ```
 2. **PR の本文（PR Body）を作成**:
-   - 一時 Markdown ファイル（`temp_pr_body.md`）に、変更内容（What's Changed）や確認事項を記載。
+   - 一時 Markdown ファイル（`scratch/pr_body.md`）に、変更内容（What's Changed）や確認事項を記載。
 3. **GitHub CLI で PR を作成 (`--body-file` 必須)**:
    ```bash
-   gh pr create --title "chore: リリース vX.Y.Z" --body-file "temp_pr_body.md" --base main
-   Remove-Item "temp_pr_body.md"
+   gh pr create --title "chore: リリース vX.Y.Z" --body-file "scratch/pr_body.md" --base main
+   Remove-Item "scratch/pr_body.md"
    ```
 4. **ユーザーへの報告 & レビュー依頼**:
    - PR URL を案内し、リリースノートの文言確認および `main` へのマージを依頼します。
