@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadSettings, saveSettings, clearSettings } from './storage';
 import type { AppSettings } from '../types';
+import { SELF_HOSTED_RUNNERS_FEATURE_ID } from '../features/ids';
 
 describe('storage service', () => {
   beforeEach(() => {
@@ -15,7 +16,10 @@ describe('storage service', () => {
       username: '',
       repositories: [],
       refreshIntervalSec: 60,
-      showSelfHostedRunners: false,
+      features: {
+        actionsUsage: { enabled: true, options: {} },
+        [SELF_HOSTED_RUNNERS_FEATURE_ID]: { enabled: false, options: {} },
+      },
       monitoredOrgs: [],
     });
   });
@@ -26,13 +30,27 @@ describe('storage service', () => {
       username: 'octocat',
       repositories: ['owner/repo-a', 'owner/repo-b'],
       refreshIntervalSec: 300,
-      showSelfHostedRunners: true,
+      features: {
+        actionsUsage: { enabled: true, options: {} },
+        [SELF_HOSTED_RUNNERS_FEATURE_ID]: { enabled: true, options: {} },
+      },
       monitoredOrgs: ['my-org'],
     };
 
     saveSettings(customSettings);
     const loaded = loadSettings();
     expect(loaded).toEqual(customSettings);
+  });
+
+  it('従来の Self-hosted Runner 設定を feature 設定へ移行すること', () => {
+    localStorage.setItem(
+      'personal_dev_dashboard_settings',
+      JSON.stringify({ showSelfHostedRunners: true, monitoredOrgs: ['old-org'] })
+    );
+
+    const loaded = loadSettings();
+    expect(loaded.features[SELF_HOSTED_RUNNERS_FEATURE_ID].enabled).toBe(true);
+    expect(loaded.monitoredOrgs).toEqual(['old-org']);
   });
 
   it('localStorage の JSON が破損している場合でもクラッシュせずデフォルト設定を返すこと', () => {
@@ -51,7 +69,7 @@ describe('storage service', () => {
       username: 'user',
       repositories: ['a/b'],
       refreshIntervalSec: 60,
-      showSelfHostedRunners: false,
+      features: { [SELF_HOSTED_RUNNERS_FEATURE_ID]: { enabled: false, options: {} } },
       monitoredOrgs: [],
     });
 

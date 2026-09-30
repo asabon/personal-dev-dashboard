@@ -7,10 +7,15 @@ export interface AppSettings {
   repositories: string[];
   /** 自動更新間隔（秒）。0 は自動更新無効 */
   refreshIntervalSec: number;
-  /** セルフホステッドランナーの稼働状況を表示するかどうか (デフォルト: false) */
-  showSelfHostedRunners?: boolean;
+  /** 拡張可能なダッシュボード機能の設定 */
+  features: Record<string, FeatureSettings>;
   /** ランナー監視対象の Organization 一覧 (任意) */
   monitoredOrgs?: string[];
+}
+
+export interface FeatureSettings {
+  enabled: boolean;
+  options?: Record<string, unknown>;
 }
 
 export interface ActionsUsageBreakdown {
@@ -119,13 +124,7 @@ export interface DashboardState {
     limit: number;
     resetAt: Date;
   } | null;
-  usage: ActionsUsage | null;
-  usageMap?: Record<string, ActionsUsageItem>;
-  selectedUsageAccount?: string;
   projects: RepositoryDashboardData[];
-  runners: SelfHostedRunner[];
-  isLoadingRunners: boolean;
-  runnersError: string | null;
   error: string | null;
 }
 
