@@ -7,6 +7,7 @@ import {
   FolderGit2,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   PlayCircle,
   Tag,
   Laptop,
@@ -207,22 +208,23 @@ export const RunnersCard: React.FC<RunnersCardProps> = ({
                 <span>取得エラーあり</span>
               </span>
             )}
-            {offlineCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
-                <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
-                <span>{offlineCount}台 Offline</span>
-              </span>
-            )}
-            {totalCount > 0 && offlineCount === 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
-                <CheckCircle2 className="w-3 h-3 shrink-0" />
-                <span>{onlineCount}/{totalCount} Online</span>
-              </span>
-            )}
-            {totalCount > 0 && offlineCount > 0 && (
-              <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-400 shrink-0">
-                <span>{onlineCount}/{totalCount} Online</span>
-              </span>
+            {totalCount > 0 && (
+              onlineCount === totalCount ? (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
+                  <CheckCircle2 className="w-3 h-3 shrink-0" />
+                  <span>{onlineCount}/{totalCount} Online</span>
+                </span>
+              ) : onlineCount === 0 ? (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
+                  <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                  <span>0/{totalCount} Online</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
+                  <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                  <span>{onlineCount}/{totalCount} Online</span>
+                </span>
+              )
             )}
             {busyCount > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">

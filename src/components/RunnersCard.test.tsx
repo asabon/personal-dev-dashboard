@@ -83,7 +83,23 @@ describe('RunnersCard', () => {
       expect(screen.getByText('2台')).toBeInTheDocument();
     });
 
-    it('3台登録（実行中1台、待機中1台、オフライン1台）の場合、"1台 Offline"（赤）、"2/3 Online"、"1台 Running"（黄）が表示されること', () => {
+    it('1台登録でオフラインの場合、"0/1 Online"（赤色）が表示され "Offline" バッジは重複表示されないこと', () => {
+      render(
+        <RunnersCard
+          runners={[dummyRunnerOffline]}
+          isLoading={false}
+          error={null}
+        />
+      );
+
+      expect(screen.getByText('0/1 Online')).toBeInTheDocument();
+      const badge = screen.getByText('0/1 Online').parentElement;
+      expect(badge?.className).toContain('text-rose-300');
+      expect(screen.queryByText(/台 Offline/)).not.toBeInTheDocument();
+      expect(screen.getByText('1台')).toBeInTheDocument();
+    });
+
+    it('3台登録（実行中1台、待機中1台、オフライン1台）の場合、"2/3 Online"（黄色）と "1台 Running" が表示され "Offline" バッジは表示されないこと', () => {
       render(
         <RunnersCard
           runners={[dummyRunnerIdle, dummyRunnerBusy, dummyRunnerOffline]}
@@ -92,10 +108,24 @@ describe('RunnersCard', () => {
         />
       );
 
-      expect(screen.getByText('1台 Offline')).toBeInTheDocument();
       expect(screen.getByText('2/3 Online')).toBeInTheDocument();
+      const badge = screen.getByText('2/3 Online').parentElement;
+      expect(badge?.className).toContain('text-amber-300');
+      expect(screen.queryByText(/台 Offline/)).not.toBeInTheDocument();
       expect(screen.getByText('1台 Running')).toBeInTheDocument();
       expect(screen.getByText('3台')).toBeInTheDocument();
+    });
+
+    it('0台登録の場合、"0台" が表示されること', () => {
+      render(
+        <RunnersCard
+          runners={[]}
+          isLoading={false}
+          error={null}
+        />
+      );
+
+      expect(screen.getAllByText('0台').length).toBeGreaterThanOrEqual(1);
     });
 
     it('エラー発生時は親ヘッダーに "取得エラーあり" が表示されること', () => {
