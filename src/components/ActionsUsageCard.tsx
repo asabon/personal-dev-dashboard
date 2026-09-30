@@ -367,6 +367,8 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
   let hasError = false;
   let hasOverPace = false; // 目安越え (残り僅か / ハイペース / 残り200分未満 / 使用率90%以上)
   let hasNearPace = false; // 目安間近 (やや速い / 使用率85%以上)
+  let underPaceCount = 0;
+  const totalAccounts = resolvedAccounts.length;
 
   for (const acc of resolvedAccounts) {
     const item = usageMap[acc.name];
@@ -390,6 +392,8 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
         hasOverPace = true;
       } else if (paceStatusText === 'やや速い' || usagePercentage >= 85) {
         hasNearPace = true;
+      } else {
+        underPaceCount += 1;
       }
     }
   }
@@ -476,22 +480,27 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
                 <span>取得エラーあり</span>
               </span>
             )}
-            {hasOverPace && (
-              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
-                <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />
-                <span>目安越えあり</span>
-              </span>
+            {totalAccounts > 0 && (
+              underPaceCount === totalAccounts ? (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
+                  <CheckCircle2 className="w-3 h-3 shrink-0" />
+                  <span>{underPaceCount}/{totalAccounts} 目安以下</span>
+                </span>
+              ) : underPaceCount === 0 ? (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
+                  <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                  <span>0/{totalAccounts} 目安以下</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
+                  <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                  <span>{underPaceCount}/{totalAccounts} 目安以下</span>
+                </span>
+              )
             )}
-            {!hasOverPace && hasNearPace && (
-              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
-                <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
-                <span>目安間近あり</span>
-              </span>
-            )}
-            {!hasError && !hasOverPace && !hasNearPace && (
-              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
-                <CheckCircle2 className="w-3 h-3 shrink-0" />
-                <span>全部目安以下</span>
+            {totalAccounts === 0 && (
+              <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-400 shrink-0">
+                0アカウント
               </span>
             )}
           </div>
