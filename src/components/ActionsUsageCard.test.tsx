@@ -1,9 +1,18 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ActionsUsageCard } from './ActionsUsageCard';
 import type { ActionsUsage, ActionsUsageAccount, ActionsUsageItem } from '../types';
 
 describe('ActionsUsageCard', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-22T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   const mockUsage: ActionsUsage = {
     totalMinutesUsed: 550,
     includedMinutes: 2000,

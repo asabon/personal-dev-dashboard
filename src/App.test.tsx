@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { App } from './App';
 
@@ -7,9 +7,12 @@ describe('App Demo Mode (?demo=true)', () => {
 
   beforeEach(() => {
     localStorage.clear();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-25T12:00:00Z'));
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     // location を復元
     Object.defineProperty(window, 'location', {
       value: originalLocation,
