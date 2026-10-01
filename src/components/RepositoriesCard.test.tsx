@@ -49,7 +49,7 @@ describe('RepositoriesCard', () => {
     },
   ];
 
-  it('ヘッダーにリポジトリ数やサマリーバッジ（失敗数）が表示されること', () => {
+  it('一部の PR が失敗している場合は「1/2 Passed」サマリーバッジ（黄色）が表示されること', () => {
     render(
       <RepositoriesCard
         repositories={['asabon/personal-dev-dashboard', 'octocat/frontend-app']}
@@ -59,11 +59,12 @@ describe('RepositoriesCard', () => {
 
     expect(screen.getByText('監視リポジトリ')).toBeInTheDocument();
     expect(screen.getByText('2リポジトリ')).toBeInTheDocument();
-    expect(screen.getByText('1 PR failed')).toBeInTheDocument();
-    expect(screen.getByText('1 PR passed')).toBeInTheDocument();
+    const badge = screen.getByText('1/2 Passed');
+    expect(badge).toBeInTheDocument();
+    expect(badge.closest('.inline-flex')).toHaveClass('text-amber-300');
   });
 
-  it('失敗がない場合は All passed バッジが表示されること', () => {
+  it('全 PR が成功している場合は「1/1 Passed」（緑色）が表示されること', () => {
     render(
       <RepositoriesCard
         repositories={['asabon/personal-dev-dashboard']}
@@ -71,7 +72,97 @@ describe('RepositoriesCard', () => {
       />
     );
 
-    expect(screen.getByText('1 PRs All passed')).toBeInTheDocument();
+    const badge = screen.getByText('1/1 Passed');
+    expect(badge).toBeInTheDocument();
+    expect(badge.closest('.inline-flex')).toHaveClass('text-emerald-400');
+  });
+
+  it('全 PR が失敗している場合は「0/1 Passed」（赤色）が表示されること', () => {
+    render(
+      <RepositoriesCard
+        repositories={['octocat/frontend-app']}
+        projects={[mockProjects[1]]}
+      />
+    );
+
+    const badge = screen.getByText('0/1 Passed');
+    expect(badge).toBeInTheDocument();
+    expect(badge.closest('.inline-flex')).toHaveClass('text-rose-300');
+  });
+
+  it('実行中の PR がある場合は「X Running」バッジが併記されること', () => {
+    const runningProject: RepositoryDashboardData = {
+      owner: 'octocat',
+      name: 'api-gateway',
+      fullName: 'octocat/api-gateway',
+      isPrivate: false,
+      pullRequests: [
+        {
+          id: 'pr-3',
+          number: 3,
+          title: 'WIP feature',
+          url: 'https://github.com/octocat/api-gateway/pull/3',
+          updatedAt: '2026-09-23T00:00:00Z',
+          author: { login: 'asabon', avatarUrl: '' },
+          headBranch: 'feat-wip',
+          headSha: '789',
+          shortSha: '789',
+          overallCiState: 'PENDING',
+          checks: [],
+        },
+      ],
+    };
+
+    render(
+      <RepositoriesCard
+        repositories={['asabon/personal-dev-dashboard', 'octocat/api-gateway']}
+        projects={[mockProjects[0], runningProject]}
+      />
+    );
+
+    expect(screen.getByText('1/2 Passed')).toBeInTheDocument();
+    expect(screen.getByText('1 Running')).toBeInTheDocument();
+  });
+
+  it('PR が 0 件の場合は「0 PR」（緑色）が表示されること', () => {
+    const emptyProject: RepositoryDashboardData = {
+      owner: 'asabon',
+      name: 'personal-dev-dashboard',
+      fullName: 'asabon/personal-dev-dashboard',
+      isPrivate: false,
+      pullRequests: [],
+    };
+
+    render(
+      <RepositoriesCard
+        repositories={['asabon/personal-dev-dashboard']}
+        projects={[emptyProject]}
+      />
+    );
+
+    const badge = screen.getByText('0 PR');
+    expect(badge).toBeInTheDocument();
+    expect(badge.closest('.inline-flex')).toHaveClass('text-emerald-400');
+  });
+
+  it('リポジトリ取得エラーがある場合は「1 リポエラー」が表示されること', () => {
+    const errorProject: RepositoryDashboardData = {
+      owner: 'octocat',
+      name: 'private-repo',
+      fullName: 'octocat/private-repo',
+      isPrivate: true,
+      error: 'Not Found',
+      pullRequests: [],
+    };
+
+    render(
+      <RepositoriesCard
+        repositories={['octocat/private-repo']}
+        projects={[errorProject]}
+      />
+    );
+
+    expect(screen.getByText('1 リポエラー')).toBeInTheDocument();
   });
 
   it('リポジトリが0件のときに「設定を開く」ボタンをクリックすると onOpenSettings が呼ばれること', () => {

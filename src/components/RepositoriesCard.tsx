@@ -6,6 +6,7 @@ import {
   XCircle,
   Loader2,
   CheckCircle2,
+  AlertTriangle,
   Settings,
 } from 'lucide-react';
 import type { RepositoryDashboardData } from '../types';
@@ -99,42 +100,59 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
         <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto pt-0.5 sm:pt-0">
           {/* サマリーバッジ */}
           <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
-              {erroredRepos.length > 0 && (
+            {erroredRepos.length > 0 && (
+              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
+                <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                <span>{erroredRepos.length} リポエラー</span>
+              </span>
+            )}
+            {repositories.length === 0 && (
+              <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-400 shrink-0">
+                0リポジトリ
+              </span>
+            )}
+            {repositories.length > 0 && totalPrs > 0 && (
+              passedPrs.length === totalPrs ? (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
+                  <CheckCircle2 className="w-3 h-3 shrink-0" />
+                  <span>{passedPrs.length}/{totalPrs} Passed</span>
+                </span>
+              ) : failedPrs.length === 0 ? (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
+                  <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                  <span>{passedPrs.length}/{totalPrs} Passed</span>
+                </span>
+              ) : passedPrs.length === 0 ? (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
                   <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
-                  <span>{erroredRepos.length} リポエラー</span>
+                  <span>0/{totalPrs} Passed</span>
                 </span>
-              )}
-              {failedPrs.length > 0 && (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
-                  <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
-                  <span>{failedPrs.length} {failedPrs.length === 1 ? 'PR' : 'PRs'} failed</span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
+                  <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                  <span>{passedPrs.length}/{totalPrs} Passed</span>
                 </span>
-              )}
-              {runningPrs.length > 0 && (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 shrink-0">
-                  <Loader2 className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
-                  <span>{runningPrs.length} {runningPrs.length === 1 ? 'PR' : 'PRs'} running</span>
-                </span>
-              )}
-              {failedPrs.length === 0 && erroredRepos.length === 0 && runningPrs.length === 0 && (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+              )
+            )}
+            {runningPrs.length > 0 && (
+              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
+                <Loader2 className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
+                <span>{runningPrs.length} Running</span>
+              </span>
+            )}
+            {repositories.length > 0 && totalPrs === 0 && (
+              erroredRepos.length === 0 ? (
+                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
-                  <span>{totalPrs > 0 ? `${totalPrs} PRs All passed` : 'PRなし'}</span>
+                  <span>0 PR</span>
                 </span>
-              )}
-              {(failedPrs.length > 0 || runningPrs.length > 0) && passedPrs.length > 0 && (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                  <CheckCircle2 className="w-3 h-3 shrink-0" />
-                  <span>{passedPrs.length} {passedPrs.length === 1 ? 'PR' : 'PRs'} passed</span>
+              ) : (
+                <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-400 shrink-0">
+                  0 PR
                 </span>
-              )}
-              {totalPrs > 0 && (failedPrs.length > 0 || runningPrs.length > 0) && passedPrs.length === 0 && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-400 shrink-0">
-                  {totalPrs} PRs
-                </span>
-              )}
-            </div>
+              )
+            )}
+          </div>
 
           {/* PC表示時の開閉アイコン */}
           <div className="hidden sm:block p-0.5 sm:p-1 rounded-lg text-slate-400 hover:text-slate-200 transition-colors shrink-0">
