@@ -27,10 +27,14 @@
 
 1. **`main` ブランチへの直接コミット・プッシュは厳格に禁止**:
    - リモートの GitHub ブランチ保護設定およびローカルの Git Hook (`.githooks/pre-commit`, `.githooks/pre-push`) の両方で保護されています。
-   - 必ずトピックブランチ（例: `feature/*`, `fix/*`, `chore/*`）を作成し、Pull Request を作成してマージしてください。
-2. **リリース（タグ）駆動デプロイ & Release Drafter**:
+   - 必ずトピックブランチ（例: `feature/*`, `fix/*`, `chore/*`）を作成し、Pull Request を作成してください。
+2. **Pull Request の承認・マージはユーザーが実施（エージェントによるマージ・承認は厳禁）**:
+   - AI エージェントの役割は、トピックブランチの作成、実装・テスト、コミット、プッシュ、PR 作成、および CI の通過確認までです。
+   - **PR のレビュー・承認（Approve）・マージ（`gh pr merge` 等）は必ずユーザー自身が行います。エージェントが自ら承認やマージを実行することは厳禁です。**
+   - CI のパスを確認後、ユーザーに PR の URL を案内し、レビューおよびマージを依頼して待機してください。
+3. **リリース（タグ）駆動デプロイ & Release Drafter**:
    - `main` ブランチへの通常マージ時は **Release Drafter** が自動起動し、ドラフトリリースノート（"Next release"）を更新・蓄積します。
-   - リリース時はリリース PR をマージ後にタグ（`v*.*.*`）を push することで、デプロイワークフロー (`deploy.yml`) が起動し、デプロイ成功後にドラフトが自動で正式 Release として公開されます。
+   - リリース時はリリース PR をユーザーがマージ後にタグ（`v*.*.*`）を push することで、デプロイワークフロー (`deploy.yml`) が起動し、デプロイ成功後にドラフトが自動で正式 Release として公開されます。
    - リリース作業は専用スキル [`.agents/skills/prepare-release/SKILL.md`](.agents/skills/prepare-release/SKILL.md) および [`.agents/skills/publish-release/SKILL.md`](.agents/skills/publish-release/SKILL.md) の手順に従って実行してください。
    - 運用手順の詳細は [`docs/dev/release-flow.md`](docs/dev/release-flow.md) を参照してください。
 
