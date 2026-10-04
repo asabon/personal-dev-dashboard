@@ -208,6 +208,12 @@ export const RunnersCard: React.FC<RunnersCardProps> = ({
                 <span>取得エラーあり</span>
               </span>
             )}
+            {busyCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
+                <PlayCircle className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
+                <span>{busyCount}台 Running</span>
+              </span>
+            )}
             {totalCount > 0 && (
               onlineCount === totalCount ? (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
@@ -225,12 +231,6 @@ export const RunnersCard: React.FC<RunnersCardProps> = ({
                   <span>{onlineCount}/{totalCount} Online</span>
                 </span>
               )
-            )}
-            {busyCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
-                <PlayCircle className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
-                <span>{busyCount}台 Running</span>
-              </span>
             )}
             {totalCount === 0 && !hasError && (
               <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-400 shrink-0">

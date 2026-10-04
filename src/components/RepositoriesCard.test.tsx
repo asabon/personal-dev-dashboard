@@ -120,8 +120,12 @@ describe('RepositoriesCard', () => {
       />
     );
 
-    expect(screen.getByText('1/2 Passed')).toBeInTheDocument();
-    expect(screen.getByText('1 Running')).toBeInTheDocument();
+    const passedBadge = screen.getByText('1/2 Passed');
+    const runningBadge = screen.getByText('1 Running');
+    expect(passedBadge).toBeInTheDocument();
+    expect(runningBadge).toBeInTheDocument();
+    // Running が Passed より前に表示されること（進行中が左、状態が右）
+    expect(runningBadge.compareDocumentPosition(passedBadge)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it('PR が 0 件の場合は「0 PR」（緑色）が表示されること', () => {
