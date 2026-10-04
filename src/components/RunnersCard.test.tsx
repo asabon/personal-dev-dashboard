@@ -62,8 +62,12 @@ describe('RunnersCard', () => {
         />
       );
 
-      expect(screen.getByText('1/1 Online')).toBeInTheDocument();
-      expect(screen.getByText('1台 Running')).toBeInTheDocument();
+      const onlineBadge = screen.getByText('1/1 Online');
+      const runningBadge = screen.getByText('1台 Running');
+      expect(onlineBadge).toBeInTheDocument();
+      expect(runningBadge).toBeInTheDocument();
+      // Running が Online より前に表示されること（進行中が左、状態が右）
+      expect(runningBadge.compareDocumentPosition(onlineBadge)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
       expect(screen.queryByText(/Offline/)).not.toBeInTheDocument();
       expect(screen.getByText('1台')).toBeInTheDocument();
     });

@@ -111,6 +111,12 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                 0リポジトリ
               </span>
             )}
+            {runningPrs.length > 0 && (
+              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
+                <Loader2 className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
+                <span>{runningPrs.length} Running</span>
+              </span>
+            )}
             {repositories.length > 0 && totalPrs > 0 && (
               passedPrs.length === totalPrs ? (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
@@ -133,12 +139,6 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                   <span>{passedPrs.length}/{totalPrs} Passed</span>
                 </span>
               )
-            )}
-            {runningPrs.length > 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
-                <Loader2 className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
-                <span>{runningPrs.length} Running</span>
-              </span>
             )}
             {repositories.length > 0 && totalPrs === 0 && (
               erroredRepos.length === 0 ? (
