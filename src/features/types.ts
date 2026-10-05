@@ -37,6 +37,13 @@ export interface FeatureAlert {
   tone: 'warning' | 'danger';
 }
 
+export interface FeatureDebugScenario {
+  id: string;
+  label: string;
+  category?: string;
+  state: FeatureDataState;
+}
+
 export interface DashboardFeatureDefinition {
   id: string;
   defaultEnabled: boolean;
@@ -47,4 +54,5 @@ export interface DashboardFeatureDefinition {
   loadData: (context: FeatureLoadContext) => Promise<unknown>;
   getAlerts?: (data: unknown) => FeatureAlert[];
   demoData?: unknown;
+  debugScenarios?: FeatureDebugScenario[];
 }

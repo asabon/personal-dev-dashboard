@@ -32,6 +32,122 @@ export const feature: DashboardFeatureDefinition = {
   SettingsEditor: SelfHostedRunnersSettingsEditor,
   Card: RunnerFeatureCard,
   demoData: { runners: DEMO_RUNNERS },
+  debugScenarios: [
+    {
+      id: 'all-idle',
+      category: '全台 Online',
+      label: '全台待機 (0台Running)',
+      state: {
+        data: {
+          runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'online' as const, busy: false })),
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'running-mixed',
+      category: '全台 Online',
+      label: '待機＋実行中混在 (1台Running)',
+      state: {
+        data: {
+          runners: [
+            { ...DEMO_RUNNERS[0], status: 'online' as const, busy: false },
+            { ...DEMO_RUNNERS[1], status: 'online' as const, busy: true },
+            { ...DEMO_RUNNERS[2], status: 'online' as const, busy: false },
+          ],
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'all-busy',
+      category: '全台 Online',
+      label: '全台実行中 (3台Running・高負荷)',
+      state: {
+        data: {
+          runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'online' as const, busy: true })),
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'offline-running',
+      category: '一部 Offline',
+      label: '実行中あり (1台Running, 1台Offline)',
+      state: {
+        data: {
+          runners: [
+            { ...DEMO_RUNNERS[0], status: 'online' as const, busy: false },
+            { ...DEMO_RUNNERS[1], status: 'online' as const, busy: true },
+            { ...DEMO_RUNNERS[2], status: 'offline' as const, busy: false },
+          ],
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'offline-idle',
+      category: '一部 Offline',
+      label: '待機中のみ (0台Running, 1台Offline)',
+      state: {
+        data: {
+          runners: [
+            { ...DEMO_RUNNERS[0], status: 'online' as const, busy: false },
+            { ...DEMO_RUNNERS[1], status: 'online' as const, busy: false },
+            { ...DEMO_RUNNERS[2], status: 'offline' as const, busy: false },
+          ],
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'all-offline',
+      category: '全台 Offline・異常',
+      label: '全台停止 (3台Offline・障害)',
+      state: {
+        data: {
+          runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'offline' as const, busy: false })),
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'empty',
+      category: '全台 Offline・異常',
+      label: 'ランナー未登録 (0台)',
+      state: {
+        data: { runners: [] },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'error',
+      category: '全台 Offline・異常',
+      label: 'API エラー (403 権限不足)',
+      state: {
+        data: null,
+        error: 'Self-hosted Runner 権限が不足しています (403 Forbidden)',
+        isLoading: false,
+      },
+    },
+    {
+      id: 'loading',
+      category: '全台 Offline・異常',
+      label: '読込中 (Loading)',
+      state: {
+        data: null,
+        error: null,
+        isLoading: true,
+      },
+    },
+  ],
   loadData: (context) =>
     fetchAllSelfHostedRunners(
       context.pat,

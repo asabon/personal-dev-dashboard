@@ -7,6 +7,7 @@ import {
   fetchUserOrganizations,
 } from '../../../services/githubApi';
 import type {
+  ActionsUsage,
   ActionsUsageAccount,
   ActionsUsageItem,
 } from '../../../types';
@@ -123,6 +124,32 @@ const ActionsUsageFeatureCard: React.FC<FeatureCardProps> = ({ state, isCompact 
   );
 };
 
+function createDebugUsageData(percentage: number, accountName = 'demo-developer'): ActionsUsageFeatureData {
+  const usage: ActionsUsage = {
+    accountName,
+    accountType: 'user',
+    totalMinutesUsed: Math.round(2000 * (percentage / 100)),
+    includedMinutes: 2000,
+    usagePercentage: percentage,
+    breakdown: { ubuntu: Math.round(2000 * (percentage / 100)), macOS: 0, windows: 0 },
+    lastUpdated: new Date().toISOString(),
+  };
+  return {
+    accounts: [{ name: accountName, type: 'user' }],
+    usageMap: { [accountName]: { usage, error: null } },
+    userError: null,
+    discoveredOrgs: [],
+  };
+}
+
+const actionsUsageDemoData = {
+  ...demoData,
+  usageMap: {
+    ...DEMO_USAGE_MAP,
+    'demo-developer': { usage: DEMO_USAGE, error: null },
+  },
+};
+
 export const feature: DashboardFeatureDefinition = {
   id: ACTIONS_USAGE_FEATURE_ID,
   defaultEnabled: true,
@@ -130,11 +157,98 @@ export const feature: DashboardFeatureDefinition = {
   Card: ActionsUsageFeatureCard,
   loadData: loadActionsUsage,
   getAlerts: getActionsUsageAlerts,
-  demoData: {
-    ...demoData,
-    usageMap: {
-      ...DEMO_USAGE_MAP,
-      'demo-developer': { usage: DEMO_USAGE, error: null },
+  demoData: actionsUsageDemoData,
+  debugScenarios: [
+    {
+      id: 'normal',
+      category: '正常・利用状況',
+      label: '余裕 (28%)',
+      state: { data: actionsUsageDemoData, error: null, isLoading: false },
     },
-  },
+    {
+      id: 'warning',
+      category: '正常・利用状況',
+      label: '警告域 (85% / 残15%)',
+      state: { data: createDebugUsageData(85), error: null, isLoading: false },
+    },
+    {
+      id: 'critical-alert',
+      category: '正常・利用状況',
+      label: '警戒域 (95% / 残5%)',
+      state: { data: createDebugUsageData(95), error: null, isLoading: false },
+    },
+    {
+      id: 'critical',
+      category: '正常・利用状況',
+      label: '上限到達 (100% / 残0%)',
+      state: { data: createDebugUsageData(100), error: null, isLoading: false },
+    },
+    {
+      id: 'overage',
+      category: '正常・利用状況',
+      label: '上限超過 (115%)',
+      state: { data: createDebugUsageData(115), error: null, isLoading: false },
+    },
+    {
+      id: 'org-exhausted',
+      category: '正常・利用状況',
+      label: '組織のみ上限 (個人28%/組織100%)',
+      state: {
+        data: {
+          accounts: [
+            { name: 'demo-developer', type: 'user' },
+            { name: 'demo-org', type: 'org' },
+          ],
+          usageMap: {
+            'demo-developer': { usage: DEMO_USAGE, error: null },
+            'demo-org': {
+              usage: {
+                accountName: 'demo-org',
+                accountType: 'org',
+                totalMinutesUsed: 2000,
+                includedMinutes: 2000,
+                usagePercentage: 100,
+                breakdown: { ubuntu: 1800, macOS: 20, windows: 0 },
+                lastUpdated: new Date().toISOString(),
+              },
+              error: null,
+            },
+          },
+          userError: null,
+          discoveredOrgs: ['demo-org'],
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'empty',
+      category: '正常・利用状況',
+      label: '未使用 (0%)',
+      state: { data: createDebugUsageData(0), error: null, isLoading: false },
+    },
+    {
+      id: 'error',
+      category: '異常・エラー',
+      label: 'API エラー (403 権限不足)',
+      state: {
+        data: {
+          accounts: [{ name: 'demo-developer', type: 'user' }],
+          usageMap: {
+            'demo-developer': { usage: null, error: 'Resource not accessible by personal access token' },
+          },
+          userError: 'Resource not accessible by personal access token',
+          discoveredOrgs: [],
+        },
+        error: 'Actions 使用量の取得に失敗しました',
+        isLoading: false,
+      },
+    },
+    {
+      id: 'loading',
+      category: '異常・エラー',
+      label: '読込中 (Loading)',
+      state: { data: null, error: null, isLoading: true },
+    },
+  ],
 };
