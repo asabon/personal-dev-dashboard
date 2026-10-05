@@ -21,14 +21,23 @@ import {
   DEMO_SETTINGS,
   DEMO_PROJECTS,
 } from './data/mockData';
+import { DebugBar } from './components/DebugBar';
+import {
+  REPOSITORIES_DEBUG_SCENARIOS,
+  RATE_LIMIT_DEBUG_SCENARIOS,
+  OVERALL_DEBUG_PRESETS,
+  type OverallDebugPreset,
+} from './data/coreDebugScenarios';
 
 const VIEW_MODE_STORAGE_KEY = 'dashboard_view_mode';
 
 export function App() {
   const isDemoMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
+  const isDebugMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === 'true';
+  const isMockMode = isDemoMode || isDebugMode;
 
   const [settings, setSettings] = useState<AppSettings>(() => {
-    if (isDemoMode) return DEMO_SETTINGS;
+    if (isMockMode) return DEMO_SETTINGS;
     return loadSettings();
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -62,6 +71,18 @@ export function App() {
   };
 
   const [state, setState] = useState<DashboardState>(() => {
+    if (isDebugMode) {
+      const initialRepos = REPOSITORIES_DEBUG_SCENARIOS.find((s) => s.id === 'normal') ?? REPOSITORIES_DEBUG_SCENARIOS[0];
+      const initialRateLimit = RATE_LIMIT_DEBUG_SCENARIOS.find((s) => s.id === 'healthy') ?? RATE_LIMIT_DEBUG_SCENARIOS[0];
+      return {
+        isLoading: initialRepos.value.isLoading,
+        isRefreshing: false,
+        lastRefreshedAt: new Date(),
+        rateLimit: initialRateLimit.value,
+        projects: initialRepos.value.projects,
+        error: initialRepos.value.error,
+      };
+    }
     if (isDemoMode) {
       return {
         isLoading: false,
@@ -87,6 +108,17 @@ export function App() {
   });
 
   const [featureStates, setFeatureStates] = useState<Record<string, FeatureDataState>>(() => {
+    if (isDebugMode) {
+      return Object.fromEntries(
+        dashboardFeatures.map((feature) => {
+          const normalScenario = feature.debugScenarios?.find((s) => s.id === 'normal') ?? feature.debugScenarios?.[0];
+          return [
+            feature.id,
+            normalScenario?.state ?? { data: feature.demoData ?? null, error: null, isLoading: false },
+          ];
+        })
+      );
+    }
     if (!isDemoMode) return {};
     return Object.fromEntries(
       dashboardFeatures
@@ -99,12 +131,97 @@ export function App() {
     featureStatesRef.current = featureStates;
   }, [featureStates]);
 
-  // 初回アクセス（PAT 未設定）の判定（デモモード時はオンボーディング非表示）
-  const needsOnboarding = !isDemoMode && !settings.pat;
+  // デバッグモード用の選択状態
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(
+    isDebugMode ? 'healthy' : null
+  );
+  const [featureScenarioSelections, setFeatureScenarioSelections] = useState<Record<string, string>>(() => {
+    if (!isDebugMode) return {};
+    return Object.fromEntries(dashboardFeatures.map((f) => [f.id, 'normal']));
+  });
+  const [repositoriesScenarioId, setRepositoriesScenarioId] = useState<string>('normal');
+  const [rateLimitScenarioId, setRateLimitScenarioId] = useState<string>('healthy');
+
+  // デバッグモード: 全体プリセット選択ハンドラ
+  const handleSelectPreset = useCallback((preset: OverallDebugPreset) => {
+    setSelectedPresetId(preset.id);
+    setRepositoriesScenarioId(preset.scenarioIds.repositories);
+    setRateLimitScenarioId(preset.scenarioIds.rateLimit);
+
+    const repoScenario = REPOSITORIES_DEBUG_SCENARIOS.find((s) => s.id === preset.scenarioIds.repositories);
+    const rateLimitScenario = RATE_LIMIT_DEBUG_SCENARIOS.find((s) => s.id === preset.scenarioIds.rateLimit);
+
+    setState((prev) => ({
+      ...prev,
+      ...(repoScenario ? repoScenario.value : {}),
+      rateLimit: rateLimitScenario ? rateLimitScenario.value : prev.rateLimit,
+    }));
+
+    const newFeatureSelections: Record<string, string> = {};
+    const newFeatureStates: Record<string, FeatureDataState> = {};
+
+    dashboardFeatures.forEach((feature) => {
+      const targetScenarioId = (preset.scenarioIds as Record<string, string>)[feature.id] || 'normal';
+      const scenario = feature.debugScenarios?.find((s) => s.id === targetScenarioId) ?? feature.debugScenarios?.[0];
+      newFeatureSelections[feature.id] = scenario?.id || targetScenarioId;
+      if (scenario) {
+        newFeatureStates[feature.id] = scenario.state;
+      }
+    });
+
+    setFeatureScenarioSelections(newFeatureSelections);
+    setFeatureStates((prev) => ({ ...prev, ...newFeatureStates }));
+  }, []);
+
+  // デバッグモード: 個別 Feature シナリオ選択ハンドラ
+  const handleSelectFeatureScenario = useCallback((featureId: string, scenarioId: string) => {
+    setSelectedPresetId(null);
+    setFeatureScenarioSelections((prev) => ({ ...prev, [featureId]: scenarioId }));
+
+    const targetFeature = dashboardFeatures.find((f) => f.id === featureId);
+    const scenario = targetFeature?.debugScenarios?.find((s) => s.id === scenarioId);
+    if (scenario) {
+      setFeatureStates((prev) => ({
+        ...prev,
+        [featureId]: scenario.state,
+      }));
+    }
+  }, []);
+
+  // デバッグモード: 個別 Repositories シナリオ選択ハンドラ
+  const handleSelectRepositoriesScenario = useCallback((scenarioId: string) => {
+    setSelectedPresetId(null);
+    setRepositoriesScenarioId(scenarioId);
+    const scenario = REPOSITORIES_DEBUG_SCENARIOS.find((s) => s.id === scenarioId);
+    if (scenario) {
+      setState((prev) => ({
+        ...prev,
+        projects: scenario.value.projects,
+        isLoading: scenario.value.isLoading,
+        error: scenario.value.error,
+      }));
+    }
+  }, []);
+
+  // デバッグモード: 個別 Rate Limit シナリオ選択ハンドラ
+  const handleSelectRateLimitScenario = useCallback((scenarioId: string) => {
+    setSelectedPresetId(null);
+    setRateLimitScenarioId(scenarioId);
+    const scenario = RATE_LIMIT_DEBUG_SCENARIOS.find((s) => s.id === scenarioId);
+    if (scenario) {
+      setState((prev) => ({
+        ...prev,
+        rateLimit: scenario.value,
+      }));
+    }
+  }, []);
+
+  // 初回アクセス（PAT 未設定）の判定（デモ・デバッグモード時はオンボーディング非表示）
+  const needsOnboarding = !isMockMode && !settings.pat;
 
   // データ取得関数
   const refreshData = useCallback(async (isSilent = false) => {
-    if (isDemoMode) {
+    if (isMockMode) {
       if (!isSilent) {
         setState((prev) => ({ ...prev, isRefreshing: true }));
         setTimeout(() => {
@@ -241,7 +358,7 @@ export function App() {
       timerRef.current = null;
     }
 
-    if (settings.refreshIntervalSec > 0 && settings.pat && !isDemoMode) {
+    if (settings.refreshIntervalSec > 0 && settings.pat && !isMockMode) {
       timerRef.current = window.setInterval(() => {
         refreshData(true);
       }, settings.refreshIntervalSec * 1000);
@@ -252,7 +369,7 @@ export function App() {
         window.clearInterval(timerRef.current);
       }
     };
-  }, [settings.refreshIntervalSec, settings.pat, isDemoMode, refreshData]);
+  }, [settings.refreshIntervalSec, settings.pat, isMockMode, refreshData]);
 
   // オンボーディング完了ハンドラ
   const handleOnboardingComplete = (pat: string, username: string) => {
@@ -313,6 +430,21 @@ export function App() {
         onRefresh={() => refreshData()}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
+
+      {/* Debug Mode Controller */}
+      {isDebugMode && (
+        <DebugBar
+          features={dashboardFeatures}
+          selectedPresetId={selectedPresetId}
+          featureScenarioSelections={featureScenarioSelections}
+          repositoriesScenarioId={repositoriesScenarioId}
+          rateLimitScenarioId={rateLimitScenarioId}
+          onSelectPreset={handleSelectPreset}
+          onSelectFeatureScenario={handleSelectFeatureScenario}
+          onSelectRepositoriesScenario={handleSelectRepositoriesScenario}
+          onSelectRateLimitScenario={handleSelectRateLimitScenario}
+        />
+      )}
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">

@@ -32,6 +32,66 @@ export const feature: DashboardFeatureDefinition = {
   SettingsEditor: SelfHostedRunnersSettingsEditor,
   Card: RunnerFeatureCard,
   demoData: { runners: DEMO_RUNNERS },
+  debugScenarios: [
+    {
+      id: 'normal',
+      label: '全台正常稼働',
+      state: {
+        data: {
+          runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'online' as const })),
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'warning',
+      label: '一部 Offline (警告)',
+      state: {
+        data: { runners: DEMO_RUNNERS },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'critical',
+      label: '全台 Offline (障害)',
+      state: {
+        data: {
+          runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'offline' as const, busy: false })),
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'empty',
+      label: 'ランナー未登録 (0台)',
+      state: {
+        data: { runners: [] },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'error',
+      label: 'API エラー (403)',
+      state: {
+        data: null,
+        error: 'Self-hosted Runner 権限が不足しています (403 Forbidden)',
+        isLoading: false,
+      },
+    },
+    {
+      id: 'loading',
+      label: '読込中 (Loading)',
+      state: {
+        data: null,
+        error: null,
+        isLoading: true,
+      },
+    },
+  ],
   loadData: (context) =>
     fetchAllSelfHostedRunners(
       context.pat,

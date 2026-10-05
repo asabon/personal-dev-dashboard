@@ -81,3 +81,75 @@ describe('App Demo Mode (?demo=true)', () => {
     expect(localStorage.getItem('dashboard_view_mode')).toBe('expanded');
   });
 });
+
+describe('App Debug Mode (?debug=true)', () => {
+  const originalLocation = window.location;
+
+  beforeEach(() => {
+    localStorage.clear();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-25T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+    });
+  });
+
+  it('URL に ?debug=true がある場合、オンボーディングを出さずデバッグバーを表示し、デモバナーは非表示であること', () => {
+    delete (window as any).location;
+    window.location = {
+      ...originalLocation,
+      search: '?debug=true',
+    } as any;
+
+    render(<App />);
+
+    // デバッグバーが表示されること
+    expect(screen.getByTestId('debug-bar')).toBeInTheDocument();
+    expect(screen.getByText('DEBUG MODE')).toBeInTheDocument();
+
+    // デモバナーは表示されないこと
+    expect(screen.queryByText(/デモモード表示中:/)).not.toBeInTheDocument();
+
+    // オンボーディングモーダルが表示されないこと
+    expect(screen.queryByText('Personal Access Token を入力')).not.toBeInTheDocument();
+  });
+
+  it('一括プリセットで「障害・枯渇 (Critical)」を選択すると、カード・アラートがクリティカル状態に切り替わること', () => {
+    delete (window as any).location;
+    window.location = {
+      ...originalLocation,
+      search: '?debug=true',
+    } as any;
+
+    render(<App />);
+
+    // Critical プリセットをクリック
+    const criticalButton = screen.getByRole('button', { name: '障害・枯渇 (Critical)' });
+    fireEvent.click(criticalButton);
+
+    // アラートサマリーに Critical アラートが表示されること (Actions 残0% など)
+    expect(screen.getByText(/Actions 残0%/)).toBeInTheDocument();
+    expect(screen.getByText(/Runner 停止:/)).toBeInTheDocument();
+  });
+
+  it('個別セレクタで Actions Usage を「警告域 (85%)」に切り替えるとアラートが反映されること', () => {
+    delete (window as any).location;
+    window.location = {
+      ...originalLocation,
+      search: '?debug=true',
+    } as any;
+
+    render(<App />);
+
+    const actionsSelect = screen.getByLabelText(/Actions Usage/i);
+    fireEvent.change(actionsSelect, { target: { value: 'warning' } });
+
+    // 残15% 警告が表示されること
+    expect(screen.getByText(/Actions 残15%/)).toBeInTheDocument();
+  });
+});
