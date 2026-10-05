@@ -166,12 +166,17 @@ export const feature: DashboardFeatureDefinition = {
     },
     {
       id: 'warning',
-      label: '警告域 (85%)',
+      label: '警告域 (85% / 残15%)',
       state: { data: createDebugUsageData(85), error: null, isLoading: false },
     },
     {
+      id: 'critical-alert',
+      label: '警戒域 (95% / 残5%)',
+      state: { data: createDebugUsageData(95), error: null, isLoading: false },
+    },
+    {
       id: 'critical',
-      label: '上限到達 (100%)',
+      label: '上限到達 (100% / 残0%)',
       state: { data: createDebugUsageData(100), error: null, isLoading: false },
     },
     {
@@ -180,13 +185,44 @@ export const feature: DashboardFeatureDefinition = {
       state: { data: createDebugUsageData(115), error: null, isLoading: false },
     },
     {
+      id: 'org-exhausted',
+      label: '組織のみ上限到達 (個人28% / 組織100%)',
+      state: {
+        data: {
+          accounts: [
+            { name: 'demo-developer', type: 'user' },
+            { name: 'demo-org', type: 'org' },
+          ],
+          usageMap: {
+            'demo-developer': { usage: DEMO_USAGE, error: null },
+            'demo-org': {
+              usage: {
+                accountName: 'demo-org',
+                accountType: 'org',
+                totalMinutesUsed: 2000,
+                includedMinutes: 2000,
+                usagePercentage: 100,
+                breakdown: { ubuntu: 1800, macOS: 20, windows: 0 },
+                lastUpdated: new Date().toISOString(),
+              },
+              error: null,
+            },
+          },
+          userError: null,
+          discoveredOrgs: ['demo-org'],
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
       id: 'empty',
       label: '未使用 (0%)',
       state: { data: createDebugUsageData(0), error: null, isLoading: false },
     },
     {
       id: 'error',
-      label: 'API エラー (403)',
+      label: 'API エラー (403 権限不足)',
       state: {
         data: {
           accounts: [{ name: 'demo-developer', type: 'user' }],

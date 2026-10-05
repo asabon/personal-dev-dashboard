@@ -42,6 +42,20 @@ const emptyProjects: RepositoryDashboardData[] = DEMO_PROJECTS.map((project) => 
   pullRequests: [],
 }));
 
+// 実行中CIが含まれるデータ
+const inProgressProjects: RepositoryDashboardData[] = DEMO_PROJECTS.map((project) => ({
+  ...project,
+  pullRequests: project.pullRequests.map((pr) => ({
+    ...pr,
+    overallCiState: 'PENDING',
+    checks: pr.checks.map((check) => ({
+      ...check,
+      status: 'IN_PROGRESS',
+      conclusion: null,
+    })),
+  })),
+}));
+
 // 一部リポジトリで取得エラーが発生したデータ
 const errorProjects: RepositoryDashboardData[] = [
   ...DEMO_PROJECTS.slice(0, 1),
@@ -67,6 +81,15 @@ export const REPOSITORIES_DEBUG_SCENARIOS: DebugScenarioOption<RepositoriesScena
     label: '全 CI 成功 (健全)',
     value: {
       projects: healthyProjects,
+      isLoading: false,
+      error: null,
+    },
+  },
+  {
+    id: 'in-progress',
+    label: 'CI 実行中のみ (Running / Pending)',
+    value: {
+      projects: inProgressProjects,
       isLoading: false,
       error: null,
     },
@@ -167,7 +190,7 @@ export const OVERALL_DEBUG_PRESETS: OverallDebugPreset[] = [
     badgeTone: 'emerald',
     scenarioIds: {
       actionsUsage: 'normal',
-      selfHostedRunners: 'normal',
+      selfHostedRunners: 'running-mixed',
       repositories: 'normal',
       rateLimit: 'healthy',
     },
@@ -178,7 +201,7 @@ export const OVERALL_DEBUG_PRESETS: OverallDebugPreset[] = [
     badgeTone: 'amber',
     scenarioIds: {
       actionsUsage: 'warning',
-      selfHostedRunners: 'warning',
+      selfHostedRunners: 'offline-running',
       repositories: 'warning',
       rateLimit: 'healthy',
     },
@@ -189,7 +212,7 @@ export const OVERALL_DEBUG_PRESETS: OverallDebugPreset[] = [
     badgeTone: 'rose',
     scenarioIds: {
       actionsUsage: 'critical',
-      selfHostedRunners: 'critical',
+      selfHostedRunners: 'all-offline',
       repositories: 'critical',
       rateLimit: 'low',
     },

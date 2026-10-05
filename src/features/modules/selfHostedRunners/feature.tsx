@@ -34,28 +34,75 @@ export const feature: DashboardFeatureDefinition = {
   demoData: { runners: DEMO_RUNNERS },
   debugScenarios: [
     {
-      id: 'normal',
-      label: '全台正常稼働',
+      id: 'running-mixed',
+      label: '全台Online (待機＋実行中混在)',
       state: {
         data: {
-          runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'online' as const })),
+          runners: [
+            { ...DEMO_RUNNERS[0], status: 'online' as const, busy: false },
+            { ...DEMO_RUNNERS[1], status: 'online' as const, busy: true },
+            { ...DEMO_RUNNERS[2], status: 'online' as const, busy: false },
+          ],
         },
         error: null,
         isLoading: false,
       },
     },
     {
-      id: 'warning',
-      label: '一部 Offline (警告)',
+      id: 'all-idle',
+      label: '全台Online (全待機・0台Running)',
       state: {
-        data: { runners: DEMO_RUNNERS },
+        data: {
+          runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'online' as const, busy: false })),
+        },
         error: null,
         isLoading: false,
       },
     },
     {
-      id: 'critical',
-      label: '全台 Offline (障害)',
+      id: 'all-busy',
+      label: '全台Online (全台Running・高負荷)',
+      state: {
+        data: {
+          runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'online' as const, busy: true })),
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'offline-running',
+      label: '一部Offline ＋ 実行中あり (警告)',
+      state: {
+        data: {
+          runners: [
+            { ...DEMO_RUNNERS[0], status: 'online' as const, busy: false },
+            { ...DEMO_RUNNERS[1], status: 'online' as const, busy: true },
+            { ...DEMO_RUNNERS[2], status: 'offline' as const, busy: false },
+          ],
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'offline-idle',
+      label: '一部Offline ＋ 待機中のみ (警告)',
+      state: {
+        data: {
+          runners: [
+            { ...DEMO_RUNNERS[0], status: 'online' as const, busy: false },
+            { ...DEMO_RUNNERS[1], status: 'online' as const, busy: false },
+            { ...DEMO_RUNNERS[2], status: 'offline' as const, busy: false },
+          ],
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
+      id: 'all-offline',
+      label: '全台Offline (全台停止・障害)',
       state: {
         data: {
           runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'offline' as const, busy: false })),
@@ -75,7 +122,7 @@ export const feature: DashboardFeatureDefinition = {
     },
     {
       id: 'error',
-      label: 'API エラー (403)',
+      label: 'API エラー (403 権限不足)',
       state: {
         data: null,
         error: 'Self-hosted Runner 権限が不足しています (403 Forbidden)',
