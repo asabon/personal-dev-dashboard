@@ -287,10 +287,15 @@ describe('ActionsUsageCard', () => {
       />
     );
 
-    // 簡易モードでは、安全な safe-user は折りたたまれ（1,800は非表示）、警告のある critical-org は展開（100が表示）
+    // 簡易モードでは親カードが初期折りたたまれている
     expect(screen.queryByText('1,800')).not.toBeInTheDocument();
+    expect(screen.queryByText('100')).not.toBeInTheDocument();
+
+    // 親カードをクリックして開くと、各アカウントが1行要約表示される（詳細は折りたたみ）
+    fireEvent.click(screen.getByText('GitHub Actions 使用状況'));
     expect(screen.getByText('残1,800分')).toBeInTheDocument();
-    expect(screen.getByText('100')).toBeInTheDocument();
+    expect(screen.getByText('残100分')).toBeInTheDocument();
+    expect(screen.queryByText('1,800')).not.toBeInTheDocument();
 
     // 2. 詳細表示モードへ切り替え
     rerender(

@@ -25,21 +25,12 @@ export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false }) =
   const passedPrs = repo.pullRequests.filter((pr) => pr.overallCiState === 'SUCCESS');
   const hasFailure = failedPrs.length > 0;
 
-  // isCompact 時は失敗またはエラーがある場合のみデフォルト展開、それ以外は折りたたみ
-  const [isExpanded, setIsExpanded] = useState(() => {
-    if (isCompact) {
-      return Boolean(hasFailure || repo.error);
-    }
-    return true;
-  });
+  // isCompact 時は初期折りたたみ（クリックで開閉）
+  const [isExpanded, setIsExpanded] = useState(!isCompact);
 
   useEffect(() => {
-    if (isCompact) {
-      setIsExpanded(Boolean(hasFailure || repo.error));
-    } else {
-      setIsExpanded(true);
-    }
-  }, [isCompact, hasFailure, repo.error]);
+    setIsExpanded(!isCompact);
+  }, [isCompact]);
 
   const cardId = `repo-${repo.fullName.replace('/', '-')}`;
 
