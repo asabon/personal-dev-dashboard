@@ -118,25 +118,6 @@ export const DebugBar: React.FC<DebugBarProps> = ({
         {/* 展開時: 各カードごとの個別シミュレーションセレクタ */}
         {isExpanded && (
           <div className="mt-3 pt-3 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-            {/* Repositories */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="debug-select-repos" className="text-slate-400 font-medium">
-                📦 Repositories (PR / CI)
-              </label>
-              <select
-                id="debug-select-repos"
-                value={repositoriesScenarioId}
-                onChange={(e) => onSelectRepositoriesScenario(e.target.value)}
-                className="bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-slate-200 text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                {REPOSITORIES_DEBUG_SCENARIOS.map((scenario) => (
-                  <option key={scenario.id} value={scenario.id}>
-                    {scenario.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Dynamic Feature Modules (Actions Usage, Runners, etc.) */}
             {features.map((feature) => {
               if (!feature.debugScenarios || feature.debugScenarios.length === 0) return null;
@@ -169,6 +150,25 @@ export const DebugBar: React.FC<DebugBarProps> = ({
                 </div>
               );
             })}
+
+            {/* Repositories (PR / CI) */}
+            <div className="flex flex-col gap-1">
+              <label htmlFor="debug-select-repos" className="text-slate-400 font-medium">
+                📦 Repositories (PR / CI)
+              </label>
+              <select
+                id="debug-select-repos"
+                value={repositoriesScenarioId}
+                onChange={(e) => onSelectRepositoriesScenario(e.target.value)}
+                className="bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-slate-200 text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                {REPOSITORIES_DEBUG_SCENARIOS.map((scenario) => (
+                  <option key={scenario.id} value={scenario.id}>
+                    {scenario.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* Rate Limit */}
             <div className="flex flex-col gap-1">
