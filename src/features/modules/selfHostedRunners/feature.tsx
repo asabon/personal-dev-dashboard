@@ -34,6 +34,18 @@ export const feature: DashboardFeatureDefinition = {
   demoData: { runners: DEMO_RUNNERS },
   debugScenarios: [
     {
+      id: 'all-idle',
+      category: '全台 Online',
+      label: '全台待機 (0台Running)',
+      state: {
+        data: {
+          runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'online' as const, busy: false })),
+        },
+        error: null,
+        isLoading: false,
+      },
+    },
+    {
       id: 'running-mixed',
       category: '全台 Online',
       label: '待機＋実行中混在 (1台Running)',
@@ -44,18 +56,6 @@ export const feature: DashboardFeatureDefinition = {
             { ...DEMO_RUNNERS[1], status: 'online' as const, busy: true },
             { ...DEMO_RUNNERS[2], status: 'online' as const, busy: false },
           ],
-        },
-        error: null,
-        isLoading: false,
-      },
-    },
-    {
-      id: 'all-idle',
-      category: '全台 Online',
-      label: '全台待機 (0台Running)',
-      state: {
-        data: {
-          runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'online' as const, busy: false })),
         },
         error: null,
         isLoading: false,

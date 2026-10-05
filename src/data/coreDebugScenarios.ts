@@ -201,7 +201,7 @@ export const OVERALL_DEBUG_PRESETS: OverallDebugPreset[] = [
     badgeTone: 'emerald',
     scenarioIds: {
       actionsUsage: 'normal',
-      selfHostedRunners: 'running-mixed',
+      selfHostedRunners: 'all-idle',
       repositories: 'normal',
       rateLimit: 'healthy',
     },
