@@ -43,6 +43,83 @@ const PRESET_STYLES: Record<OverallDebugPreset['badgeTone'], { active: string; i
   },
 };
 
+interface TwoTierScenarioSelectProps {
+  label: string;
+  selectIdPrefix: string;
+  scenarios: Array<{ id: string; label: string; category?: string }>;
+  currentScenarioId: string;
+  onSelectScenario: (scenarioId: string) => void;
+}
+
+const TwoTierScenarioSelect: React.FC<TwoTierScenarioSelectProps> = ({
+  label,
+  selectIdPrefix,
+  scenarios,
+  currentScenarioId,
+  onSelectScenario,
+}) => {
+  const categories = Array.from(new Set(scenarios.map((s) => s.category || '一般')));
+  const currentScenario = scenarios.find((s) => s.id === currentScenarioId) || scenarios[0];
+  const currentCategory = currentScenario?.category || categories[0];
+  const categoryScenarios = scenarios.filter((s) => (s.category || '一般') === currentCategory);
+
+  const handleCategoryChange = (newCategory: string) => {
+    const firstScenario = scenarios.find((s) => (s.category || '一般') === newCategory);
+    if (firstScenario) {
+      onSelectScenario(firstScenario.id);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5 p-2 rounded-lg bg-slate-950/50 border border-slate-800/80 shadow-inner">
+      <div className="flex items-center justify-between text-slate-300 font-semibold text-[11px]">
+        <span>{label}</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        {/* 大分類ドロップダウン */}
+        <div className="flex flex-col gap-0.5">
+          <label htmlFor={`${selectIdPrefix}-category`} className="text-[10px] text-slate-400 font-normal">
+            状態種別
+          </label>
+          <select
+            id={`${selectIdPrefix}-category`}
+            aria-label={`${label} の状態種別`}
+            value={currentCategory}
+            onChange={(e) => handleCategoryChange(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-slate-300 text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* 詳細状態ドロップダウン */}
+        <div className="flex flex-col gap-0.5">
+          <label htmlFor={`${selectIdPrefix}-scenario`} className="text-[10px] text-slate-400 font-normal">
+            詳細状態
+          </label>
+          <select
+            id={`${selectIdPrefix}-scenario`}
+            aria-label={`${label} の詳細状態`}
+            value={currentScenarioId}
+            onChange={(e) => onSelectScenario(e.target.value)}
+            className="w-full bg-slate-950 border border-indigo-500/40 rounded px-2 py-1 text-indigo-200 text-xs font-medium focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            {categoryScenarios.map((scenario) => (
+              <option key={scenario.id} value={scenario.id}>
+                {scenario.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const DebugBar: React.FC<DebugBarProps> = ({
   features,
   selectedPresetId,
@@ -115,9 +192,9 @@ export const DebugBar: React.FC<DebugBarProps> = ({
           </div>
         </div>
 
-        {/* 展開時: 各カードごとの個別シミュレーションセレクタ */}
+        {/* 展開時: 各カードごとの個別シミュレーションセレクタ (2段階連動ドロップダウン) */}
         {isExpanded && (
-          <div className="mt-3 pt-3 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <div className="mt-3 pt-3 border-t border-slate-800/80 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
             {/* Dynamic Feature Modules (Actions Usage, Runners, etc.) */}
             {features.map((feature) => {
               if (!feature.debugScenarios || feature.debugScenarios.length === 0) return null;
@@ -131,63 +208,34 @@ export const DebugBar: React.FC<DebugBarProps> = ({
                   : `🧩 ${feature.id}`;
 
               return (
-                <div key={feature.id} className="flex flex-col gap-1">
-                  <label htmlFor={selectId} className="text-slate-400 font-medium">
-                    {label}
-                  </label>
-                  <select
-                    id={selectId}
-                    value={currentScenarioId}
-                    onChange={(e) => onSelectFeatureScenario(feature.id, e.target.value)}
-                    className="bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-slate-200 text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    {feature.debugScenarios.map((scenario) => (
-                      <option key={scenario.id} value={scenario.id}>
-                        {scenario.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <TwoTierScenarioSelect
+                  key={feature.id}
+                  label={label}
+                  selectIdPrefix={selectId}
+                  scenarios={feature.debugScenarios}
+                  currentScenarioId={currentScenarioId}
+                  onSelectScenario={(scenarioId) => onSelectFeatureScenario(feature.id, scenarioId)}
+                />
               );
             })}
 
             {/* Repositories (PR / CI) */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="debug-select-repos" className="text-slate-400 font-medium">
-                📦 Repositories (PR / CI)
-              </label>
-              <select
-                id="debug-select-repos"
-                value={repositoriesScenarioId}
-                onChange={(e) => onSelectRepositoriesScenario(e.target.value)}
-                className="bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-slate-200 text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                {REPOSITORIES_DEBUG_SCENARIOS.map((scenario) => (
-                  <option key={scenario.id} value={scenario.id}>
-                    {scenario.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <TwoTierScenarioSelect
+              label="📦 Repositories (PR / CI)"
+              selectIdPrefix="debug-select-repos"
+              scenarios={REPOSITORIES_DEBUG_SCENARIOS}
+              currentScenarioId={repositoriesScenarioId}
+              onSelectScenario={onSelectRepositoriesScenario}
+            />
 
             {/* Rate Limit */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="debug-select-ratelimit" className="text-slate-400 font-medium">
-                ⏱️ GitHub API Rate Limit
-              </label>
-              <select
-                id="debug-select-ratelimit"
-                value={rateLimitScenarioId}
-                onChange={(e) => onSelectRateLimitScenario(e.target.value)}
-                className="bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-slate-200 text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                {RATE_LIMIT_DEBUG_SCENARIOS.map((scenario) => (
-                  <option key={scenario.id} value={scenario.id}>
-                    {scenario.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <TwoTierScenarioSelect
+              label="⏱️ GitHub API Rate Limit"
+              selectIdPrefix="debug-select-ratelimit"
+              scenarios={RATE_LIMIT_DEBUG_SCENARIOS}
+              currentScenarioId={rateLimitScenarioId}
+              onSelectScenario={onSelectRateLimitScenario}
+            />
           </div>
         )}
       </div>

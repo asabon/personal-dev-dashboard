@@ -161,32 +161,38 @@ export const feature: DashboardFeatureDefinition = {
   debugScenarios: [
     {
       id: 'normal',
-      label: '通常・余裕 (28%)',
+      category: '正常・利用状況',
+      label: '余裕 (28%)',
       state: { data: actionsUsageDemoData, error: null, isLoading: false },
     },
     {
       id: 'warning',
+      category: '正常・利用状況',
       label: '警告域 (85% / 残15%)',
       state: { data: createDebugUsageData(85), error: null, isLoading: false },
     },
     {
       id: 'critical-alert',
+      category: '正常・利用状況',
       label: '警戒域 (95% / 残5%)',
       state: { data: createDebugUsageData(95), error: null, isLoading: false },
     },
     {
       id: 'critical',
+      category: '正常・利用状況',
       label: '上限到達 (100% / 残0%)',
       state: { data: createDebugUsageData(100), error: null, isLoading: false },
     },
     {
       id: 'overage',
+      category: '正常・利用状況',
       label: '上限超過 (115%)',
       state: { data: createDebugUsageData(115), error: null, isLoading: false },
     },
     {
       id: 'org-exhausted',
-      label: '組織のみ上限到達 (個人28% / 組織100%)',
+      category: '正常・利用状況',
+      label: '組織のみ上限 (個人28%/組織100%)',
       state: {
         data: {
           accounts: [
@@ -217,11 +223,13 @@ export const feature: DashboardFeatureDefinition = {
     },
     {
       id: 'empty',
+      category: '正常・利用状況',
       label: '未使用 (0%)',
       state: { data: createDebugUsageData(0), error: null, isLoading: false },
     },
     {
       id: 'error',
+      category: '異常・エラー',
       label: 'API エラー (403 権限不足)',
       state: {
         data: {
@@ -238,6 +246,7 @@ export const feature: DashboardFeatureDefinition = {
     },
     {
       id: 'loading',
+      category: '異常・エラー',
       label: '読込中 (Loading)',
       state: { data: null, error: null, isLoading: true },
     },

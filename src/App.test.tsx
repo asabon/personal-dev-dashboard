@@ -146,7 +146,7 @@ describe('App Debug Mode (?debug=true)', () => {
 
     render(<App />);
 
-    const actionsSelect = screen.getByLabelText(/Actions Usage/i);
+    const actionsSelect = screen.getByLabelText(/Actions Usage の詳細状態/i);
     fireEvent.change(actionsSelect, { target: { value: 'warning' } });
 
     // 残15% 警告が表示されること

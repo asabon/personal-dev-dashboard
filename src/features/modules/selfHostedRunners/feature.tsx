@@ -35,7 +35,8 @@ export const feature: DashboardFeatureDefinition = {
   debugScenarios: [
     {
       id: 'running-mixed',
-      label: '全台Online (待機＋実行中混在)',
+      category: '全台 Online',
+      label: '待機＋実行中混在 (1台Running)',
       state: {
         data: {
           runners: [
@@ -50,7 +51,8 @@ export const feature: DashboardFeatureDefinition = {
     },
     {
       id: 'all-idle',
-      label: '全台Online (全待機・0台Running)',
+      category: '全台 Online',
+      label: '全台待機 (0台Running)',
       state: {
         data: {
           runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'online' as const, busy: false })),
@@ -61,7 +63,8 @@ export const feature: DashboardFeatureDefinition = {
     },
     {
       id: 'all-busy',
-      label: '全台Online (全台Running・高負荷)',
+      category: '全台 Online',
+      label: '全台実行中 (3台Running・高負荷)',
       state: {
         data: {
           runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'online' as const, busy: true })),
@@ -72,7 +75,8 @@ export const feature: DashboardFeatureDefinition = {
     },
     {
       id: 'offline-running',
-      label: '一部Offline ＋ 実行中あり (警告)',
+      category: '一部 Offline',
+      label: '実行中あり (1台Running, 1台Offline)',
       state: {
         data: {
           runners: [
@@ -87,7 +91,8 @@ export const feature: DashboardFeatureDefinition = {
     },
     {
       id: 'offline-idle',
-      label: '一部Offline ＋ 待機中のみ (警告)',
+      category: '一部 Offline',
+      label: '待機中のみ (0台Running, 1台Offline)',
       state: {
         data: {
           runners: [
@@ -102,7 +107,8 @@ export const feature: DashboardFeatureDefinition = {
     },
     {
       id: 'all-offline',
-      label: '全台Offline (全台停止・障害)',
+      category: '全台 Offline・異常',
+      label: '全台停止 (3台Offline・障害)',
       state: {
         data: {
           runners: DEMO_RUNNERS.map((r) => ({ ...r, status: 'offline' as const, busy: false })),
@@ -113,6 +119,7 @@ export const feature: DashboardFeatureDefinition = {
     },
     {
       id: 'empty',
+      category: '全台 Offline・異常',
       label: 'ランナー未登録 (0台)',
       state: {
         data: { runners: [] },
@@ -122,6 +129,7 @@ export const feature: DashboardFeatureDefinition = {
     },
     {
       id: 'error',
+      category: '全台 Offline・異常',
       label: 'API エラー (403 権限不足)',
       state: {
         data: null,
@@ -131,6 +139,7 @@ export const feature: DashboardFeatureDefinition = {
     },
     {
       id: 'loading',
+      category: '全台 Offline・異常',
       label: '読込中 (Loading)',
       state: {
         data: null,

@@ -40,6 +40,7 @@ export interface FeatureAlert {
 export interface FeatureDebugScenario {
   id: string;
   label: string;
+  category?: string;
   state: FeatureDataState;
 }
 

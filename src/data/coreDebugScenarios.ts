@@ -5,6 +5,7 @@ import { DEMO_PROJECTS } from './mockData';
 export interface DebugScenarioOption<T> {
   id: string;
   label: string;
+  category?: string;
   value: T;
 }
 
@@ -78,6 +79,7 @@ export interface RepositoriesScenarioState {
 export const REPOSITORIES_DEBUG_SCENARIOS: DebugScenarioOption<RepositoriesScenarioState>[] = [
   {
     id: 'normal',
+    category: 'PR あり (通常)',
     label: '全 CI 成功 (健全)',
     value: {
       projects: healthyProjects,
@@ -87,7 +89,8 @@ export const REPOSITORIES_DEBUG_SCENARIOS: DebugScenarioOption<RepositoriesScena
   },
   {
     id: 'in-progress',
-    label: 'CI 実行中のみ (Running / Pending)',
+    category: 'PR あり (通常)',
+    label: 'CI 実行中のみ (Running)',
     value: {
       projects: inProgressProjects,
       isLoading: false,
@@ -96,6 +99,7 @@ export const REPOSITORIES_DEBUG_SCENARIOS: DebugScenarioOption<RepositoriesScena
   },
   {
     id: 'warning',
+    category: 'PR あり (通常)',
     label: 'CI 失敗・進行中混在 (警告)',
     value: {
       projects: DEMO_PROJECTS,
@@ -105,7 +109,8 @@ export const REPOSITORIES_DEBUG_SCENARIOS: DebugScenarioOption<RepositoriesScena
   },
   {
     id: 'critical',
-    label: '全 CI 失敗 (クリティカル)',
+    category: 'PR あり (通常)',
+    label: '全 CI 失敗 (多重障害)',
     value: {
       projects: criticalProjects,
       isLoading: false,
@@ -114,6 +119,7 @@ export const REPOSITORIES_DEBUG_SCENARIOS: DebugScenarioOption<RepositoriesScena
   },
   {
     id: 'empty',
+    category: 'PR なし・異常',
     label: 'PR なし (Clean)',
     value: {
       projects: emptyProjects,
@@ -123,6 +129,7 @@ export const REPOSITORIES_DEBUG_SCENARIOS: DebugScenarioOption<RepositoriesScena
   },
   {
     id: 'error',
+    category: 'PR なし・異常',
     label: 'リポジトリ取得エラー (404)',
     value: {
       projects: errorProjects,
@@ -132,6 +139,7 @@ export const REPOSITORIES_DEBUG_SCENARIOS: DebugScenarioOption<RepositoriesScena
   },
   {
     id: 'loading',
+    category: 'PR なし・異常',
     label: '読込中 (Loading)',
     value: {
       projects: [],
@@ -144,6 +152,7 @@ export const REPOSITORIES_DEBUG_SCENARIOS: DebugScenarioOption<RepositoriesScena
 export const RATE_LIMIT_DEBUG_SCENARIOS: DebugScenarioOption<RateLimitInfo>[] = [
   {
     id: 'healthy',
+    category: 'API 残量',
     label: '潤沢 (4892 / 5000)',
     value: {
       remaining: 4892,
@@ -153,6 +162,7 @@ export const RATE_LIMIT_DEBUG_SCENARIOS: DebugScenarioOption<RateLimitInfo>[] = 
   },
   {
     id: 'low',
+    category: 'API 残量',
     label: '残少 (15 / 5000)',
     value: {
       remaining: 15,
@@ -162,6 +172,7 @@ export const RATE_LIMIT_DEBUG_SCENARIOS: DebugScenarioOption<RateLimitInfo>[] = 
   },
   {
     id: 'exhausted',
+    category: 'API 残量',
     label: '枯渇 (0 / 5000)',
     value: {
       remaining: 0,
