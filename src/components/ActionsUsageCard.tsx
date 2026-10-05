@@ -45,22 +45,12 @@ export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
   const isPaceWarning = pace ? pace.paceStatusText !== '順調 (目安内)' : false;
   const hasWarning = Boolean(error || isLowRemaining || isHighUsage || isPaceWarning);
 
-  // 個別アカウントの開閉状態:
-  // 詳細表示時 (isCompact=false) は詳細まで全開、簡易表示時 (isCompact=true) は警告/エラーがあるもののみ展開（正常アカウントは1行表示）
-  const [isExpanded, setIsExpanded] = useState(() => {
-    if (isCompact) {
-      return hasWarning;
-    }
-    return true;
-  });
+  // 個別アカウントの開閉状態: 詳細表示時 (isCompact=false) は全開、簡易表示時 (isCompact=true) は初期折りたたみ（クリックで開閉）
+  const [isExpanded, setIsExpanded] = useState(!isCompact);
 
   useEffect(() => {
-    if (isCompact) {
-      setIsExpanded(hasWarning);
-    } else {
-      setIsExpanded(true);
-    }
-  }, [isCompact, hasWarning]);
+    setIsExpanded(!isCompact);
+  }, [isCompact]);
 
   const [showBreakdown, setShowBreakdown] = useState(!isCompact);
 
@@ -400,21 +390,12 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
 
   const hasWarningOrError = hasError || hasOverPace || hasNearPace;
 
-  // isCompact 時は警告/エラーがない限り初期折りたたみ
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (isCompact) {
-      return !hasWarningOrError;
-    }
-    return false;
-  });
+  // isCompact 時は初期折りたたみ（明示的にクリックされた場合のみ開閉）
+  const [isCollapsed, setIsCollapsed] = useState(isCompact);
 
   useEffect(() => {
-    if (isCompact) {
-      setIsCollapsed(!hasWarningOrError);
-    } else {
-      setIsCollapsed(false);
-    }
-  }, [isCompact, hasWarningOrError]);
+    setIsCollapsed(isCompact);
+  }, [isCompact]);
 
   return (
     <div

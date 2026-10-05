@@ -31,21 +31,12 @@ export const RunnerCard: React.FC<RunnerCardProps> = ({ runner, isCompact = fals
   const isBusy = runner.busy;
   const isOffline = runner.status === 'offline';
 
-  // 開閉状態: 詳細モード(isCompact=false)は全開、簡易モード(isCompact=true)は初期折りたたみ（オフラインマシンのみ注意喚起のため展開）
-  const [isExpanded, setIsExpanded] = useState(() => {
-    if (isCompact) {
-      return isOffline;
-    }
-    return true;
-  });
+  // 開閉状態: 詳細モード(isCompact=false)は全開、簡易モード(isCompact=true)は初期折りたたみ（クリックで開閉）
+  const [isExpanded, setIsExpanded] = useState(!isCompact);
 
   useEffect(() => {
-    if (isCompact) {
-      setIsExpanded(isOffline);
-    } else {
-      setIsExpanded(true);
-    }
-  }, [isCompact, isOffline]);
+    setIsExpanded(!isCompact);
+  }, [isCompact]);
 
   return (
     <div className="rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700/80 transition-all overflow-hidden shadow-sm">
@@ -143,21 +134,12 @@ export const RunnersCard: React.FC<RunnersCardProps> = ({
   const hasError = Boolean(error);
   const hasFailureOrOffline = hasError || offlineCount > 0;
 
-  // isCompact 時はエラーまたはオフラインがある場合を除き初期折りたたみ
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (isCompact) {
-      return !hasFailureOrOffline;
-    }
-    return false;
-  });
+  // isCompact 時は初期折りたたみ（明示的にクリックされた場合のみ開閉）
+  const [isCollapsed, setIsCollapsed] = useState(isCompact);
 
   useEffect(() => {
-    if (isCompact) {
-      setIsCollapsed(!hasFailureOrOffline);
-    } else {
-      setIsCollapsed(false);
-    }
-  }, [isCompact, hasFailureOrOffline]);
+    setIsCollapsed(isCompact);
+  }, [isCompact]);
 
   return (
     <div

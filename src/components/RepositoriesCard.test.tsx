@@ -203,4 +203,22 @@ describe('RepositoriesCard', () => {
     // 中身が閉じる
     expect(screen.queryByText('asabon/personal-dev-dashboard')).not.toBeInTheDocument();
   });
+
+  it('簡易表示モード（isCompact=true）ではCI失敗があっても親カードは初期折りたたまれ、クリックで開けること', () => {
+    render(
+      <RepositoriesCard
+        repositories={['octocat/frontend-app']}
+        projects={[mockProjects[1]]}
+        isCompact={true}
+      />
+    );
+
+    // サマリーバッジには0/1 Passedが表示されるが、中身は折りたたまれている
+    expect(screen.getByText('0/1 Passed')).toBeInTheDocument();
+    expect(screen.queryByText('octocat/frontend-app')).not.toBeInTheDocument();
+
+    // ヘッダークリックで展開される
+    fireEvent.click(screen.getByText('監視リポジトリ'));
+    expect(screen.getByText('octocat/frontend-app')).toBeInTheDocument();
+  });
 });

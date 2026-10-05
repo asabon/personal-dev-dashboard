@@ -37,21 +37,12 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
   const erroredRepos = projects.filter((p) => Boolean(p.error));
   const hasFailure = failedPrs.length > 0 || erroredRepos.length > 0;
 
-  // isCompact 時は失敗リポジトリがある場合を除き初期折りたたみ
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (isCompact) {
-      return !hasFailure;
-    }
-    return false;
-  });
+  // isCompact 時は初期折りたたみ（明示的にクリックされた場合のみ開閉）
+  const [isCollapsed, setIsCollapsed] = useState(isCompact);
 
   useEffect(() => {
-    if (isCompact) {
-      setIsCollapsed(!hasFailure);
-    } else {
-      setIsCollapsed(false);
-    }
-  }, [isCompact, hasFailure]);
+    setIsCollapsed(isCompact);
+  }, [isCompact]);
 
   return (
     <div

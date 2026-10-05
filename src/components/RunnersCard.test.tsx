@@ -199,7 +199,7 @@ describe('RunnersCard', () => {
       expect(screen.getByText('X64')).toBeInTheDocument();
     });
 
-    it('簡易モード（isCompact=true）でもオフラインがある場合は自動で親カードが展開されること', () => {
+    it('簡易モード（isCompact=true）ではオフラインがあっても親カードは初期折りたたまれ、クリックで開けること', () => {
       render(
         <RunnersCard
           runners={[dummyRunnerOffline]}
@@ -209,12 +209,17 @@ describe('RunnersCard', () => {
         />
       );
 
-      // オフラインがあるため初期状態から展開されている
+      // サマリーバッジには0/1 Onlineが表示されるが、中身は折りたたまれている
+      expect(screen.getByText('0/1 Online')).toBeInTheDocument();
+      expect(screen.queryByText('worker-node-3')).not.toBeInTheDocument();
+
+      // ヘッダークリックで展開される
+      fireEvent.click(screen.getByText('Self-hosted Runners'));
       expect(screen.getByText('worker-node-3')).toBeInTheDocument();
       expect(screen.getByText('Offline')).toBeInTheDocument();
     });
 
-    it('簡易モード（isCompact=true）でもエラーがある場合は自動で親カードが展開されること', () => {
+    it('簡易モード（isCompact=true）ではエラーがあっても親カードは初期折りたたまれ、クリックで開けること', () => {
       render(
         <RunnersCard
           runners={[]}
@@ -224,7 +229,12 @@ describe('RunnersCard', () => {
         />
       );
 
-      // エラーメッセージが表示されていること
+      // サマリーバッジに「取得エラーあり」が表示されるが、詳細メッセージは折りたたまれている
+      expect(screen.getByText('取得エラーあり')).toBeInTheDocument();
+      expect(screen.queryByText('Runner API error')).not.toBeInTheDocument();
+
+      // ヘッダークリックでエラーメッセージが展開される
+      fireEvent.click(screen.getByText('Self-hosted Runners'));
       expect(screen.getByText('Runner API error')).toBeInTheDocument();
     });
 
