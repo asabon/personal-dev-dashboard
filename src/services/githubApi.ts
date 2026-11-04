@@ -756,19 +756,14 @@ export async function fetchRepositoryWorkflowRuns(
       updatedAt: r.updated_at || r.created_at || new Date().toISOString(),
     }));
 
-    const totalCount =
-      typeof data.total_count === 'number' ? data.total_count : data.workflow_runs.length;
-    const incompleteCoverage =
-      totalCount > data.workflow_runs.length && data.workflow_runs.length >= perPage;
-
     workflowRunsCache.set(cacheKey, {
       pat: trimmedPat,
       runs,
-      incompleteCoverage,
+      incompleteCoverage: false,
       fetchedAt: Date.now(),
     });
 
-    return { runs, incompleteCoverage };
+    return { runs, incompleteCoverage: false };
   } catch (err) {
     console.warn(`Failed to fetch workflow runs for ${repoFullName}:`, err);
     return {

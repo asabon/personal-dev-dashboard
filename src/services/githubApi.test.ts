@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { fetchActionsUsage, fetchOrgActionsUsage } from './githubApi';
+import {
+  fetchActionsUsage,
+  fetchOrgActionsUsage,
+  fetchRepositoryWorkflowRuns,
+} from './githubApi';
 
 describe('githubApi - Actions 使用量および倍率計算テスト', () => {
   const TEST_PAT = 'ghp_TEST_TOKEN_12345';
@@ -97,5 +101,43 @@ describe('githubApi - Actions 使用量および倍率計算テスト', () => {
     expect(result.totalMinutesUsed).toBe(200);
     expect(result.accountName).toBe('test-org');
     expect(result.accountType).toBe('org');
+  });
+
+  it('fetchRepositoryWorkflowRuns は過去の累積 total_count が perPage を超えていても正常取得時は incompleteCoverage を false にすること', async () => {
+    globalThis.fetch = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          total_count: 450,
+          workflow_runs: Array.from({ length: 30 }, (_, i) => ({
+            id: i + 1,
+            workflow_id: 10,
+            name: 'CI',
+            display_title: `Run ${i + 1}`,
+            run_number: 450 - i,
+            event: 'push',
+            status: 'completed',
+            conclusion: 'success',
+            html_url: `https://github.com/asabon/personal-dev-dashboard/actions/runs/${i + 1}`,
+            head_branch: 'main',
+            head_sha: '1234567890abcdef',
+            actor: { login: 'asabon', avatar_url: '' },
+            created_at: '2026-09-25T10:00:00Z',
+            updated_at: '2026-09-25T10:05:00Z',
+          })),
+        }),
+        { status: 200 }
+      );
+    });
+
+    const result = await fetchRepositoryWorkflowRuns(
+      TEST_PAT,
+      'asabon',
+      'personal-dev-dashboard',
+      30
+    );
+
+    expect(result.runs).toHaveLength(30);
+    expect(result.incompleteCoverage).toBe(false);
+    expect(result.warning).toBeUndefined();
   });
 });
