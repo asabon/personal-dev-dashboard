@@ -21,6 +21,7 @@ export interface ActionsStatusCardProps {
   runs: WorkflowRunItem[];
   isLoading: boolean;
   error: string | null;
+  incompleteCoverage?: boolean;
   isCompact?: boolean;
 }
 
@@ -58,21 +59,27 @@ export function selectAttentionWorkflowRuns(runs: WorkflowRunItem[]): WorkflowRu
 
   for (const run of sortedByNewest) {
     // PR トリガーはブランチ単位、それ以外（push / release / schedule / workflow_dispatch 等）はワークフロー単位で最新状態を追跡
-    const scopeBranch =
-      run.event === 'pull_request' || run.event === 'pull_request_target'
-        ? run.headBranch
-        : '__workflow_latest__';
-    const key = `${run.repoFullName}::${run.workflowName}::${scopeBranch}`;
+    const isPullRequest =
+      run.event === 'pull_request' || run.event === 'pull_request_target';
+    const scope = isPullRequest ? `pr:${run.headBranch}` : 'workflow-latest';
+    const workflowKey = run.workflowId ?? run.workflowName;
+    const key = `${run.repoFullName}::${workflowKey}::${scope}`;
 
     if (!latestByWorkflowKey.has(key)) {
       latestByWorkflowKey.set(key, run);
     }
   }
 
-  // 最新状態が「実行中」または「失敗」のワークフローのみ抽出
-  const attentionRuns = Array.from(latestByWorkflowKey.values()).filter(
-    (run) => isWorkflowRunActive(run) || isWorkflowRunFailed(run)
-  );
+  // 現在実行中のワークフローは常に表示し、最新状態が「失敗」のまま未解決のワークフローも抽出
+  const activeRuns = sortedByNewest.filter(isWorkflowRunActive);
+  const failedLatestRuns = Array.from(latestByWorkflowKey.values()).filter(isWorkflowRunFailed);
+  const seenRunKeys = new Set<string>();
+  const attentionRuns = [...activeRuns, ...failedLatestRuns].filter((run) => {
+    const runKey = `${run.repoFullName}::${run.id}`;
+    if (seenRunKeys.has(runKey)) return false;
+    seenRunKeys.add(runKey);
+    return true;
+  });
 
   // 表示ソート順: 実行中 (Active) を最優先、次に失敗 (Failed) を更新日時の新しい順
   attentionRuns.sort((a, b) => {
@@ -166,12 +173,14 @@ export const ActionsStatusCard: React.FC<ActionsStatusCardProps> = ({
   runs,
   isLoading,
   error,
+  incompleteCoverage = false,
   isCompact = false,
 }) => {
   const attentionRuns = selectAttentionWorkflowRuns(runs);
   const runningRuns = attentionRuns.filter(isWorkflowRunActive);
   const failedRuns = attentionRuns.filter(isWorkflowRunFailed);
   const hasError = Boolean(error);
+  const hasIncompleteCoverage = incompleteCoverage || hasError;
 
   const [isCollapsed, setIsCollapsed] = useState(isCompact);
 
@@ -231,22 +240,28 @@ export const ActionsStatusCard: React.FC<ActionsStatusCardProps> = ({
                 <span>取得エラーあり</span>
               </span>
             )}
-            {runningRuns.length > 0 && (
+            {!isLoading && runningRuns.length > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
                 <Loader2 className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
                 <span>{runningRuns.length} Running</span>
               </span>
             )}
-            {failedRuns.length > 0 && (
+            {!isLoading && failedRuns.length > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
                 <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
                 <span>{failedRuns.length} Failed</span>
               </span>
             )}
-            {runningRuns.length === 0 && failedRuns.length === 0 && !hasError && (
+            {!isLoading && runningRuns.length === 0 && failedRuns.length === 0 && !hasIncompleteCoverage && (
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
                 <CheckCircle2 className="w-3 h-3 shrink-0" />
                 <span>All Passed</span>
+              </span>
+            )}
+            {!isLoading && runningRuns.length === 0 && failedRuns.length === 0 && incompleteCoverage && !hasError && (
+              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
+                <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
+                <span>一部未取得</span>
               </span>
             )}
           </div>

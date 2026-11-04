@@ -82,6 +82,7 @@ describe('PAT セキュリティ・漏洩防止テスト (Zero-Backend Privacy G
   it('PAT が URL クエリパラメータやパスに露出せず、Authorization ヘッダーにのみ格納されること', async () => {
     await validateToken(TEST_PAT);
     await fetchActionsUsage(TEST_PAT, 'test-user');
+    await fetchAllWorkflowRuns(TEST_PAT, ['test-user/test-repo']);
 
     for (const req of capturedRequests) {
       // URL に生の PAT が含まれていないこと

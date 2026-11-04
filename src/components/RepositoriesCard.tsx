@@ -16,6 +16,7 @@ import { RepoCard } from './RepoCard';
 interface RepositoriesCardProps {
   repositories: string[];
   projects: RepositoryDashboardData[];
+  isLoading?: boolean;
   isCompact?: boolean;
   onOpenSettings?: () => void;
 }
@@ -23,6 +24,7 @@ interface RepositoriesCardProps {
 export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
   repositories,
   projects,
+  isLoading = false,
   isCompact = false,
   onOpenSettings,
 }) => {
@@ -107,13 +109,13 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                 0リポジトリ
               </span>
             )}
-            {runningPrs.length > 0 && (
+            {!isLoading && runningPrs.length > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
                 <Loader2 className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
                 <span>{runningPrs.length} Running</span>
               </span>
             )}
-            {repositories.length > 0 && totalPrs > 0 && (
+            {!isLoading && repositories.length > 0 && totalPrs > 0 && (
               passedPrs.length === totalPrs ? (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
@@ -136,7 +138,7 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                 </span>
               )
             )}
-            {repositories.length > 0 && totalPrs === 0 && (
+            {!isLoading && repositories.length > 0 && totalPrs === 0 && (
               erroredRepos.length === 0 ? (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
@@ -186,6 +188,11 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                   <Settings className="w-4 h-4" /> 設定を開く
                 </button>
               )}
+            </div>
+          ) : isLoading ? (
+            <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2 mt-2">
+              <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+              <span>Pull Request と CI 状況を確認中...</span>
             </div>
           ) : visibleProjects.length === 0 ? (
             <div className="py-8 text-center text-slate-500 flex flex-col items-center justify-center gap-2 mt-2">

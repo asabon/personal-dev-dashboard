@@ -238,29 +238,6 @@ export function App() {
     }
 
     try {
-      // 監視対象リポジトリの PR / CI 取得
-      if (settings.repositories.length > 0) {
-        const repoPromises = settings.repositories.map(async (repoFullName) => {
-          const [owner, name] = repoFullName.split('/');
-          if (!owner || !name) {
-            return {
-              owner: '',
-              name: '',
-              fullName: repoFullName,
-              isPrivate: false,
-              pullRequests: [],
-              error: 'リポジトリ名が不正です (owner/repo 形式である必要があります)',
-            } as RepositoryDashboardData;
-          }
-          return await fetchRepositoryPRs(settings.pat, owner, name);
-        });
-
-        const repoResults = await Promise.all(repoPromises);
-        setState((prev) => ({ ...prev, projects: repoResults }));
-      } else {
-        setState((prev) => ({ ...prev, projects: [] }));
-      }
-
       const enabledFeatures = dashboardFeatures.filter(
         (feature) => isFeatureEnabled(feature, settings.features)
       );
@@ -280,6 +257,30 @@ export function App() {
         }
         return next;
       });
+
+      // 監視対象リポジトリの PR / CI 取得
+      if (settings.repositories.length > 0) {
+        setState((prev) => ({ ...prev, isLoading: true }));
+        const repoPromises = settings.repositories.map(async (repoFullName) => {
+          const [owner, name] = repoFullName.split('/');
+          if (!owner || !name) {
+            return {
+              owner: '',
+              name: '',
+              fullName: repoFullName,
+              isPrivate: false,
+              pullRequests: [],
+              error: 'リポジトリ名が不正です (owner/repo 形式である必要があります)',
+            } as RepositoryDashboardData;
+          }
+          return await fetchRepositoryPRs(settings.pat, owner, name);
+        });
+
+        const repoResults = await Promise.all(repoPromises);
+        setState((prev) => ({ ...prev, projects: repoResults, isLoading: false }));
+      } else {
+        setState((prev) => ({ ...prev, projects: [], isLoading: false }));
+      }
 
       await Promise.all(
         enabledFeatures.map(async (feature) => {
@@ -324,6 +325,7 @@ export function App() {
       console.error('Refresh error:', err);
       setState((prev) => ({
         ...prev,
+        isLoading: false,
         isRefreshing: false,
         error: err.message || 'データの取得中にエラーが発生しました',
       }));
@@ -489,7 +491,7 @@ export function App() {
         {/* GitHub Section (Pattern B: セクション見出し + カード群) */}
         <section aria-label="GitHub" className="space-y-4 sm:space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 pt-1">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 shrink-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-200 shadow-sm">
                 <FolderGit2 className="w-4 h-4 text-indigo-400" />
               </div>
@@ -537,6 +539,7 @@ export function App() {
           <RepositoriesCard
             repositories={settings.repositories}
             projects={state.projects}
+            isLoading={state.isLoading}
             isCompact={viewMode === 'compact'}
             onOpenSettings={() => setIsSettingsOpen(true)}
           />

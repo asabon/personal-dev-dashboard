@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, XCircle } from 'lucide-react';
+import { AlertCircle, Loader2, XCircle } from 'lucide-react';
 import {
   ActionsStatusCard,
   isWorkflowRunActive,
@@ -19,6 +19,7 @@ import type {
 export interface WorkflowRunsFeatureData {
   runs: WorkflowRunItem[];
   warning?: string;
+  incompleteCoverage?: boolean;
 }
 
 const healthyRuns: WorkflowRunItem[] = DEMO_WORKFLOW_RUNS.map((run) => ({
@@ -40,7 +41,8 @@ const criticalRuns: WorkflowRunItem[] = DEMO_WORKFLOW_RUNS.map((run) => ({
 }));
 
 export function getWorkflowRunsAlerts(data: unknown): FeatureAlert[] {
-  const rawRuns = (data as WorkflowRunsFeatureData | null)?.runs ?? [];
+  const featureData = data as WorkflowRunsFeatureData | null;
+  const rawRuns = featureData?.runs ?? [];
   const attentionRuns = selectAttentionWorkflowRuns(rawRuns);
   const failedCount = attentionRuns.filter(isWorkflowRunFailed).length;
   const runningCount = attentionRuns.filter(isWorkflowRunActive).length;
@@ -67,6 +69,16 @@ export function getWorkflowRunsAlerts(data: unknown): FeatureAlert[] {
     });
   }
 
+  if (featureData?.warning || featureData?.incompleteCoverage) {
+    alerts.push({
+      id: 'workflow-runs-unavailable',
+      label: 'Actions 取得不可',
+      targetId: 'workflow-runs-section',
+      icon: <AlertCircle className="w-3.5 h-3.5 text-amber-400" />,
+      tone: 'warning',
+    });
+  }
+
   return alerts;
 }
 
@@ -77,6 +89,7 @@ const WorkflowRunsFeatureCard: React.FC<FeatureCardProps> = ({ state, isCompact 
       runs={data?.runs ?? []}
       isLoading={state.isLoading}
       error={state.error || data?.warning || null}
+      incompleteCoverage={Boolean(data?.incompleteCoverage)}
       isCompact={isCompact}
     />
   );

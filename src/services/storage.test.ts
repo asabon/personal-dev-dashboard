@@ -58,6 +58,31 @@ describe('storage service', () => {
     expect(loaded.monitoredOrgs).toEqual(['old-org']);
   });
 
+  it('保存済み設定に新しい feature ID が存在しない場合、デフォルト値で補完されること', () => {
+    localStorage.setItem(
+      'personal_dev_dashboard_settings',
+      JSON.stringify({
+        pat: 'ghp_existing',
+        username: 'octocat',
+        repositories: ['octocat/hello-world'],
+        refreshIntervalSec: 120,
+        features: {
+          actionsUsage: { enabled: false, options: {} },
+          [SELF_HOSTED_RUNNERS_FEATURE_ID]: { enabled: true, options: {} },
+        },
+        monitoredOrgs: [],
+      })
+    );
+
+    const loaded = loadSettings();
+    expect(loaded.features[WORKFLOW_RUNS_FEATURE_ID]).toEqual({
+      enabled: true,
+      options: {},
+    });
+    expect(loaded.features.actionsUsage.enabled).toBe(false);
+    expect(loaded.features[SELF_HOSTED_RUNNERS_FEATURE_ID].enabled).toBe(true);
+  });
+
   it('localStorage の JSON が破損している場合でもクラッシュせずデフォルト設定を返すこと', () => {
     const spyError = vi.spyOn(console, 'error').mockImplementation(() => {});
     localStorage.setItem('personal_dev_dashboard_settings', 'invalid-json-{{{');

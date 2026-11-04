@@ -136,6 +136,8 @@ export type WorkflowRunConclusion =
 
 export interface WorkflowRunItem {
   id: number;
+  /** ワークフロー定義 ID (GitHub Actions workflow_id) */
+  workflowId?: number;
   /** リポジトリフルネーム (例: "owner/repo") */
   repoFullName: string;
   /** ワークフロー名 (例: "CI", "Deploy to GitHub Pages") */

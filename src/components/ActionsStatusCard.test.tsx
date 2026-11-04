@@ -93,7 +93,7 @@ describe('ActionsStatusCard', () => {
     const attention = selectAttentionWorkflowRuns([failedMainRun, recoveredMainRun]);
     expect(attention).toEqual([]);
 
-    render(
+    const { rerender } = render(
       <ActionsStatusCard
         runs={[failedMainRun, recoveredMainRun]}
         isLoading={false}
@@ -109,6 +109,91 @@ describe('ActionsStatusCard', () => {
     expect(
       screen.getByText('現在、実行中または失敗状態の Actions はありません')
     ).toBeInTheDocument();
+
+    // 同一 Run ID / runNumber の再実行（re-run）で成功に更新された場合も消えること
+    const rerunRecovered: WorkflowRunItem = {
+      ...failedMainRun,
+      id: 102,
+      runNumber: 94,
+      status: 'completed',
+      conclusion: 'success',
+      updatedAt: '2026-09-25T12:00:00Z',
+    };
+    rerender(
+      <ActionsStatusCard
+        runs={[rerunRecovered]}
+        isLoading={false}
+        error={null}
+      />
+    );
+    expect(screen.queryByText('Main CI')).not.toBeInTheDocument();
+    expect(screen.getByText('All Passed')).toBeInTheDocument();
+  });
+
+  it('同一リポジトリ・同一ワークフローでも異なる PR ブランチの失敗は別ブランチの成功で消えないこと', () => {
+    const prBranchAFailed: WorkflowRunItem = {
+      ...runningPrRun,
+      id: 201,
+      runNumber: 150,
+      headBranch: 'feat/branch-a',
+      status: 'completed',
+      conclusion: 'failure',
+      createdAt: '2026-09-25T11:10:00Z',
+      updatedAt: '2026-09-25T11:15:00Z',
+    };
+    const prBranchBPassed: WorkflowRunItem = {
+      ...runningPrRun,
+      id: 202,
+      runNumber: 151,
+      headBranch: 'feat/branch-b',
+      status: 'completed',
+      conclusion: 'success',
+      createdAt: '2026-09-25T11:20:00Z',
+      updatedAt: '2026-09-25T11:25:00Z',
+    };
+
+    const attention = selectAttentionWorkflowRuns([prBranchAFailed, prBranchBPassed]);
+    expect(attention).toHaveLength(1);
+    expect(attention[0].id).toBe(201);
+    expect(attention[0].headBranch).toBe('feat/branch-a');
+  });
+
+  it('古い実行がまだ in_progress の場合、後続の短い実行が先に success 完了しても in_progress の実行が隠れないこと', () => {
+    const olderInProgress: WorkflowRunItem = {
+      ...failedMainRun,
+      id: 301,
+      runNumber: 100,
+      status: 'in_progress',
+      conclusion: null,
+      createdAt: '2026-09-25T11:00:00Z',
+      updatedAt: '2026-09-25T11:05:00Z',
+    };
+    const newerSuccess: WorkflowRunItem = {
+      ...failedMainRun,
+      id: 302,
+      runNumber: 101,
+      status: 'completed',
+      conclusion: 'success',
+      createdAt: '2026-09-25T11:02:00Z',
+      updatedAt: '2026-09-25T11:03:00Z',
+    };
+
+    const attention = selectAttentionWorkflowRuns([olderInProgress, newerSuccess]);
+    expect(attention).toHaveLength(1);
+    expect(attention[0].id).toBe(301);
+  });
+
+  it('読込中（isLoading=true）の場合はヘッダーの All Passed バッジを抑制すること', () => {
+    render(
+      <ActionsStatusCard
+        runs={[]}
+        isLoading={true}
+        error={null}
+      />
+    );
+
+    expect(screen.queryByText('All Passed')).not.toBeInTheDocument();
+    expect(screen.getByText('直近の Actions 実行状況を確認中...')).toBeInTheDocument();
   });
 
   it('簡易表示モード（isCompact=true）では初期状態で折りたたまれ、クリックで展開できること', () => {

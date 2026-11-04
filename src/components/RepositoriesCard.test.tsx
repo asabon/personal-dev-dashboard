@@ -171,7 +171,7 @@ describe('RepositoriesCard', () => {
     expect(screen.queryByText('octocat/api-gateway')).not.toBeInTheDocument();
   });
 
-  it('リポジトリ取得エラーがある場合は「1 リポエラー」が表示されること', () => {
+  it('リポジトリ取得エラーがある場合は「1 リポエラー」が表示され、エラーのあるリポジトリカードは0件PRでも表示されること', () => {
     const errorProject: RepositoryDashboardData = {
       owner: 'octocat',
       name: 'private-repo',
@@ -189,6 +189,22 @@ describe('RepositoriesCard', () => {
     );
 
     expect(screen.getByText('1 リポエラー')).toBeInTheDocument();
+    expect(screen.getByText('octocat/private-repo')).toBeInTheDocument();
+    expect(screen.getByText('取得エラー')).toBeInTheDocument();
+    expect(screen.getByText('Not Found')).toBeInTheDocument();
+  });
+
+  it('読込中（isLoading=true）の場合は「0 PR」ではなく確認中メッセージが表示されること', () => {
+    render(
+      <RepositoriesCard
+        repositories={['asabon/personal-dev-dashboard']}
+        projects={[]}
+        isLoading={true}
+      />
+    );
+
+    expect(screen.queryByText('0 PR')).not.toBeInTheDocument();
+    expect(screen.getByText('Pull Request と CI 状況を確認中...')).toBeInTheDocument();
   });
 
   it('リポジトリが0件のときに「設定を開く」ボタンをクリックすると onOpenSettings が呼ばれること', () => {

@@ -81,6 +81,24 @@ describe('workflowRuns feature module', () => {
     ]);
   });
 
+  it('warning または incompleteCoverage がある場合に「Actions 取得不可」アラートを返すこと', () => {
+    const data: WorkflowRunsFeatureData = {
+      runs: [],
+      warning: 'repo: API error (500)',
+      incompleteCoverage: true,
+    };
+
+    const alerts = getWorkflowRunsAlerts(data);
+    expect(alerts).toMatchObject([
+      {
+        id: 'workflow-runs-unavailable',
+        label: 'Actions 取得不可',
+        targetId: 'workflow-runs-section',
+        tone: 'warning',
+      },
+    ]);
+  });
+
   it('loadData が context の pat と repositories を使って fetchAllWorkflowRuns を呼び出すこと', async () => {
     const mockRuns = [makeRun(1, 'CI', 'completed', 'success')];
     vi.mocked(fetchAllWorkflowRuns).mockResolvedValue({ runs: mockRuns });
