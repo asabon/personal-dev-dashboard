@@ -57,8 +57,8 @@ describe('RepositoriesCard', () => {
       />
     );
 
-    expect(screen.getByText('監視リポジトリ')).toBeInTheDocument();
-    expect(screen.getByText('2リポジトリ')).toBeInTheDocument();
+    expect(screen.getByText('Open PRs')).toBeInTheDocument();
+    expect(screen.getByText('2件')).toBeInTheDocument();
     const badge = screen.getByText('1/2 Passed');
     expect(badge).toBeInTheDocument();
     expect(badge.closest('.inline-flex')).toHaveClass('text-amber-300');
@@ -128,7 +128,7 @@ describe('RepositoriesCard', () => {
     expect(runningBadge.compareDocumentPosition(passedBadge)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  it('PR が 0 件の場合は「0 PR」（緑色）が表示されること', () => {
+  it('PR が 0 件の場合は「0 PR」（緑色）が表示され、0件のリポジトリカードは非表示になること', () => {
     const emptyProject: RepositoryDashboardData = {
       owner: 'asabon',
       name: 'personal-dev-dashboard',
@@ -147,6 +147,28 @@ describe('RepositoriesCard', () => {
     const badge = screen.getByText('0 PR');
     expect(badge).toBeInTheDocument();
     expect(badge.closest('.inline-flex')).toHaveClass('text-emerald-400');
+    expect(screen.queryByText('asabon/personal-dev-dashboard')).not.toBeInTheDocument();
+    expect(screen.getByText('現在 Open な Pull Request はありません')).toBeInTheDocument();
+  });
+
+  it('Open PR があるリポジトリと 0 件のリポジトリが混在する場合、0 件のリポジトリのみ非表示になること', () => {
+    const emptyProject: RepositoryDashboardData = {
+      owner: 'octocat',
+      name: 'api-gateway',
+      fullName: 'octocat/api-gateway',
+      isPrivate: true,
+      pullRequests: [],
+    };
+
+    render(
+      <RepositoriesCard
+        repositories={['asabon/personal-dev-dashboard', 'octocat/api-gateway']}
+        projects={[mockProjects[0], emptyProject]}
+      />
+    );
+
+    expect(screen.getByText('asabon/personal-dev-dashboard')).toBeInTheDocument();
+    expect(screen.queryByText('octocat/api-gateway')).not.toBeInTheDocument();
   });
 
   it('リポジトリ取得エラーがある場合は「1 リポエラー」が表示されること', () => {
@@ -197,7 +219,7 @@ describe('RepositoriesCard', () => {
     expect(screen.getByText('asabon/personal-dev-dashboard')).toBeInTheDocument();
 
     // ヘッダーをクリックして折りたたむ
-    const headerTitle = screen.getByText('監視リポジトリ');
+    const headerTitle = screen.getByText('Open PRs');
     fireEvent.click(headerTitle);
 
     // 中身が閉じる
@@ -218,7 +240,7 @@ describe('RepositoriesCard', () => {
     expect(screen.queryByText('octocat/frontend-app')).not.toBeInTheDocument();
 
     // ヘッダークリックで展開される
-    fireEvent.click(screen.getByText('監視リポジトリ'));
+    fireEvent.click(screen.getByText('Open PRs'));
     expect(screen.getByText('octocat/frontend-app')).toBeInTheDocument();
   });
 });

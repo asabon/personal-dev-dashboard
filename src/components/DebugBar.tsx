@@ -194,8 +194,8 @@ export const DebugBar: React.FC<DebugBarProps> = ({
 
         {/* 展開時: 各カードごとの個別シミュレーションセレクタ (2段階連動ドロップダウン) */}
         {isExpanded && (
-          <div className="mt-3 pt-3 border-t border-slate-800/80 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-            {/* Dynamic Feature Modules (Actions Usage, Runners, etc.) */}
+          <div className="mt-3 pt-3 border-t border-slate-800/80 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 text-xs">
+            {/* Dynamic Feature Modules (Actions Usage, Runners, Workflow Runs, etc.) */}
             {features.map((feature) => {
               if (!feature.debugScenarios || feature.debugScenarios.length === 0) return null;
               const currentScenarioId = featureScenarioSelections[feature.id] || 'normal';
@@ -205,6 +205,8 @@ export const DebugBar: React.FC<DebugBarProps> = ({
                   ? '⚡ Actions Usage'
                   : feature.id === 'selfHostedRunners'
                   ? '🖥️ Self-hosted Runners'
+                  : feature.id === 'workflowRuns'
+                  ? '🔄 Actions Status'
                   : `🧩 ${feature.id}`;
 
               return (

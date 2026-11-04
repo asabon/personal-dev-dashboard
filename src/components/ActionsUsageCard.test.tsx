@@ -52,7 +52,7 @@ describe('ActionsUsageCard', () => {
     render(<ActionsUsageCard usage={mockUsage} />);
 
     // タイトルと全体サマリーバッジ
-    expect(screen.getByText('GitHub Actions 使用状況')).toBeInTheDocument();
+    expect(screen.getByText('Actions Usage')).toBeInTheDocument();
     expect(screen.getByText('1/1 目安以下')).toBeInTheDocument();
 
     // 詳細モードでは最初から詳細が展開されている
@@ -78,7 +78,7 @@ describe('ActionsUsageCard', () => {
     render(<ActionsUsageCard usage={mockUsage} isCompact={true} />);
 
     // タイトルと全体サマリーバッジ
-    expect(screen.getByText('GitHub Actions 使用状況')).toBeInTheDocument();
+    expect(screen.getByText('Actions Usage')).toBeInTheDocument();
     expect(screen.getByText('1/1 目安以下')).toBeInTheDocument();
 
     // 簡易モードでは正常時、親カードは初期折りたたまれている（子カードはまだ見えない）
@@ -86,7 +86,7 @@ describe('ActionsUsageCard', () => {
     expect(screen.queryByText(/残り無料枠/)).not.toBeInTheDocument();
 
     // 1. 最上位（親カード）をクリックして開く
-    fireEvent.click(screen.getByText('GitHub Actions 使用状況'));
+    fireEvent.click(screen.getByText('Actions Usage'));
 
     // 親展開直後は各アカウントは1行表示（残量バッジが表示され、詳細は折りたたみ）
     expect(screen.getByText('残1,450分')).toBeInTheDocument();
@@ -292,7 +292,7 @@ describe('ActionsUsageCard', () => {
     expect(screen.queryByText('100')).not.toBeInTheDocument();
 
     // 親カードをクリックして開くと、各アカウントが1行要約表示される（詳細は折りたたみ）
-    fireEvent.click(screen.getByText('GitHub Actions 使用状況'));
+    fireEvent.click(screen.getByText('Actions Usage'));
     expect(screen.getByText('残1,800分')).toBeInTheDocument();
     expect(screen.getByText('残100分')).toBeInTheDocument();
     expect(screen.queryByText('1,800')).not.toBeInTheDocument();
@@ -400,7 +400,7 @@ describe('ActionsUsageCard', () => {
       expect(screen.getByText('asabon')).toBeInTheDocument();
 
       // 親ヘッダーをクリックして折りたたむ
-      fireEvent.click(screen.getByText('GitHub Actions 使用状況'));
+      fireEvent.click(screen.getByText('Actions Usage'));
 
       // 折りたたみ状態でもサマリーバッジは表示され、子カード一覧は非表示
       expect(screen.getByText('1/1 目安以下')).toBeInTheDocument();

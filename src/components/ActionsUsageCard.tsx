@@ -418,7 +418,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm sm:text-base font-bold text-slate-100 whitespace-nowrap">
-                  GitHub Actions 使用状況
+                  Actions Usage
                 </h2>
                 <span className="text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono shrink-0">
                   {resolvedAccounts.length}アカウント

@@ -189,6 +189,7 @@ export interface OverallDebugPreset {
   scenarioIds: {
     actionsUsage: string;
     selfHostedRunners: string;
+    workflowRuns?: string;
     repositories: string;
     rateLimit: string;
   };
@@ -202,6 +203,7 @@ export const OVERALL_DEBUG_PRESETS: OverallDebugPreset[] = [
     scenarioIds: {
       actionsUsage: 'normal',
       selfHostedRunners: 'all-idle',
+      workflowRuns: 'normal',
       repositories: 'normal',
       rateLimit: 'healthy',
     },
@@ -213,6 +215,7 @@ export const OVERALL_DEBUG_PRESETS: OverallDebugPreset[] = [
     scenarioIds: {
       actionsUsage: 'warning',
       selfHostedRunners: 'offline-running',
+      workflowRuns: 'warning',
       repositories: 'warning',
       rateLimit: 'healthy',
     },
@@ -224,6 +227,7 @@ export const OVERALL_DEBUG_PRESETS: OverallDebugPreset[] = [
     scenarioIds: {
       actionsUsage: 'critical',
       selfHostedRunners: 'all-offline',
+      workflowRuns: 'critical',
       repositories: 'critical',
       rateLimit: 'low',
     },
@@ -235,6 +239,7 @@ export const OVERALL_DEBUG_PRESETS: OverallDebugPreset[] = [
     scenarioIds: {
       actionsUsage: 'empty',
       selfHostedRunners: 'empty',
+      workflowRuns: 'empty',
       repositories: 'empty',
       rateLimit: 'healthy',
     },
@@ -246,6 +251,7 @@ export const OVERALL_DEBUG_PRESETS: OverallDebugPreset[] = [
     scenarioIds: {
       actionsUsage: 'error',
       selfHostedRunners: 'error',
+      workflowRuns: 'error',
       repositories: 'error',
       rateLimit: 'exhausted',
     },

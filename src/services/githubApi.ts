@@ -8,6 +8,9 @@ import type {
   RepositoryDashboardData,
   UserRepositoryOption,
   SelfHostedRunner,
+  WorkflowRunItem,
+  WorkflowRunStatus,
+  WorkflowRunConclusion,
 } from '../types';
 
 export interface RateLimitInfo {
@@ -651,5 +654,117 @@ export async function fetchAllSelfHostedRunners(
     warning: warnings.length > 0 ? warnings.join('\n') : undefined,
   };
 }
+
+/**
+ * 単一リポジトリの直近の Actions ワークフロー実行履歴を取得する
+ */
+export async function fetchRepositoryWorkflowRuns(
+  pat: string,
+  owner: string,
+  repo: string,
+  perPage = 10
+): Promise<{ runs: WorkflowRunItem[]; warning?: string }> {
+  const repoFullName = `${owner}/${repo}`;
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/runs?per_page=${perPage}`,
+      {
+        headers: {
+          Authorization: `Bearer ${pat.trim()}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      }
+    );
+
+    updateRateLimitFromHeaders(res.headers);
+
+    if (!res.ok) {
+      return {
+        runs: [],
+        warning: `${repoFullName}: Actions 実行履歴の取得に失敗しました (${res.status})`,
+      };
+    }
+
+    const data = await res.json();
+    if (!data.workflow_runs || !Array.isArray(data.workflow_runs)) {
+      return { runs: [] };
+    }
+
+    const runs: WorkflowRunItem[] = data.workflow_runs.map((r: any) => ({
+      id: r.id,
+      repoFullName,
+      workflowName: r.name || 'Workflow',
+      displayTitle: r.display_title || r.head_commit?.message?.split('\n')[0] || r.name || 'Run',
+      runNumber: r.run_number || 0,
+      event: r.event || 'unknown',
+      status: (r.status || 'completed') as WorkflowRunStatus,
+      conclusion: (r.conclusion ?? null) as WorkflowRunConclusion,
+      htmlUrl: r.html_url || `https://github.com/${repoFullName}/actions`,
+      headBranch: r.head_branch || '',
+      shortSha: typeof r.head_sha === 'string' ? r.head_sha.slice(0, 7) : '',
+      actor: {
+        login: r.actor?.login || r.triggering_actor?.login || 'github-actions',
+        avatarUrl: r.actor?.avatar_url || r.triggering_actor?.avatar_url || '',
+      },
+      createdAt: r.created_at || new Date().toISOString(),
+      updatedAt: r.updated_at || r.created_at || new Date().toISOString(),
+    }));
+
+    return { runs };
+  } catch (err) {
+    console.warn(`Failed to fetch workflow runs for ${repoFullName}:`, err);
+    return {
+      runs: [],
+      warning: `${repoFullName}: Actions 実行履歴の取得中に通信エラーが発生しました`,
+    };
+  }
+}
+
+/**
+ * 監視対象リポジトリ群の直近 Actions ワークフロー実行履歴を横断取得・ソートする
+ */
+export async function fetchAllWorkflowRuns(
+  pat: string,
+  repositories: string[],
+  perRepoLimit = 10
+): Promise<{ runs: WorkflowRunItem[]; warning?: string }> {
+  const trimmedPat = pat.trim();
+  if (!trimmedPat || repositories.length === 0) {
+    return { runs: [] };
+  }
+
+  const results = await Promise.all(
+    repositories.map(async (repoFullName) => {
+      const [owner, name] = repoFullName.split('/');
+      if (!owner || !name) {
+        return {
+          runs: [] as WorkflowRunItem[],
+          warning: `${repoFullName}: リポジトリ名が不正です`,
+        };
+      }
+      return fetchRepositoryWorkflowRuns(trimmedPat, owner, name, perRepoLimit);
+    })
+  );
+
+  const allRuns = results.flatMap((r) => r.runs);
+  const warnings = results.map((r) => r.warning).filter(Boolean) as string[];
+
+  // ソート順: 実行中・待機中 (status !== 'completed') を最優先し、次に更新日時の新しい順
+  allRuns.sort((a, b) => {
+    const aActive = a.status !== 'completed' ? 1 : 0;
+    const bActive = b.status !== 'completed' ? 1 : 0;
+    if (aActive !== bActive) {
+      return bActive - aActive;
+    }
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+  });
+
+  return {
+    runs: allRuns,
+    warning: warnings.length > 0 ? warnings.join('\n') : undefined,
+  };
+}
+
 
 

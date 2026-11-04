@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadSettings, saveSettings, clearSettings } from './storage';
 import type { AppSettings } from '../types';
-import { SELF_HOSTED_RUNNERS_FEATURE_ID } from '../features/ids';
+import {
+  SELF_HOSTED_RUNNERS_FEATURE_ID,
+  WORKFLOW_RUNS_FEATURE_ID,
+} from '../features/ids';
 
 describe('storage service', () => {
   beforeEach(() => {
@@ -19,6 +22,7 @@ describe('storage service', () => {
       features: {
         actionsUsage: { enabled: true, options: {} },
         [SELF_HOSTED_RUNNERS_FEATURE_ID]: { enabled: false, options: {} },
+        [WORKFLOW_RUNS_FEATURE_ID]: { enabled: true, options: {} },
       },
       monitoredOrgs: [],
     });
@@ -33,6 +37,7 @@ describe('storage service', () => {
       features: {
         actionsUsage: { enabled: true, options: {} },
         [SELF_HOSTED_RUNNERS_FEATURE_ID]: { enabled: true, options: {} },
+        [WORKFLOW_RUNS_FEATURE_ID]: { enabled: true, options: {} },
       },
       monitoredOrgs: ['my-org'],
     };

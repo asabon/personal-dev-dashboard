@@ -5,6 +5,7 @@ import {
   fetchOrgActionsUsage,
   fetchRepositoryPRs,
   fetchUserRepositories,
+  fetchAllWorkflowRuns,
 } from './githubApi';
 import { saveSettings } from './storage';
 import type { AppSettings } from '../types';
@@ -64,6 +65,7 @@ describe('PAT セキュリティ・漏洩防止テスト (Zero-Backend Privacy G
     await fetchOrgActionsUsage(TEST_PAT, 'test-org');
     await fetchRepositoryPRs(TEST_PAT, 'test-user', 'test-repo');
     await fetchUserRepositories(TEST_PAT);
+    await fetchAllWorkflowRuns(TEST_PAT, ['test-user/test-repo']);
 
     expect(capturedRequests.length).toBeGreaterThan(0);
 

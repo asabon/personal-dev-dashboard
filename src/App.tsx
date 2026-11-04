@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, FolderGit2, AlertCircle } from 'lucide-react';
+import { Plus, FolderGit2, AlertCircle, ShieldCheck } from 'lucide-react';
 import type {
   AppSettings,
   DashboardState,
@@ -486,25 +486,61 @@ export function App() {
           })}
         />
 
-        {dashboardFeatures.map((feature) => {
-          if (!isFeatureEnabled(feature, settings.features)) return null;
-          const FeatureCard = feature.Card;
-          return (
-            <FeatureCard
-              key={feature.id}
-              state={featureStates[feature.id] ?? { data: null, error: null, isLoading: false }}
-              isCompact={viewMode === 'compact'}
-            />
-          );
-        })}
+        {/* GitHub Section (Pattern B: セクション見出し + カード群) */}
+        <section aria-label="GitHub" className="space-y-4 sm:space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-200 shadow-sm">
+                <FolderGit2 className="w-4 h-4 text-indigo-400" />
+              </div>
+              <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-slate-100">
+                GitHub
+              </h2>
+              {settings.username && (
+                <span className="text-xs text-slate-400">
+                  Logged in as <span className="text-slate-200 font-medium font-mono">@{settings.username}</span>
+                </span>
+              )}
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-900/90 text-slate-400 border border-slate-800">
+                {settings.repositories.length} {settings.repositories.length === 1 ? 'repo' : 'repos'}
+              </span>
+            </div>
+            <div className="hidden sm:block flex-1 h-px bg-gradient-to-r from-slate-800 via-slate-800/50 to-transparent" />
+            {state.rateLimit && (
+              <div
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-slate-300 cursor-help shrink-0"
+                title={`GitHub API レート制限の残数（1時間上限: ${state.rateLimit.limit}回）\n枠のリセット予定: ${state.rateLimit.resetAt.toLocaleTimeString()}`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>API残数:</span>
+                <span className="font-mono font-medium text-slate-100">
+                  {state.rateLimit.remaining}
+                </span>
+                <span className="text-slate-500">/ {state.rateLimit.limit}</span>
+              </div>
+            )}
+          </div>
 
-        {/* 3. Repositories Section (統一親カード) */}
-        <RepositoriesCard
-          repositories={settings.repositories}
-          projects={state.projects}
-          isCompact={viewMode === 'compact'}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-        />
+          {dashboardFeatures.map((feature) => {
+            if (!isFeatureEnabled(feature, settings.features)) return null;
+            const FeatureCard = feature.Card;
+            return (
+              <FeatureCard
+                key={feature.id}
+                state={featureStates[feature.id] ?? { data: null, error: null, isLoading: false }}
+                isCompact={viewMode === 'compact'}
+              />
+            );
+          })}
+
+          {/* Open PRs Section */}
+          <RepositoriesCard
+            repositories={settings.repositories}
+            projects={state.projects}
+            isCompact={viewMode === 'compact'}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
+        </section>
       </main>
 
       {/* Footer */}

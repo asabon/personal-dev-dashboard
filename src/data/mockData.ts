@@ -4,10 +4,12 @@ import type {
   AppSettings,
   RepositoryDashboardData,
   SelfHostedRunner,
+  WorkflowRunItem,
 } from '../types';
 import {
   ACTIONS_USAGE_FEATURE_ID,
   SELF_HOSTED_RUNNERS_FEATURE_ID,
+  WORKFLOW_RUNS_FEATURE_ID,
 } from '../features/ids';
 
 export const DEMO_SETTINGS: AppSettings = {
@@ -22,6 +24,7 @@ export const DEMO_SETTINGS: AppSettings = {
   features: {
     [ACTIONS_USAGE_FEATURE_ID]: { enabled: true, options: {} },
     [SELF_HOSTED_RUNNERS_FEATURE_ID]: { enabled: true, options: {} },
+    [WORKFLOW_RUNS_FEATURE_ID]: { enabled: true, options: {} },
   },
   monitoredOrgs: ['demo-org'],
 };
@@ -247,3 +250,102 @@ export const DEMO_RUNNERS: SelfHostedRunner[] = [
     scopeName: 'octocat/frontend-app',
   },
 ];
+
+export const DEMO_WORKFLOW_RUNS: WorkflowRunItem[] = [
+  {
+    id: 5001,
+    repoFullName: 'octocat/frontend-app',
+    workflowName: 'CI / E2E Playwright',
+    displayTitle: 'feat: Add OAuth login & multi-factor authentication flow',
+    runNumber: 142,
+    event: 'pull_request',
+    status: 'in_progress',
+    conclusion: null,
+    htmlUrl: 'https://github.com/octocat/frontend-app/actions/runs/5001',
+    headBranch: 'feat/oauth-flow',
+    shortSha: 'a1b2c3d',
+    actor: {
+      login: 'alice',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 1).toISOString(),
+  },
+  {
+    id: 5002,
+    repoFullName: 'asabon/personal-dev-dashboard',
+    workflowName: 'Deploy to GitHub Pages',
+    displayTitle: 'Release v0.4.0',
+    runNumber: 38,
+    event: 'release',
+    status: 'completed',
+    conclusion: 'success',
+    htmlUrl: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/5002',
+    headBranch: 'v0.4.0',
+    shortSha: '8f4e2a1',
+    actor: {
+      login: 'asabon',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/10427?v=4',
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+  },
+  {
+    id: 5003,
+    repoFullName: 'octocat/api-gateway',
+    workflowName: 'Docker Build & Staging Deploy',
+    displayTitle: 'Merge pull request #89 from octocat/feat/rate-limiter',
+    runNumber: 94,
+    event: 'push',
+    status: 'completed',
+    conclusion: 'failure',
+    htmlUrl: 'https://github.com/octocat/api-gateway/actions/runs/5003',
+    headBranch: 'main',
+    shortSha: 'c4d5e6f',
+    actor: {
+      login: 'bob',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/1024025?v=4',
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 42).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 40).toISOString(),
+  },
+  {
+    id: 5004,
+    repoFullName: 'asabon/personal-dev-dashboard',
+    workflowName: 'Release Drafter',
+    displayTitle: 'Merge pull request #27 from asabon/feature/setup-unit-testing',
+    runNumber: 65,
+    event: 'push',
+    status: 'completed',
+    conclusion: 'success',
+    htmlUrl: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/5004',
+    headBranch: 'main',
+    shortSha: '939c1cc',
+    actor: {
+      login: 'asabon',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/10427?v=4',
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 89).toISOString(),
+  },
+  {
+    id: 5005,
+    repoFullName: 'octocat/api-gateway',
+    workflowName: 'Nightly Security Audit',
+    displayTitle: 'Scheduled dependency & vulnerability scan',
+    runNumber: 12,
+    event: 'schedule',
+    status: 'completed',
+    conclusion: 'success',
+    htmlUrl: 'https://github.com/octocat/api-gateway/actions/runs/5005',
+    headBranch: 'main',
+    shortSha: 'c4d5e6f',
+    actor: {
+      login: 'github-actions',
+      avatarUrl: '',
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
+  },
+];
+

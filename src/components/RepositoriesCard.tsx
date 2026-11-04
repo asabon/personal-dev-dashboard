@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   FolderGit2,
+  GitPullRequest,
   ChevronDown,
   ChevronUp,
   XCircle,
@@ -35,7 +36,11 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
 
   // リポジトリ自体のエラー
   const erroredRepos = projects.filter((p) => Boolean(p.error));
-  const hasFailure = failedPrs.length > 0 || erroredRepos.length > 0;
+
+  // Open PR があるリポジトリ、または取得エラーが発生しているリポジトリのみを表示対象とする（Open PR 0件は非表示）
+  const visibleProjects = projects.filter(
+    (repo) => repo.pullRequests.length > 0 || Boolean(repo.error)
+  );
 
   // isCompact 時は初期折りたたみ（明示的にクリックされた場合のみ開閉）
   const [isCollapsed, setIsCollapsed] = useState(isCompact);
@@ -60,19 +65,19 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
         <div className="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 w-full sm:w-auto">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 shadow-inner shrink-0">
-              <FolderGit2 className="w-4 h-4 shrink-0" />
+              <GitPullRequest className="w-4 h-4 shrink-0" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm sm:text-base font-bold text-slate-100 tracking-tight whitespace-nowrap">
-                  監視リポジトリ
+                  Open PRs
                 </h2>
                 <span className="text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono shrink-0">
-                  {repositories.length}リポジトリ
+                  {totalPrs}件
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 hidden md:block">
-                CIパイプライン実行状況および Open PR の監視
+                Open な Pull Request のマージ可否・CI チェック状況
               </p>
             </div>
           </div>
@@ -182,9 +187,16 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                 </button>
               )}
             </div>
+          ) : visibleProjects.length === 0 ? (
+            <div className="py-8 text-center text-slate-500 flex flex-col items-center justify-center gap-2 mt-2">
+              <CheckCircle2 className="w-7 h-7 text-slate-700" />
+              <p className="text-xs font-medium text-slate-400">
+                現在 Open な Pull Request はありません
+              </p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 pt-3">
-              {projects.map((repo) => (
+              {visibleProjects.map((repo) => (
                 <RepoCard
                   key={repo.fullName}
                   repo={repo}
