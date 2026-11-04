@@ -131,6 +131,7 @@ export type WorkflowRunConclusion =
   | 'skipped'
   | 'timed_out'
   | 'action_required'
+  | 'startup_failure'
   | 'stale'
   | null;
 

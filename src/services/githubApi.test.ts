@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
+  clearWorkflowRunsCache,
   fetchActionsUsage,
+  fetchAllWorkflowRuns,
   fetchOrgActionsUsage,
   fetchRepositoryWorkflowRuns,
 } from './githubApi';
@@ -11,6 +13,7 @@ describe('githubApi - Actions 使用量および倍率計算テスト', () => {
 
   beforeEach(() => {
     originalFetch = globalThis.fetch;
+    clearWorkflowRunsCache();
   });
 
   afterEach(() => {
@@ -139,5 +142,24 @@ describe('githubApi - Actions 使用量および倍率計算テスト', () => {
     expect(result.runs).toHaveLength(30);
     expect(result.incompleteCoverage).toBe(false);
     expect(result.warning).toBeUndefined();
+  });
+
+  it('fetchAllWorkflowRuns は20リポジトリを超える場合に超過分をスキップし incompleteCoverage と警告を返すこと', async () => {
+    globalThis.fetch = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          total_count: 1,
+          workflow_runs: [],
+        }),
+        { status: 200 }
+      );
+    });
+
+    const repos = Array.from({ length: 22 }, (_, i) => `owner/repo-${i + 1}`);
+    const result = await fetchAllWorkflowRuns(TEST_PAT, repos, 10);
+
+    expect(result.incompleteCoverage).toBe(true);
+    expect(result.warning).toContain('先頭 20 リポジトリのみ');
+    expect(result.warning).toContain('残り 2 件をスキップ');
   });
 });

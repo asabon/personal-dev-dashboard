@@ -30,7 +30,8 @@ export function isWorkflowRunFailed(run: WorkflowRunItem): boolean {
     run.status === 'completed' &&
     (run.conclusion === 'failure' ||
       run.conclusion === 'timed_out' ||
-      run.conclusion === 'action_required')
+      run.conclusion === 'action_required' ||
+      run.conclusion === 'startup_failure')
   );
 }
 
@@ -233,7 +234,7 @@ export const ActionsStatusCard: React.FC<ActionsStatusCardProps> = ({
 
         {/* ヘッダー右側（スマホ時は2行目）: サマリーバッジ & PC開閉アイコン */}
         <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto pt-0.5 sm:pt-0">
-          <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
             {hasError && (
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
                 <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
@@ -293,12 +294,21 @@ export const ActionsStatusCard: React.FC<ActionsStatusCardProps> = ({
               <span>直近の Actions 実行状況を確認中...</span>
             </div>
           ) : attentionRuns.length === 0 ? (
-            <div className="py-6 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
-              <CheckCircle2 className="w-7 h-7 text-emerald-500/40" />
-              <p className="text-xs font-medium text-slate-400">
-                現在、実行中または失敗状態の Actions はありません
-              </p>
-            </div>
+            hasError ? null : incompleteCoverage ? (
+              <div className="py-6 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
+                <AlertCircle className="w-7 h-7 text-amber-500/40" />
+                <p className="text-xs font-medium text-slate-400">
+                  取得できた範囲では、実行中または失敗状態の Actions はありません（一部未取得のリポジトリがあります）
+                </p>
+              </div>
+            ) : (
+              <div className="py-6 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
+                <CheckCircle2 className="w-7 h-7 text-emerald-500/40" />
+                <p className="text-xs font-medium text-slate-400">
+                  現在、実行中または失敗状態の Actions はありません
+                </p>
+              </div>
+            )
           ) : (
             <div className="space-y-2">
               {attentionRuns.map((run) => (

@@ -44,6 +44,10 @@ describe('App Demo Mode (?demo=true)', () => {
     expect(screen.getByText('demo-org')).toBeInTheDocument();
     expect(screen.getByText('2/2 目安以下')).toBeInTheDocument();
     expect(screen.getByText('Self-hosted Runners')).toBeInTheDocument();
+    expect(screen.getByText('Actions Status')).toBeInTheDocument();
+    expect(screen.getByText('Open PRs')).toBeInTheDocument();
+    // PR が 0 件の octocat/api-gateway は Open PRs の RepoCard としては表示されないこと
+    expect(screen.queryByText('octocat/api-gateway')).not.toBeInTheDocument();
   });
 
   it('通常アクセス（demoパラメータなし & PAT未設定）の場合はオンボーディングモーダルが表示されること', () => {

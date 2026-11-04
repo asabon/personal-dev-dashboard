@@ -78,7 +78,7 @@
 - 監視中リポジトリのうち、**Open な Pull Request が存在するリポジトリ（または取得エラーがあるリポジトリ）のみ**を表示し、Open PR が 0 件のリポジトリは非表示化。
 - 各リポジトリのステータスバッジ（PR数、全体のCI健全性）。
 
-### 3.4 PR アイテムカード (`PullRequestCard`)
+### 3.5 PR アイテムカード (`PullRequestCard`)
 - PR 番号、タイトル（GitHub 公式への直接リンク）、作成者、更新日時
 - ブランチ名と最新コミットの短縮 SHA
 - **CI ステータス統合バッジ**:
@@ -87,7 +87,7 @@
   - ⏳ **Checks in progress**
 - 個別チェックの詳細展開ポップオーバー / バッジリスト
 
-### 3.5 設定モーダル (`SettingsModal`)
+### 3.6 設定モーダル (`SettingsModal`)
 - **GitHub PAT 入力フォーム**:
   - 現在設定されているトークンのマスク表示
   - トークン更新 / 削除（ログアウト）ボタン
@@ -97,14 +97,14 @@
   - ドラッグ&ドロップまたは削除ボタン
 - **更新間隔設定**: 30秒 / 60秒 / 5分 / 手動のみ
 
-### 3.6 オンボーディング画面 (`WelcomeScreen`)
+### 3.7 オンボーディング画面 (`WelcomeScreen`)
 - トークンが `localStorage` に未設定の場合に自動表示される初期画面。
 - なぜ安全なのか（BYOK・localStorage 保存）の説明。
 - トークン作成のガイドと入力欄。
 
-### 3.7 デバッグコントロールバー (`DebugBar`)
+### 3.8 デバッグコントロールバー (`DebugBar`)
 - URL に `?debug=true` が付与されている場合のみヘッダー直下に表示される開発・UI検証用ツールバー。
 - **一括プリセット切替**: Healthy（健全）、Warning（警告）、Critical（障害・上限到達）、Empty（空状態）、Error（APIエラー）をワンクリックでダッシュボード全体に適用。
-- **カード個別シミュレーション**: Actions Usage、Self-hosted Runners、Repositories (PR/CI)、Rate Limit をカード単位で独立して任意のシナリオ（0%、85%、100%、一部オフライン、全台停止、CI失敗混在など）に切り替え可能。
+- **カード個別シミュレーション**: Actions Usage、Self-hosted Runners、Actions Status、Open PRs (Repositories)、Rate Limit をカード単位で独立して任意のシナリオ（0%、85%、100%、一部オフライン、全台停止、CI失敗混在など）に切り替え可能。
 - **折りたたみトグル**: カード個別設定パネルを折りたたんで、ダッシュボード全体のレイアウト確認に集中可能。
 - **Feature Module 連携**: 各 feature module の `debugScenarios` 定義を動的に読み取ってセレクタを自動構成。

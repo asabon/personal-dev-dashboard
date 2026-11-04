@@ -7,6 +7,7 @@ import type {
 } from './types';
 import { loadSettings, saveSettings, clearSettings, createDefaultSettings } from './services/storage';
 import {
+  clearWorkflowRunsCache,
   fetchRepositoryPRs,
   getLatestRateLimit,
 } from './services/githubApi';
@@ -234,6 +235,7 @@ export function App() {
     if (!settings.pat || !settings.username) return;
 
     if (!isSilent) {
+      clearWorkflowRunsCache();
       setState((prev) => ({ ...prev, isRefreshing: true }));
     }
 
@@ -248,41 +250,51 @@ export function App() {
           if (!enabledFeatureIds.has(feature.id)) {
             delete next[feature.id];
           } else {
+            const prevData = previous[feature.id]?.data ?? null;
             next[feature.id] = {
-              data: previous[feature.id]?.data ?? null,
+              data: prevData,
               error: null,
-              isLoading: true,
+              // 初回取得時（データ未保持時）のみ isLoading: true にして自動更新時のちらつきを防止
+              isLoading: prevData == null,
             };
           }
         }
         return next;
       });
 
-      // 監視対象リポジトリの PR / CI 取得
       if (settings.repositories.length > 0) {
-        setState((prev) => ({ ...prev, isLoading: true }));
-        const repoPromises = settings.repositories.map(async (repoFullName) => {
-          const [owner, name] = repoFullName.split('/');
-          if (!owner || !name) {
-            return {
-              owner: '',
-              name: '',
-              fullName: repoFullName,
-              isPrivate: false,
-              pullRequests: [],
-              error: 'リポジトリ名が不正です (owner/repo 形式である必要があります)',
-            } as RepositoryDashboardData;
-          }
-          return await fetchRepositoryPRs(settings.pat, owner, name);
-        });
-
-        const repoResults = await Promise.all(repoPromises);
-        setState((prev) => ({ ...prev, projects: repoResults, isLoading: false }));
+        setState((prev) => ({
+          ...prev,
+          isLoading: prev.projects.length === 0,
+        }));
       } else {
         setState((prev) => ({ ...prev, projects: [], isLoading: false }));
       }
 
-      await Promise.all(
+      // 監視対象リポジトリの PR / CI 取得と Feature 取得を並列実行
+      const repoFetchPromise =
+        settings.repositories.length > 0
+          ? Promise.all(
+              settings.repositories.map(async (repoFullName) => {
+                const [owner, name] = repoFullName.split('/');
+                if (!owner || !name) {
+                  return {
+                    owner: '',
+                    name: '',
+                    fullName: repoFullName,
+                    isPrivate: false,
+                    pullRequests: [],
+                    error: 'リポジトリ名が不正です (owner/repo 形式である必要があります)',
+                  } as RepositoryDashboardData;
+                }
+                return await fetchRepositoryPRs(settings.pat, owner, name);
+              })
+            ).then((repoResults) => {
+              setState((prev) => ({ ...prev, projects: repoResults, isLoading: false }));
+            })
+          : Promise.resolve();
+
+      const featuresFetchPromise = Promise.all(
         enabledFeatures.map(async (feature) => {
           try {
             const data = await feature.loadData({
@@ -313,6 +325,8 @@ export function App() {
           }
         })
       );
+
+      await Promise.all([repoFetchPromise, featuresFetchPromise]);
 
       setState((prev) => ({
         ...prev,
@@ -403,6 +417,7 @@ export function App() {
   const handleLogout = () => {
     if (window.confirm('ダッシュボードの設定とトークンを消去して初期化しますか？')) {
       clearSettings();
+      clearWorkflowRunsCache();
       setSettings({
         ...createDefaultSettings(),
       });

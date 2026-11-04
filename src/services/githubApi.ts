@@ -670,6 +670,13 @@ const workflowRunsCache = new Map<
 >();
 
 /**
+ * Actions ワークフロー実行履歴のメモリキャッシュをクリアする（手動更新・ログアウト・テスト用）
+ */
+export function clearWorkflowRunsCache(): void {
+  workflowRunsCache.clear();
+}
+
+/**
  * 単一リポジトリの直近の Actions ワークフロー実行履歴を取得する
  */
 export async function fetchRepositoryWorkflowRuns(

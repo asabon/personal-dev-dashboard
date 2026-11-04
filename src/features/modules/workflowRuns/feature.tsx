@@ -159,7 +159,11 @@ export const feature: DashboardFeatureDefinition = {
       category: '履歴なし・異常',
       label: 'API 取得エラー (403)',
       state: {
-        data: null,
+        data: {
+          runs: [],
+          warning: 'Actions 実行履歴の取得に失敗しました (403 Forbidden)',
+          incompleteCoverage: true,
+        },
         error: 'Actions 実行履歴の取得に失敗しました (403 Forbidden)',
         isLoading: false,
       },

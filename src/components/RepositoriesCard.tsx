@@ -97,7 +97,7 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
         {/* ヘッダー右側（スマホ時は2行目）: サマリーバッジ & PC開閉アイコン */}
         <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto pt-0.5 sm:pt-0">
           {/* サマリーバッジ */}
-          <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
             {erroredRepos.length > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
                 <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
