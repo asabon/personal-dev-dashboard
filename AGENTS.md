@@ -49,8 +49,9 @@ GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合
 - **`--body-file` の使用を義務化**:
   - シェルコマンドの `--body "..."` に複数行の Markdown やバッククォートを直接渡さないでください。PowerShell 等の展開処理によって意図しないバックスラッシュ（`\`）の混入やコードブロック破損が発生します。
   - 必ず `.gitignore` 対象の `scratch/` 配下に一時的な Markdown ファイル（例: `scratch/pr_body.md`）を書き出し、`gh pr create --body-file <path>` または `gh pr edit --body-file <path>` を使用してください。送信完了後は一時ファイルを直ちに削除してください。
-- **事前コードレビューの義務化（CodeRabbit レート制限対策）**:
-  - 新規 PR 作成時やレビュー修正の `git push` を行う前に、必ず [コードレビュールール (`.agents/rules/code-review.md`)](.agents/rules/code-review.md) およびスキル [`.agents/skills/code-review/SKILL.md`](.agents/skills/code-review/SKILL.md) に従い、独立した視点（サブエージェント等）で差分を事前点検・修正してから 1 回の Push にまとめてください。
+- **事前コードレビューの義務化とチェックリストの継続更新（CodeRabbit レート制限対策）**:
+  - 新規 PR 作成時やレビュー修正の `git push` を行う前に、必ず [コードレビュールール (`.agents/rules/code-review.md`)](.agents/rules/code-review.md) およびスキル [`.agents/skills/code-review/SKILL.md`](.agents/skills/code-review/SKILL.md) に従い、同スキルの `references/` 配下のチェックリストを用いて独立した視点（サブエージェント等）で差分を事前点検・修正してから 1 回の Push にまとめてください。
+  - また、CodeRabbit やユーザーから PR で新たな指摘を受けた際は、再発防止のため [`.agents/skills/code-review/references/`](.agents/skills/code-review/references/) の該当チェックリストに項目を追記してください。
 - 詳細ルール: [`.agents/rules/cli-markdown-escaping.md`](.agents/rules/cli-markdown-escaping.md), [`.agents/rules/windows-shell-commands.md`](.agents/rules/windows-shell-commands.md), [`.agents/rules/code-review.md`](.agents/rules/code-review.md)
 
 ---

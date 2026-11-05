@@ -10,6 +10,19 @@ description: Perform a comprehensive CodeRabbit-equivalent code review on curren
 
 ---
 
+## 📚 参照チェックリスト (`references/`)
+
+レビュー実施時は、変更内容に応じて同階層 `references/` 配下のチェックリストを必ず参照してください：
+
+1. **[TypeScript / React / UI チェックリスト (`references/typescript-react.md`)](references/typescript-react.md)**
+   - 状態遷移（`isLoading` vs `isSilent`）、部分失敗・空状態表示、Map/Set 集約キー衝突、進行中ジョブ保護、モバイル幅 Flexbox 折り返し
+2. **[GitHub API・レート制限・セキュリティ チェックリスト (`references/github-api-security.md`)](references/github-api-security.md)**
+   - レスポンス型防御、`total_count` と `per_page` の区別、`conclusion` 網羅性（`startup_failure` 等）、ファンアウト・レート制限保護、キャッシュクリア、PAT 秘匿
+3. **[テスト・ドキュメント整合性 チェックリスト (`references/testing-and-docs.md`)](references/testing-and-docs.md)**
+   - テスト間のキャッシュ分離、UI アサーション強度（`rerender`・エラーカード表示）、`storage.test.ts` 後方互換、`security.test.ts` 新 API カバレッジ、設計ドキュメント同期
+
+---
+
 ## 📋 実行手順
 
 ### 1. 変更差分の把握
@@ -20,15 +33,13 @@ git diff --stat main
 ```
 
 ### 2. 独立レビューサブエージェント (`research`) の起動
-実装者バイアスを排除するため、`invoke_subagent` で `research` サブエージェントを起動し、変更されたすべてのファイル（未追跡の新規ファイルを含む）を [`.agents/rules/code-review.md`](../../rules/code-review.md) のチェックリストに基づいて精査させます。
-
-サブエージェントへの指示例：
-- `git diff main` の差分および変更・新規作成されたソースコード・テスト・ドキュメントを全文確認すること
-- 状態遷移（`isLoading`, `isSilent`, `error`, `warning`, 空状態）、集約キーの衝突、モジュールキャッシュのテスト間干渉、GitHub API のレスポンス型防御と `conclusion` 網羅性、モバイル幅の Flexbox 折り返し、テストケースのアサーション強度、ドキュメント整合性を重点検査すること
+実装者バイアスを排除するため、`invoke_subagent` で `research` サブエージェントを起動し、以下を指示します：
+- `git diff main` の差分および変更・新規作成されたファイルを全文確認すること
+- `.agents/skills/code-review/references/` 配下の 3 つのチェックリストファイルを読み込み、すべての項目に照らして検査すること
 - 発見事項を重大度別（🔴 Critical / 🟠 Major / 🟡 Minor・Nitpick / ✅ 問題なし確認済み項目）に報告すること
 
 ### 3. 指摘事項の修正とローカル検証
-サブエージェントから報告された指摘事項のうち、修正すべき項目をローカルで修正し、以下をすべて通過させます。
+サブエージェントから報告された指摘事項のうち、修正すべき項目をすべてローカルで修正し、以下をすべて通過させます。
 1. `npm run typecheck`
 2. `npm test`
 3. `npm run build`
@@ -36,3 +47,9 @@ git diff --stat main
 
 ### 4. 結果報告（またはコミット・Push）
 レビュー結果と修正内容をユーザーに報告します。PR 作成・更新フローの中で実行した場合は、すべての修正と検証が完了してから 1 回のコミット・`git push` にまとめて反映します。
+
+---
+
+## 🔄 継続的改善（CodeRabbit 等の外部レビュー指摘からの学習）
+
+PR 作成後に CodeRabbit やユーザーから新たな観点のレビュー指摘を受けた場合は、コードの修正とあわせて **`references/` 配下の該当チェックリストファイルに再発防止のチェック項目を追記** してください。これにより、次回以降の `code-review` スキル実行時に同じパターンの指摘を未然に防ぐことができます。
