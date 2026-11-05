@@ -35,3 +35,4 @@ CodeRabbit 等で新たな指摘を受けた際は、再発防止のため本フ
   - すべての API 通信が `https://api.github.com/` のみに対して行われているか（外部プロキシ等の不使用）。
 - [ ] **PAT の秘匿**:
   - PAT が URL クエリパラメータやパス、コンソールログ（`console.log` / `warn` / `error`）に出力されず、`Authorization: Bearer` ヘッダーのみに格納されているか。
+

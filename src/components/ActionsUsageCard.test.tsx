@@ -53,7 +53,7 @@ describe('ActionsUsageCard', () => {
 
     // タイトルと全体サマリーバッジ
     expect(screen.getByText('Actions Usage')).toBeInTheDocument();
-    expect(screen.getByText('1/1 目安以下')).toBeInTheDocument();
+    expect(screen.getByText('All 目安以下')).toBeInTheDocument();
 
     // 詳細モードでは最初から詳細が展開されている
     expect(screen.getByText(/残り無料枠/)).toBeInTheDocument();
@@ -79,7 +79,7 @@ describe('ActionsUsageCard', () => {
 
     // タイトルと全体サマリーバッジ
     expect(screen.getByText('Actions Usage')).toBeInTheDocument();
-    expect(screen.getByText('1/1 目安以下')).toBeInTheDocument();
+    expect(screen.getByText('All 目安以下')).toBeInTheDocument();
 
     // 簡易モードでは正常時、親カードは初期折りたたまれている（子カードはまだ見えない）
     expect(screen.queryByText('OS別 実稼働内訳')).not.toBeInTheDocument();
@@ -117,9 +117,9 @@ describe('ActionsUsageCard', () => {
     };
 
     render(<ActionsUsageCard usage={criticalUsage} />);
-    // 親ヘッダーのサマリーバッジ（1アカウント中0アカウントが目安内なので赤色の0/1）
-    expect(screen.getByText('0/1 目安以下')).toBeInTheDocument();
-    expect(screen.getByText('0/1 目安以下').closest('.inline-flex')).toHaveClass('text-rose-300');
+    // 親ヘッダーのサマリーバッジ（1アカウント超過なので赤色の1 超過）
+    expect(screen.getByText('1 超過')).toBeInTheDocument();
+    expect(screen.getByText('1 超過').closest('.inline-flex')).toHaveClass('text-rose-300');
 
     const remainingNumber = screen.getByText('100');
     expect(remainingNumber).toHaveClass('text-rose-400');
@@ -167,7 +167,7 @@ describe('ActionsUsageCard', () => {
     expect(screen.getByText('2,313')).toBeInTheDocument();
 
     // 全体サマリーバッジ
-    expect(screen.getByText('2/2 目安以下')).toBeInTheDocument();
+    expect(screen.getByText('All 目安以下')).toBeInTheDocument();
   });
 
   it('複数アカウントのうち一方でエラーが発生しても、もう一方のアカウントは正常に表示されエラーメッセージが展開されること', () => {
@@ -312,7 +312,7 @@ describe('ActionsUsageCard', () => {
   });
 
   describe('サマリーバッジの判定ロジック', () => {
-    it('全アカウントが目安内の場合は「1/1 目安以下」（緑色）を表示すること', () => {
+    it('全アカウントが目安内の場合は「All 目安以下」（緑色）を表示すること', () => {
       const accounts: ActionsUsageAccount[] = [
         { name: 'asabon', type: 'user' },
       ];
@@ -321,12 +321,12 @@ describe('ActionsUsageCard', () => {
       };
 
       render(<ActionsUsageCard accounts={accounts} usageMap={usageMap} />);
-      const badge = screen.getByText('1/1 目安以下');
+      const badge = screen.getByText('All 目安以下');
       expect(badge).toBeInTheDocument();
       expect(badge.closest('.inline-flex')).toHaveClass('text-emerald-400');
     });
 
-    it('複数アカウントのうち一部がペース超過・注意の場合は「1/2 目安以下」（黄色）を表示すること', () => {
+    it('複数アカウントのうち一部がペース注意・一部が目安内の場合は「1 やや速い」（黄色）と「1 目安以下」（緑色）を表示すること', () => {
       const accounts: ActionsUsageAccount[] = [
         { name: 'safe-user', type: 'user' },
         { name: 'near-user', type: 'user' },
@@ -346,12 +346,15 @@ describe('ActionsUsageCard', () => {
       };
 
       render(<ActionsUsageCard accounts={accounts} usageMap={usageMap} />);
-      const badge = screen.getByText('1/2 目安以下');
-      expect(badge).toBeInTheDocument();
-      expect(badge.closest('.inline-flex')).toHaveClass('text-amber-300');
+      const nearBadge = screen.getByText('1 やや速い');
+      const underBadge = screen.getByText('1 目安以下');
+      expect(nearBadge).toBeInTheDocument();
+      expect(nearBadge.closest('.inline-flex')).toHaveClass('text-amber-300');
+      expect(underBadge).toBeInTheDocument();
+      expect(underBadge.closest('.inline-flex')).toHaveClass('text-emerald-400');
     });
 
-    it('全アカウントが超過している場合は「0/2 目安以下」（赤色）を表示すること', () => {
+    it('全アカウントが超過している場合は「2 超過」（赤色）を表示すること', () => {
       const accounts: ActionsUsageAccount[] = [
         { name: 'over-user-1', type: 'user' },
         { name: 'over-user-2', type: 'user' },
@@ -380,7 +383,7 @@ describe('ActionsUsageCard', () => {
       };
 
       render(<ActionsUsageCard accounts={accounts} usageMap={usageMap} />);
-      const badge = screen.getByText('0/2 目安以下');
+      const badge = screen.getByText('2 超過');
       expect(badge).toBeInTheDocument();
       expect(badge.closest('.inline-flex')).toHaveClass('text-rose-300');
     });
@@ -396,14 +399,14 @@ describe('ActionsUsageCard', () => {
       render(<ActionsUsageCard accounts={accounts} usageMap={usageMap} />);
 
       // 展開状態（デフォルト）
-      expect(screen.getByText('1/1 目安以下')).toBeInTheDocument();
+      expect(screen.getByText('All 目安以下')).toBeInTheDocument();
       expect(screen.getByText('asabon')).toBeInTheDocument();
 
       // 親ヘッダーをクリックして折りたたむ
       fireEvent.click(screen.getByText('Actions Usage'));
 
       // 折りたたみ状態でもサマリーバッジは表示され、子カード一覧は非表示
-      expect(screen.getByText('1/1 目安以下')).toBeInTheDocument();
+      expect(screen.getByText('All 目安以下')).toBeInTheDocument();
       expect(screen.queryByText('asabon')).not.toBeInTheDocument();
     });
   });

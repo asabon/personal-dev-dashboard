@@ -42,7 +42,7 @@ describe('App Demo Mode (?demo=true)', () => {
     // デモ用 Actions 使用量が個人・Orgの両方同時に表示されること
     expect(screen.getByText('demo-developer')).toBeInTheDocument();
     expect(screen.getByText('demo-org')).toBeInTheDocument();
-    expect(screen.getByText('2/2 目安以下')).toBeInTheDocument();
+    expect(screen.getByText('All 目安以下')).toBeInTheDocument();
     expect(screen.getByText('Self-hosted Runners')).toBeInTheDocument();
     expect(screen.getByText('Actions Status')).toBeInTheDocument();
     expect(screen.getByText('Open PRs')).toBeInTheDocument();

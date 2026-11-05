@@ -49,7 +49,7 @@ describe('RepositoriesCard', () => {
     },
   ];
 
-  it('一部の PR が失敗している場合は「1/2 Passed」サマリーバッジ（黄色）が表示されること', () => {
+  it('一部の PR が失敗・一部が成功している場合は「1 Failed」と「1 Passed」が個別に表示されること', () => {
     render(
       <RepositoriesCard
         repositories={['asabon/personal-dev-dashboard', 'octocat/frontend-app']}
@@ -59,12 +59,15 @@ describe('RepositoriesCard', () => {
 
     expect(screen.getByText('Open PRs')).toBeInTheDocument();
     expect(screen.getByText('2件')).toBeInTheDocument();
-    const badge = screen.getByText('1/2 Passed');
-    expect(badge).toBeInTheDocument();
-    expect(badge.closest('.inline-flex')).toHaveClass('text-amber-300');
+    const failedBadges = screen.getAllByText('1 Failed');
+    const passedBadges = screen.getAllByText('1 Passed');
+    expect(failedBadges.length).toBeGreaterThanOrEqual(1);
+    expect(passedBadges.length).toBeGreaterThanOrEqual(1);
+    expect(failedBadges[0].closest('.inline-flex')).toHaveClass('text-rose-300');
+    expect(passedBadges[0].closest('.inline-flex')).toHaveClass('text-emerald-400');
   });
 
-  it('全 PR が成功している場合は「1/1 Passed」（緑色）が表示されること', () => {
+  it('全 PR が成功している場合は「All Passed」（緑色）が表示されること', () => {
     render(
       <RepositoriesCard
         repositories={['asabon/personal-dev-dashboard']}
@@ -72,12 +75,12 @@ describe('RepositoriesCard', () => {
       />
     );
 
-    const badge = screen.getByText('1/1 Passed');
-    expect(badge).toBeInTheDocument();
-    expect(badge.closest('.inline-flex')).toHaveClass('text-emerald-400');
+    const badges = screen.getAllByText('All Passed');
+    expect(badges.length).toBeGreaterThanOrEqual(1);
+    expect(badges[0].closest('.inline-flex')).toHaveClass('text-emerald-400');
   });
 
-  it('全 PR が失敗している場合は「0/1 Passed」（赤色）が表示されること', () => {
+  it('全 PR が失敗している場合は「1 Failed」（赤色）が表示されること', () => {
     render(
       <RepositoriesCard
         repositories={['octocat/frontend-app']}
@@ -85,12 +88,12 @@ describe('RepositoriesCard', () => {
       />
     );
 
-    const badge = screen.getByText('0/1 Passed');
-    expect(badge).toBeInTheDocument();
-    expect(badge.closest('.inline-flex')).toHaveClass('text-rose-300');
+    const badges = screen.getAllByText('1 Failed');
+    expect(badges.length).toBeGreaterThanOrEqual(1);
+    expect(badges[0].closest('.inline-flex')).toHaveClass('text-rose-300');
   });
 
-  it('実行中の PR がある場合は「X Running」バッジが併記されること', () => {
+  it('実行中の PR と成功 PR がある場合は「1 Running」と「1 Passed」が併記されること', () => {
     const runningProject: RepositoryDashboardData = {
       owner: 'octocat',
       name: 'api-gateway',
@@ -120,8 +123,8 @@ describe('RepositoriesCard', () => {
       />
     );
 
-    const passedBadge = screen.getByText('1/2 Passed');
-    const runningBadge = screen.getByText('1 Running');
+    const passedBadge = screen.getAllByText('1 Passed')[0];
+    const runningBadge = screen.getAllByText('1 Running')[0];
     expect(passedBadge).toBeInTheDocument();
     expect(runningBadge).toBeInTheDocument();
     // Running が Passed より前に表示されること（進行中が左、状態が右）
@@ -251,8 +254,8 @@ describe('RepositoriesCard', () => {
       />
     );
 
-    // サマリーバッジには0/1 Passedが表示されるが、中身は折りたたまれている
-    expect(screen.getByText('0/1 Passed')).toBeInTheDocument();
+    // サマリーバッジには1 Failedが表示されるが、中身は折りたたまれている
+    expect(screen.getByText('1 Failed')).toBeInTheDocument();
     expect(screen.queryByText('octocat/frontend-app')).not.toBeInTheDocument();
 
     // ヘッダークリックで展開される

@@ -7,7 +7,6 @@ import {
   XCircle,
   Loader2,
   CheckCircle2,
-  AlertTriangle,
   Settings,
 } from 'lucide-react';
 import type { RepositoryDashboardData } from '../types';
@@ -35,6 +34,7 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
   const failedPrs = allPrs.filter((pr) => pr.overallCiState === 'FAILURE');
   const runningPrs = allPrs.filter((pr) => pr.overallCiState === 'PENDING');
   const passedPrs = allPrs.filter((pr) => pr.overallCiState === 'SUCCESS');
+  const noCiPrs = allPrs.filter((pr) => pr.overallCiState === 'NONE');
 
   // リポジトリ自体のエラー
   const erroredRepos = projects.filter((p) => Boolean(p.error));
@@ -109,33 +109,38 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                 0リポジトリ
               </span>
             )}
-            {!isLoading && runningPrs.length > 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
-                <Loader2 className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
-                <span>{runningPrs.length} Running</span>
-              </span>
-            )}
             {!isLoading && repositories.length > 0 && totalPrs > 0 && (
               passedPrs.length === totalPrs ? (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
-                  <span>{passedPrs.length}/{totalPrs} Passed</span>
-                </span>
-              ) : failedPrs.length === 0 ? (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
-                  <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span>{passedPrs.length}/{totalPrs} Passed</span>
-                </span>
-              ) : passedPrs.length === 0 ? (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
-                  <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
-                  <span>0/{totalPrs} Passed</span>
+                  <span>All Passed</span>
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
-                  <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span>{passedPrs.length}/{totalPrs} Passed</span>
-                </span>
+                <>
+                  {runningPrs.length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
+                      <Loader2 className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
+                      <span>{runningPrs.length} Running</span>
+                    </span>
+                  )}
+                  {failedPrs.length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
+                      <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                      <span>{failedPrs.length} Failed</span>
+                    </span>
+                  )}
+                  {passedPrs.length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
+                      <CheckCircle2 className="w-3 h-3 shrink-0" />
+                      <span>{passedPrs.length} Passed</span>
+                    </span>
+                  )}
+                  {noCiPrs.length > 0 && (
+                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-400 shrink-0">
+                      {noCiPrs.length} No CI
+                    </span>
+                  )}
+                </>
               )
             )}
             {!isLoading && repositories.length > 0 && totalPrs === 0 && (

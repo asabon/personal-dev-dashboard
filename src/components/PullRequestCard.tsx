@@ -31,30 +31,36 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact 
 
   const getStatusBadge = () => {
     if (totalChecks > 0) {
-      if (failedChecks > 0) {
-        return (
-          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 font-mono shrink-0">
-            <XCircle className="w-3.5 h-3.5 shrink-0" />
-            <span>{failedChecks} failed</span>
-          </span>
-        );
-      }
-      if (runningChecks > 0) {
-        return (
-          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono shrink-0">
-            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-            <span>{runningChecks} running</span>
-          </span>
-        );
-      }
-      if (passedChecks === totalChecks) {
+      if (failedChecks === 0 && runningChecks === 0 && passedChecks > 0) {
         return (
           <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono shrink-0">
             <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-            <span>All passed ({passedChecks}/{totalChecks})</span>
+            <span>All Passed</span>
           </span>
         );
       }
+      return (
+        <div className="flex flex-wrap items-center justify-end gap-1 font-mono">
+          {runningChecks > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+              <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+              <span>{runningChecks} Running</span>
+            </span>
+          )}
+          {failedChecks > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
+              <XCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{failedChecks} Failed</span>
+            </span>
+          )}
+          {passedChecks > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>{passedChecks} Passed</span>
+            </span>
+          )}
+        </div>
+      );
     }
 
     switch (pr.overallCiState) {
@@ -62,7 +68,7 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact 
         return (
           <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
             <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-            <span>All passed</span>
+            <span>All Passed</span>
           </span>
         );
       case 'FAILURE':

@@ -23,7 +23,7 @@ export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false }) =
   const failedPrs = repo.pullRequests.filter((pr) => pr.overallCiState === 'FAILURE');
   const runningPrs = repo.pullRequests.filter((pr) => pr.overallCiState === 'PENDING');
   const passedPrs = repo.pullRequests.filter((pr) => pr.overallCiState === 'SUCCESS');
-  const hasFailure = failedPrs.length > 0;
+  const noCiPrs = repo.pullRequests.filter((pr) => pr.overallCiState === 'NONE');
 
   // isCompact 時は初期折りたたみ（クリックで開閉）
   const [isExpanded, setIsExpanded] = useState(!isCompact);
@@ -65,28 +65,47 @@ export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false }) =
               <Globe className="w-2.5 h-2.5" /> Public
             </span>
           )}
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono shrink-0">
+            {totalPrs}件
+          </span>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0 font-mono text-xs">
           {totalPrs === 0 ? (
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
-              0 PRs
+            <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
+              0 PR
             </span>
-          ) : failedPrs.length > 0 ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0 font-mono">
-              <XCircle className="w-3.5 h-3.5 shrink-0" />
-              <span>{failedPrs.length}/{totalPrs} {totalPrs === 1 ? 'PR' : 'PRs'} failed</span>
-            </span>
-          ) : runningPrs.length > 0 ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0 font-mono">
-              <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-              <span>{runningPrs.length}/{totalPrs} {totalPrs === 1 ? 'PR' : 'PRs'} running</span>
+          ) : passedPrs.length === totalPrs ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>All Passed</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0 font-mono">
-              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-              <span>{passedPrs.length}/{totalPrs} {totalPrs === 1 ? 'PR' : 'PRs'} passed</span>
-            </span>
+            <>
+              {runningPrs.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/20 shrink-0">
+                  <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin shrink-0" />
+                  <span>{runningPrs.length} Running</span>
+                </span>
+              )}
+              {failedPrs.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold bg-rose-500/10 text-rose-300 border border-rose-500/30 shrink-0">
+                  <XCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                  <span>{failedPrs.length} Failed</span>
+                </span>
+              )}
+              {passedPrs.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>{passedPrs.length} Passed</span>
+                </span>
+              )}
+              {noCiPrs.length > 0 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
+                  {noCiPrs.length} No CI
+                </span>
+              )}
+            </>
           )}
 
           <div className="p-0.5 text-slate-400 hover:text-slate-200">
