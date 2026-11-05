@@ -196,7 +196,7 @@ describe('ActionsStatusCard', () => {
     expect(screen.getByText('直近の Actions 実行状況を確認中...')).toBeInTheDocument();
   });
 
-  it('簡易表示モード（isCompact=true）では初期状態で折りたたまれ、クリックで展開できること', () => {
+  it('簡易表示モード（isCompact=true）では初期状態で折りたたまれ、クリックまたは Enter/Space キーで展開できること', () => {
     render(
       <ActionsStatusCard
         runs={[failedMainRun]}
@@ -208,7 +208,100 @@ describe('ActionsStatusCard', () => {
 
     expect(screen.queryByText('Main CI')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('Actions Status'));
+    const headerButton = screen.getByRole('button', { expanded: false });
+    fireEvent.keyDown(headerButton, { key: 'Enter' });
     expect(screen.getByText('Main CI')).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole('button', { expanded: true }), { key: ' ' });
+    expect(screen.queryByText('Main CI')).not.toBeInTheDocument();
+  });
+
+  it('失敗後に cancelled / skipped / neutral で完了した別 Run が来ても、成功するまでは未解決の失敗が表示され続けること', () => {
+    const laterCancelledRun: WorkflowRunItem = {
+      ...failedMainRun,
+      id: 401,
+      runNumber: 95,
+      status: 'completed',
+      conclusion: 'cancelled',
+      createdAt: '2026-09-25T11:40:00Z',
+      updatedAt: '2026-09-25T11:42:00Z',
+    };
+    const laterSkippedRun: WorkflowRunItem = {
+      ...failedMainRun,
+      id: 402,
+      runNumber: 96,
+      status: 'completed',
+      conclusion: 'skipped',
+      createdAt: '2026-09-25T11:45:00Z',
+      updatedAt: '2026-09-25T11:46:00Z',
+    };
+
+    const attention = selectAttentionWorkflowRuns([
+      failedMainRun,
+      laterCancelledRun,
+      laterSkippedRun,
+    ]);
+    expect(attention).toHaveLength(1);
+    expect(attention[0].id).toBe(failedMainRun.id);
+  });
+
+  it('古い Run が後から再実行（runStartedAt が新しい）されて失敗した場合、その失敗が最新状態として表示されること', () => {
+    const newerCreatedSuccess: WorkflowRunItem = {
+      ...failedMainRun,
+      id: 502,
+      runNumber: 95,
+      status: 'completed',
+      conclusion: 'success',
+      createdAt: '2026-09-25T11:40:00Z',
+      runStartedAt: '2026-09-25T11:40:00Z',
+      updatedAt: '2026-09-25T11:45:00Z',
+    };
+    const olderCreatedRerunFailed: WorkflowRunItem = {
+      ...failedMainRun,
+      id: 501,
+      runNumber: 94,
+      runAttempt: 2,
+      status: 'completed',
+      conclusion: 'failure',
+      createdAt: '2026-09-25T11:30:00Z',
+      runStartedAt: '2026-09-25T12:00:00Z',
+      updatedAt: '2026-09-25T12:05:00Z',
+    };
+
+    const attention = selectAttentionWorkflowRuns([
+      newerCreatedSuccess,
+      olderCreatedRerunFailed,
+    ]);
+    expect(attention).toHaveLength(1);
+    expect(attention[0].id).toBe(501);
+  });
+
+  it('同一ブランチ名のフォーク PR でも headRepositoryFullName または pullRequestNumber が異なれば別スコープとして扱われること', () => {
+    const forkAFailed: WorkflowRunItem = {
+      ...runningPrRun,
+      id: 601,
+      runNumber: 201,
+      headBranch: 'main',
+      headRepositoryFullName: 'fork-a/frontend-app',
+      status: 'completed',
+      conclusion: 'failure',
+      createdAt: '2026-09-25T11:10:00Z',
+      updatedAt: '2026-09-25T11:15:00Z',
+    };
+    const forkBPassed: WorkflowRunItem = {
+      ...runningPrRun,
+      id: 602,
+      runNumber: 202,
+      headBranch: 'main',
+      headRepositoryFullName: 'fork-b/frontend-app',
+      status: 'completed',
+      conclusion: 'success',
+      createdAt: '2026-09-25T11:20:00Z',
+      updatedAt: '2026-09-25T11:25:00Z',
+    };
+
+    const attention = selectAttentionWorkflowRuns([forkAFailed, forkBPassed]);
+    expect(attention).toHaveLength(1);
+    expect(attention[0].id).toBe(601);
   });
 });

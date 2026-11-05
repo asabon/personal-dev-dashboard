@@ -18,6 +18,9 @@ interface RepoCardProps {
   isCompact?: boolean;
 }
 
+/**
+ * 単一リポジトリの Open な Pull Request 一覧とリポジトリ単位の CI ステータス集約を表示するカード
+ */
 export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false }) => {
   const totalPrs = repo.pullRequests.length;
   const failedPrs = repo.pullRequests.filter((pr) => pr.overallCiState === 'FAILURE');
@@ -84,7 +87,7 @@ export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false }) =
             <>
               {runningPrs.length > 0 && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/20 shrink-0">
-                  <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin shrink-0" />
+                  <Loader2 className="w-3.5 h-3.5 text-amber-400 motion-safe:animate-spin shrink-0" />
                   <span>{runningPrs.length} Running</span>
                 </span>
               )}

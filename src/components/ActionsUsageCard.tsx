@@ -24,6 +24,9 @@ interface AccountUsageCardProps {
   isCompact?: boolean;
 }
 
+/**
+ * 単一アカウント（個人または Organization）の GitHub Actions 無料枠消費量とペース予測を表示するサブカード
+ */
 export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
   account,
   usage,
@@ -320,6 +323,9 @@ interface ActionsUsageCardProps {
   onSelectAccount?: (accountName: string) => void;
 }
 
+/**
+ * 個人および Organization アカウントの GitHub Actions 無料枠使用量を統合表示するダッシュボードカード
+ */
 export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
   accounts = [],
   usageMap = {},

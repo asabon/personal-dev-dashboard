@@ -262,4 +262,54 @@ describe('RepositoriesCard', () => {
     fireEvent.click(screen.getByText('Open PRs'));
     expect(screen.getByText('octocat/frontend-app')).toBeInTheDocument();
   });
+
+  it('PR のチェックに SUCCESS と SKIPPED が混在する場合、All Passed ではなく Passed と Skipped の件数バッジが表示されること', () => {
+    const prWithSkippedCheck: RepositoryDashboardData = {
+      owner: 'asabon',
+      name: 'personal-dev-dashboard',
+      fullName: 'asabon/personal-dev-dashboard',
+      isPrivate: false,
+      pullRequests: [
+        {
+          id: 'pr-skipped',
+          number: 99,
+          title: 'feat: conditional job test',
+          url: 'https://github.com/asabon/personal-dev-dashboard/pull/99',
+          updatedAt: new Date().toISOString(),
+          author: { login: 'asabon', avatarUrl: '' },
+          headBranch: 'feat/skipped',
+          headSha: '1234567890abcdef',
+          shortSha: '1234567',
+          overallCiState: 'SUCCESS',
+          checks: [
+            {
+              id: 'c-pass',
+              name: 'build',
+              status: 'COMPLETED',
+              conclusion: 'SUCCESS',
+              detailsUrl: '',
+            },
+            {
+              id: 'c-skip',
+              name: 'deploy-preview',
+              status: 'COMPLETED',
+              conclusion: 'SKIPPED',
+              detailsUrl: '',
+            },
+          ],
+        },
+      ],
+    };
+
+    render(
+      <RepositoriesCard
+        repositories={['asabon/personal-dev-dashboard']}
+        projects={[prWithSkippedCheck]}
+        isCompact={false}
+      />
+    );
+
+    expect(screen.getByText('1 Skipped')).toBeInTheDocument();
+    expect(screen.getByText('2 Checks (1 passed, 1 skipped)')).toBeInTheDocument();
+  });
 });

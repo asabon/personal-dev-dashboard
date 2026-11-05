@@ -40,6 +40,9 @@ const criticalRuns: WorkflowRunItem[] = DEMO_WORKFLOW_RUNS.map((run) => ({
   conclusion: 'failure',
 }));
 
+/**
+ * Actions Status 機能のデータから画面上部サマリーバー向けのアラート一覧を生成する
+ */
 export function getWorkflowRunsAlerts(data: unknown): FeatureAlert[] {
   const featureData = data as WorkflowRunsFeatureData | null;
   const rawRuns = featureData?.runs ?? [];
@@ -64,7 +67,7 @@ export function getWorkflowRunsAlerts(data: unknown): FeatureAlert[] {
       id: 'workflow-runs-running',
       label: `Actions 実行中: ${runningCount}件`,
       targetId: 'workflow-runs-section',
-      icon: <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" />,
+      icon: <Loader2 className="w-3.5 h-3.5 text-amber-400 motion-safe:animate-spin" />,
       tone: 'warning',
     });
   }
@@ -82,6 +85,9 @@ export function getWorkflowRunsAlerts(data: unknown): FeatureAlert[] {
   return alerts;
 }
 
+/**
+ * Actions Status 機能モジュール用のカードラッパーコンポーネント
+ */
 const WorkflowRunsFeatureCard: React.FC<FeatureCardProps> = ({ state, isCompact }) => {
   const data = state.data as WorkflowRunsFeatureData | null;
   return (

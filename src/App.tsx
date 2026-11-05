@@ -287,7 +287,18 @@ export function App() {
                     error: 'リポジトリ名が不正です (owner/repo 形式である必要があります)',
                   } as RepositoryDashboardData;
                 }
-                return await fetchRepositoryPRs(settings.pat, owner, name);
+                try {
+                  return await fetchRepositoryPRs(settings.pat, owner, name);
+                } catch (err: any) {
+                  return {
+                    owner,
+                    name,
+                    fullName: repoFullName,
+                    isPrivate: false,
+                    pullRequests: [],
+                    error: err?.message || 'リポジトリ情報の取得に失敗しました',
+                  } as RepositoryDashboardData;
+                }
               })
             ).then((repoResults) => {
               setState((prev) => ({ ...prev, projects: repoResults, isLoading: false }));

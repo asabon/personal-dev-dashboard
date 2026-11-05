@@ -139,6 +139,14 @@ export interface WorkflowRunItem {
   id: number;
   /** ワークフロー定義 ID (GitHub Actions workflow_id) */
   workflowId?: number;
+  /** Pull Request 番号 (PR トリガー時、GitHub API から返却された場合) */
+  pullRequestNumber?: number;
+  /** Head リポジトリのフルネーム (フォーク PR 識別用) */
+  headRepositoryFullName?: string;
+  /** 再実行試行回数 (1 = 初回実行, 2+ = Rerun) */
+  runAttempt?: number;
+  /** 最新試行の開始日時 (ISO 8601、Rerun 時の実行順判定用) */
+  runStartedAt?: string;
   /** リポジトリフルネーム (例: "owner/repo") */
   repoFullName: string;
   /** ワークフロー名 (例: "CI", "Deploy to GitHub Pages") */

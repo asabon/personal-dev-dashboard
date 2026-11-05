@@ -162,4 +162,56 @@ describe('githubApi - Actions 使用量および倍率計算テスト', () => {
     expect(result.warning).toContain('先頭 20 リポジトリのみ');
     expect(result.warning).toContain('残り 2 件をスキップ');
   });
+
+  it('fetchRepositoryWorkflowRuns は再実行 (run_attempt > 1) が cancelled の場合に直前の試行から failure を復元すること', async () => {
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/attempts/1')) {
+        return new Response(
+          JSON.stringify({
+            id: 777,
+            run_attempt: 1,
+            status: 'completed',
+            conclusion: 'failure',
+          }),
+          { status: 200 }
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          total_count: 1,
+          workflow_runs: [
+            {
+              id: 777,
+              workflow_id: 10,
+              name: 'CI',
+              display_title: 'Rerun cancelled after failure',
+              run_number: 50,
+              run_attempt: 2,
+              event: 'push',
+              status: 'completed',
+              conclusion: 'cancelled',
+              html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/777',
+              head_branch: 'main',
+              head_sha: '1234567890abcdef',
+              actor: { login: 'asabon', avatar_url: '' },
+              created_at: '2026-09-25T10:00:00Z',
+              updated_at: '2026-09-25T10:10:00Z',
+            },
+          ],
+        }),
+        { status: 200 }
+      );
+    });
+
+    const result = await fetchRepositoryWorkflowRuns(
+      TEST_PAT,
+      'asabon',
+      'personal-dev-dashboard',
+      30
+    );
+
+    expect(result.runs).toHaveLength(1);
+    expect(result.runs[0].conclusion).toBe('failure');
+  });
 });

@@ -27,14 +27,20 @@ CodeRabbit 等で新たな指摘を受けた際は、再発防止のため本フ
 - [ ] **進行中（Active / `in_progress`）状態の保護**:
   - 「同一ワークフローの最新実行のみを採用する」集約処理において、長時間実行中の古い `in_progress` Run が、後から開始して先に完了した `success` Run によって上書き・隠蔽されないか。
 - [ ] **サマリーバッジの個数表示と `All` 表記の整合性**:
-  - 状態別個数バッジ（`Running`, `Failed`, `Passed` 等）を並記する際、すべてのアイテムが正常完了しているときのみ `All ...`（`All Passed`, `All Online`, `All 目安以下`）を表示し、一部が異なる状態のときは各状態の個数バッジ（0件は非表示、`No CI` 等のその他状態も含む）を色固定で並記しているか。
+  - 状態別個数バッジ（`Running`, `Failed`, `Passed` 等）を並記する際、すべてのアイテムが正常完了しているとき（`passedChecks === totalChecks` 等）のみ `All ...`（`All Passed`, `All Online`, `All 目安以下`）を表示し、一部が異なる状態のときは各状態の個数バッジ（0件は非表示、`No CI` や `SKIPPED` / `NEUTRAL` 等のその他状態も含む）を色固定で並記しているか。
+- [ ] **独立した並列非同期処理（`Promise.all`）の部分失敗耐性**:
+  - 複数リポジトリのデータを `Promise.all` で並列取得する際、1つのリポジトリの取得失敗で全体が reject されないよう、各要素の非同期処理内で `try / catch` してエラーレコードを返しているか。
 - [ ] **Feature Module 契約の遵守**:
   - 任意カード追加・変更時に `src/App.tsx` や `src/components/SettingsModal.tsx`、`src/features/registry.ts` に機能固有の分岐を追加していないか。
 
 ---
 
-## 3. レスポンシブ UI・Tailwind CSS レイアウト
+## 3. レスポンシブ UI・アクセシビリティ・Tailwind CSS レイアウト
 
+- [ ] **アコーディオン開閉ヘッダーのキーボード操作対応**:
+  - クリックで開閉するカードヘッダー（`div` 等）に `role="button"`、`tabIndex={0}`、`aria-expanded={!isCollapsed}`、および `Enter` / `Space` キーの `onKeyDown` ハンドラが設定されているか。
+- [ ] **アニメーションの視差効果軽減（Reduced Motion）対応**:
+  - スピナー等の回転アニメーションに `motion-safe:animate-spin` を使用し、OS の視覚効果軽減設定を尊重しているか。
 - [ ] **モバイル幅（`sm:` 未満・360px幅）での横あふれ防止**:
   - `flex-wrap` コンテナ内の子要素に不要な `shrink-0` が付いて折り返しを阻害していないか。
   - ヘッダー右側のサマリーバッジ群など、複数バッジ（エラー＋Running＋Failed 等）が同時に並びうるコンテナに `flex-wrap` が指定されているか。

@@ -26,6 +26,9 @@ interface RunnerCardProps {
   isCompact?: boolean;
 }
 
+/**
+ * 個別の Self-hosted Runner の稼働状態・OS・ラベルを表示するサブカードコンポーネント
+ */
 export const RunnerCard: React.FC<RunnerCardProps> = ({ runner, isCompact = false }) => {
   const isOnline = runner.status === 'online';
   const isBusy = runner.busy;
@@ -121,6 +124,9 @@ export const RunnerCard: React.FC<RunnerCardProps> = ({ runner, isCompact = fals
   );
 };
 
+/**
+ * 監視対象 Organization およびリポジトリの Self-hosted Runners 稼働状況を一覧表示するダッシュボードカード
+ */
 export const RunnersCard: React.FC<RunnersCardProps> = ({
   runners,
   isLoading,

@@ -25,6 +25,9 @@ export interface ActionsStatusCardProps {
   isCompact?: boolean;
 }
 
+/**
+ * ワークフロー実行が完了かつ失敗系 conclusion かどうかを判定する
+ */
 export function isWorkflowRunFailed(run: WorkflowRunItem): boolean {
   return (
     run.status === 'completed' &&
@@ -35,23 +38,32 @@ export function isWorkflowRunFailed(run: WorkflowRunItem): boolean {
   );
 }
 
+/**
+ * ワークフロー実行が現在進行中または待機中かどうかを判定する
+ */
 export function isWorkflowRunActive(run: WorkflowRunItem): boolean {
   return run.status !== 'completed';
 }
 
+/**
+ * ワークフロー実行が完了かつ成功（success）かどうかを判定する
+ */
 export function isWorkflowRunPassed(run: WorkflowRunItem): boolean {
   return run.status === 'completed' && run.conclusion === 'success';
 }
 
 /**
- * 同一ワークフロー（リポジトリ × ワークフロー名 × PRブランチまたはデフォルト）ごとに最新の実行を採用し、
+ * 同一ワークフロー（リポジトリ × ワークフロー ID/名 × PR スコープまたはデフォルト）ごとに最新の実行を採用し、
  * 「現在実行中（Running/Queued）」または「最新実行が失敗（Failed）のまま未解決」のものだけを抽出する。
  * 失敗後に再実行や後続コミット・後続タグで同ワークフローが成功した場合は自動的に除外される。
+ * また、cancelled / skipped / neutral / stale で完了した実行は未解決の失敗を上書きしない。
  */
 export function selectAttentionWorkflowRuns(runs: WorkflowRunItem[]): WorkflowRunItem[] {
-  // 新しい順（runNumber または updatedAt/createdAt の降順）に並べてから各ワークフローの最新状態を判定
+  // 新しい順（再実行時は最新試行の開始・更新日時を優先し、同日時は runNumber の降順）に並べて最新状態を判定
   const sortedByNewest = [...runs].sort((a, b) => {
-    const timeDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    const aExecTime = new Date(a.runStartedAt || a.updatedAt || a.createdAt).getTime();
+    const bExecTime = new Date(b.runStartedAt || b.updatedAt || b.createdAt).getTime();
+    const timeDiff = bExecTime - aExecTime;
     if (timeDiff !== 0) return timeDiff;
     return b.runNumber - a.runNumber;
   });
@@ -59,12 +71,22 @@ export function selectAttentionWorkflowRuns(runs: WorkflowRunItem[]): WorkflowRu
   const latestByWorkflowKey = new Map<string, WorkflowRunItem>();
 
   for (const run of sortedByNewest) {
-    // PR トリガーはブランチ単位、それ以外（push / release / schedule / workflow_dispatch 等）はワークフロー単位で最新状態を追跡
+    // PR トリガーは PR 番号（未取得時は head リポジトリ + ブランチ）、それ以外はワークフロー単位で最新状態を追跡
     const isPullRequest =
       run.event === 'pull_request' || run.event === 'pull_request_target';
-    const scope = isPullRequest ? `pr:${run.headBranch}` : 'workflow-latest';
+    const scope = isPullRequest
+      ? `pr:${run.pullRequestNumber ?? `${run.headRepositoryFullName ?? run.repoFullName}:${run.headBranch}`}`
+      : 'workflow-latest';
     const workflowKey = run.workflowId ?? run.workflowName;
     const key = `${run.repoFullName}::${workflowKey}::${scope}`;
+
+    if (
+      run.status === 'completed' &&
+      !isWorkflowRunPassed(run) &&
+      !isWorkflowRunFailed(run)
+    ) {
+      continue;
+    }
 
     if (!latestByWorkflowKey.has(key)) {
       latestByWorkflowKey.set(key, run);
@@ -95,6 +117,9 @@ export function selectAttentionWorkflowRuns(runs: WorkflowRunItem[]): WorkflowRu
   return attentionRuns;
 }
 
+/**
+ * ISO 8601 日時文字列を現在時刻からの相対時間表記（分・時間・日前）に変換する
+ */
 const formatRelativeTime = (iso: string) => {
   const diff = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diff / 60000);
@@ -105,6 +130,9 @@ const formatRelativeTime = (iso: string) => {
   return `${days}日前`;
 };
 
+/**
+ * トリガーイベント種別に応じたバッジ要素を返す
+ */
 const getEventBadge = (event: string) => {
   switch (event) {
     case 'release':
@@ -146,11 +174,14 @@ const getEventBadge = (event: string) => {
   }
 };
 
+/**
+ * ワークフロー実行行の右端に表示するステータスバッジ要素を返す
+ */
 const getRunStatusBadge = (run: WorkflowRunItem) => {
   if (isWorkflowRunActive(run)) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono shrink-0">
-        <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+        <Loader2 className="w-3 h-3 motion-safe:animate-spin shrink-0" />
         <span>Running</span>
       </span>
     );
@@ -163,13 +194,19 @@ const getRunStatusBadge = (run: WorkflowRunItem) => {
   );
 };
 
+/**
+ * ワークフロー実行行の左端に表示するステータスアイコン要素を返す
+ */
 const getRunStatusIcon = (run: WorkflowRunItem) => {
   if (isWorkflowRunActive(run)) {
-    return <Loader2 className="w-4 h-4 text-amber-400 animate-spin shrink-0 mt-0.5" />;
+    return <Loader2 className="w-4 h-4 text-amber-400 motion-safe:animate-spin shrink-0 mt-0.5" />;
   }
   return <XCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />;
 };
 
+/**
+ * 実行中および未解決の失敗状態にある GitHub Actions ワークフローを監視するダッシュボードカード
+ */
 export const ActionsStatusCard: React.FC<ActionsStatusCardProps> = ({
   runs,
   isLoading,
@@ -189,6 +226,10 @@ export const ActionsStatusCard: React.FC<ActionsStatusCardProps> = ({
     setIsCollapsed(isCompact);
   }, [isCompact]);
 
+  const handleToggleCollapse = () => {
+    setIsCollapsed((prev) => !prev);
+  };
+
   return (
     <div
       id="workflow-runs-section"
@@ -197,9 +238,18 @@ export const ActionsStatusCard: React.FC<ActionsStatusCardProps> = ({
       {/* Background ambient glow */}
       <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Header Row (クリックで開閉) */}
+      {/* Header Row (クリックまたは Enter/Space キーで開閉) */}
       <div
-        onClick={() => setIsCollapsed(!isCollapsed)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={!isCollapsed}
+        onClick={handleToggleCollapse}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleToggleCollapse();
+          }
+        }}
         className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 cursor-pointer hover:bg-slate-900/40 transition-colors select-none"
       >
         <div className="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 w-full sm:w-auto">
@@ -243,7 +293,7 @@ export const ActionsStatusCard: React.FC<ActionsStatusCardProps> = ({
             )}
             {!isLoading && runningRuns.length > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
-                <Loader2 className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
+                <Loader2 className="w-3 h-3 text-amber-400 motion-safe:animate-spin shrink-0" />
                 <span>{runningRuns.length} Running</span>
               </span>
             )}
@@ -290,7 +340,7 @@ export const ActionsStatusCard: React.FC<ActionsStatusCardProps> = ({
 
           {isLoading ? (
             <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+              <Loader2 className="w-4 h-4 motion-safe:animate-spin text-indigo-400" />
               <span>直近の Actions 実行状況を確認中...</span>
             </div>
           ) : attentionRuns.length === 0 ? (

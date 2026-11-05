@@ -20,6 +20,9 @@ interface RepositoriesCardProps {
   onOpenSettings?: () => void;
 }
 
+/**
+ * 監視対象リポジトリ群の Open な Pull Request 一覧と CI 状況を統合表示するダッシュボードカード
+ */
 export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
   repositories,
   projects,
@@ -51,6 +54,10 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
     setIsCollapsed(isCompact);
   }, [isCompact]);
 
+  const handleToggleCollapse = () => {
+    setIsCollapsed((prev) => !prev);
+  };
+
   return (
     <div
       id="repositories-section"
@@ -59,9 +66,18 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
       {/* Background ambient glow */}
       <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Header Row (クリックで開閉) */}
+      {/* Header Row (クリックまたは Enter/Space キーで開閉) */}
       <div
-        onClick={() => setIsCollapsed(!isCollapsed)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={!isCollapsed}
+        onClick={handleToggleCollapse}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleToggleCollapse();
+          }
+        }}
         className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 cursor-pointer hover:bg-slate-900/40 transition-colors select-none"
       >
         <div className="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 w-full sm:w-auto">
@@ -119,7 +135,7 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                 <>
                   {runningPrs.length > 0 && (
                     <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
-                      <Loader2 className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
+                      <Loader2 className="w-3 h-3 text-amber-400 motion-safe:animate-spin shrink-0" />
                       <span>{runningPrs.length} Running</span>
                     </span>
                   )}
@@ -196,7 +212,7 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
             </div>
           ) : isLoading ? (
             <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2 mt-2">
-              <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+              <Loader2 className="w-4 h-4 motion-safe:animate-spin text-indigo-400" />
               <span>Pull Request と CI 状況を確認中...</span>
             </div>
           ) : visibleProjects.length === 0 ? (

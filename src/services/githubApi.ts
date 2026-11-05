@@ -668,12 +668,26 @@ const workflowRunsCache = new Map<
     fetchedAt: number;
   }
 >();
+let workflowRunsCacheGeneration = 0;
 
 /**
- * Actions ワークフロー実行履歴のメモリキャッシュをクリアする（手動更新・ログアウト・テスト用）
+ * Actions ワークフロー実行履歴のメモリキャッシュをクリアし、進行中の取得による再格納も無効化する
  */
 export function clearWorkflowRunsCache(): void {
   workflowRunsCache.clear();
+  workflowRunsCacheGeneration += 1;
+}
+
+/**
+ * ワークフロー実行結果が失敗（要対応）かどうかを判定する
+ */
+function isFailedWorkflowConclusion(conclusion: WorkflowRunConclusion): boolean {
+  return (
+    conclusion === 'failure' ||
+    conclusion === 'timed_out' ||
+    conclusion === 'action_required' ||
+    conclusion === 'startup_failure'
+  );
 }
 
 /**
@@ -690,6 +704,7 @@ export async function fetchRepositoryWorkflowRuns(
   const cacheKey = `${repoFullName}::${perPage}`;
   const now = Date.now();
   const cached = workflowRunsCache.get(cacheKey);
+  const cacheGeneration = workflowRunsCacheGeneration;
 
   if (cached && cached.pat === trimmedPat && now - cached.fetchedAt < WORKFLOW_RUNS_CACHE_TTL_MS) {
     return {
@@ -745,6 +760,16 @@ export async function fetchRepositoryWorkflowRuns(
     const runs: WorkflowRunItem[] = data.workflow_runs.map((r: any) => ({
       id: r.id,
       workflowId: typeof r.workflow_id === 'number' ? r.workflow_id : undefined,
+      pullRequestNumber:
+        typeof r.pull_requests?.[0]?.number === 'number'
+          ? r.pull_requests[0].number
+          : undefined,
+      headRepositoryFullName:
+        typeof r.head_repository?.full_name === 'string'
+          ? r.head_repository.full_name
+          : undefined,
+      runAttempt: typeof r.run_attempt === 'number' ? r.run_attempt : undefined,
+      runStartedAt: r.run_started_at || r.created_at || new Date().toISOString(),
       repoFullName,
       workflowName: r.name || 'Workflow',
       displayTitle: r.display_title || r.head_commit?.message?.split('\n')[0] || r.name || 'Run',
@@ -763,12 +788,58 @@ export async function fetchRepositoryWorkflowRuns(
       updatedAt: r.updated_at || r.created_at || new Date().toISOString(),
     }));
 
-    workflowRunsCache.set(cacheKey, {
-      pat: trimmedPat,
-      runs,
-      incompleteCoverage: false,
-      fetchedAt: Date.now(),
-    });
+    // 再実行（run_attempt > 1）が cancelled / skipped / neutral / stale で終わった場合、
+    // 直前の試行から未解決の失敗ステータスを復元する（レート制限残数がある場合のみ）
+    for (const run of runs) {
+      if (
+        run.status === 'completed' &&
+        run.conclusion !== 'success' &&
+        !isFailedWorkflowConclusion(run.conclusion) &&
+        typeof run.runAttempt === 'number' &&
+        run.runAttempt > 1
+      ) {
+        for (let attempt = run.runAttempt - 1; attempt >= 1; attempt -= 1) {
+          if (
+            latestRateLimit &&
+            latestRateLimit.remaining < MIN_RATE_LIMIT_RESERVE &&
+            latestRateLimit.resetAt.getTime() > Date.now()
+          ) {
+            break;
+          }
+          try {
+            const attemptRes = await fetch(
+              `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/runs/${encodeURIComponent(String(run.id))}/attempts/${attempt}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${trimmedPat}`,
+                  Accept: 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+                },
+              }
+            );
+            updateRateLimitFromHeaders(attemptRes.headers);
+            if (!attemptRes.ok) break;
+            const attemptData = await attemptRes.json();
+            const priorConclusion = (attemptData?.conclusion ?? null) as WorkflowRunConclusion;
+            if (priorConclusion === 'success' || isFailedWorkflowConclusion(priorConclusion)) {
+              run.conclusion = priorConclusion;
+              break;
+            }
+          } catch {
+            break;
+          }
+        }
+      }
+    }
+
+    if (cacheGeneration === workflowRunsCacheGeneration) {
+      workflowRunsCache.set(cacheKey, {
+        pat: trimmedPat,
+        runs,
+        incompleteCoverage: false,
+        fetchedAt: Date.now(),
+      });
+    }
 
     return { runs, incompleteCoverage: false };
   } catch (err) {
