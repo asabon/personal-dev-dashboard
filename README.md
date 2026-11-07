@@ -118,11 +118,14 @@
   - 詳細ガイド: [**🔑 GitHub PAT 作成・設定ガイド (docs/user/setup-pat.md)**](docs/user/setup-pat.md)
 
 ### Step 2: ダッシュボードを開いてトークンを入力
-- [**Personal Dev Dashboard**](https://asabon.github.io/personal-dev-dashboard/) をブラウザで開きます。
-- 初回モーダルにコピーした PAT を貼り付け、「利用を開始する」をクリックします。
 
-### Step 3: 監視したいリポジトリを登録
-- 右上の設定アイコン（⚙️）を開き、監視したいリポジトリ（例: `owner/repo`）や Organization、Self-hosted Runner を登録します。
+- [**Personal Dev Dashboard**](https://asabon.github.io/personal-dev-dashboard/) をブラウザで開きます。
+- 初回モーダルにコピーした PAT を貼り付け、「ダッシュボードを開始」をクリックします。
+- **自分のリポジトリ（非アーカイブ）は登録不要ですぐに自動監視** されます。
+
+### Step 3: 外部リポジトリや Organization の追加設定（任意）
+
+- 他オーナーのリポジトリや所属 Organization のリポジトリ、Self-hosted Runner も合わせて監視したい場合は、右上の設定アイコン（⚙️）から追加登録できます。
 
 ---
 

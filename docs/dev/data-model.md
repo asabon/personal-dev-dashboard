@@ -87,6 +87,10 @@ export interface RepositoryDashboardData {
   isPrivate: boolean;
   pullRequests: PullRequestItem[];
   error?: string; // リポジトリ取得エラー（404/権限不足など）の場合
+  isLoading?: boolean;
+  pushedAt?: string; // 最終プッシュ日時 (ISO 8601、スマート差分ポーリング判定用)
+  updatedAt?: string; // 最終更新日時 (ISO 8601、スマート差分ポーリング判定用)
+  isFork?: boolean; // フォークリポジトリかどうか
 }
 ```
 

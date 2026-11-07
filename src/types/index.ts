@@ -102,6 +102,12 @@ export interface RepositoryDashboardData {
   pullRequests: PullRequestItem[];
   error?: string;
   isLoading?: boolean;
+  /** 最終プッシュ日時 (ISO 8601、スマート差分ポーリング判定用) */
+  pushedAt?: string;
+  /** 最終更新日時 (ISO 8601、スマート差分ポーリング判定用) */
+  updatedAt?: string;
+  /** フォークリポジトリかどうか */
+  isFork?: boolean;
 }
 
 export interface SelfHostedRunner {

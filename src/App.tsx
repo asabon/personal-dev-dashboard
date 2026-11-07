@@ -9,7 +9,9 @@ import { loadSettings, saveSettings, clearSettings, createDefaultSettings } from
 import {
   clearWorkflowRunsCache,
   fetchRepositoryPRs,
+  fetchViewerOwnedRepositoriesAndPRs,
   getLatestRateLimit,
+  selectActiveRepositoriesForPolling,
 } from './services/githubApi';
 import { Header } from './components/Header';
 import { DashboardSummaryBar } from './components/DashboardSummaryBar';
@@ -32,6 +34,9 @@ import {
 
 const VIEW_MODE_STORAGE_KEY = 'dashboard_view_mode';
 
+/**
+ * Personal Dev Dashboard のルートアプリケーションコンポーネント
+ */
 export function App() {
   const isDemoMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === 'true';
   const isDebugMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === 'true';
@@ -271,58 +276,93 @@ export function App() {
         return next;
       });
 
-      if (settings.repositories.length > 0) {
-        setState((prev) => ({
-          ...prev,
-          isLoading: prev.projects.length === 0,
-        }));
-      } else {
-        setState((prev) => ({ ...prev, projects: [], isLoading: false }));
+      setState((prev) => ({
+        ...prev,
+        isLoading: prev.projects.length === 0,
+      }));
+
+      // 1. 自分の全リポジトリ（非アーカイブ・最大100件）と Open PR / CI を 1 回の GraphQL で一括取得
+      let ownedProjects: RepositoryDashboardData[] = [];
+      let ownedErrorProject: RepositoryDashboardData | null = null;
+      try {
+        ownedProjects = await fetchViewerOwnedRepositoriesAndPRs(settings.pat);
+      } catch (err: any) {
+        const errorMsg = err?.message || '所有リポジトリ情報の取得に失敗しました';
+        ownedProjects = projectsRef.current.filter(
+          (p) => p.owner.toLowerCase() === settings.username.toLowerCase()
+        );
+        ownedErrorProject = {
+          owner: '',
+          name: settings.username,
+          fullName: settings.username,
+          isPrivate: false,
+          pullRequests: [],
+          error: errorMsg,
+        };
       }
 
-      // 監視対象リポジトリの PR / CI 取得と Feature 取得を並列実行
-      const repoFetchPromise =
-        settings.repositories.length > 0
-          ? Promise.all(
-              settings.repositories.map(async (repoFullName) => {
-                const [owner, name] = repoFullName.split('/');
-                if (!owner || !name) {
-                  return {
-                    owner: '',
-                    name: '',
-                    fullName: repoFullName,
-                    isPrivate: false,
-                    pullRequests: [],
-                    error: 'リポジトリ名が不正です (owner/repo 形式である必要があります)',
-                  } as RepositoryDashboardData;
-                }
-                try {
-                  return await fetchRepositoryPRs(settings.pat, owner, name);
-                } catch (err: any) {
-                  const prevRepo = projectsRef.current.find((p) => p.fullName === repoFullName);
-                  return {
-                    owner,
-                    name,
-                    fullName: repoFullName,
-                    isPrivate: prevRepo?.isPrivate ?? false,
-                    pullRequests: prevRepo?.pullRequests ?? [],
-                    error: err?.message || 'リポジトリ情報の取得に失敗しました',
-                  } as RepositoryDashboardData;
-                }
-              })
-            ).then((repoResults) => {
-              if (refreshGenerationRef.current !== currentGeneration) return;
-              setState((prev) => ({ ...prev, projects: repoResults, isLoading: false }));
-            })
-          : Promise.resolve();
+      // 2. 指定された外部リポジトリ（自分のリポジトリ一括取得に含まれないもの）の PR / CI を取得
+      const ownedMap = new Map(
+        ownedProjects.map((p) => [p.fullName.toLowerCase(), p])
+      );
+      const externalRepoNames = settings.repositories.filter(
+        (r) => !ownedMap.has(r.trim().toLowerCase())
+      );
 
-      const featuresFetchPromise = Promise.all(
+      const externalProjects = await Promise.all(
+        externalRepoNames.map(async (repoFullName) => {
+          const [owner, name] = repoFullName.split('/');
+          if (!owner || !name) {
+            return {
+              owner: '',
+              name: '',
+              fullName: repoFullName,
+              isPrivate: false,
+              pullRequests: [],
+              error: 'リポジトリ名が不正です (owner/repo 形式である必要があります)',
+            } as RepositoryDashboardData;
+          }
+          try {
+            return await fetchRepositoryPRs(settings.pat, owner, name);
+          } catch (err: any) {
+            const prevRepo = projectsRef.current.find(
+              (p) => p.fullName.toLowerCase() === repoFullName.toLowerCase()
+            );
+            return {
+              owner,
+              name,
+              fullName: repoFullName,
+              isPrivate: prevRepo?.isPrivate ?? false,
+              pullRequests: prevRepo?.pullRequests ?? [],
+              error: err?.message || 'リポジトリ情報の取得に失敗しました',
+            } as RepositoryDashboardData;
+          }
+        })
+      );
+
+      const mergedProjects: RepositoryDashboardData[] = [
+        ...(ownedErrorProject ? [ownedErrorProject] : []),
+        ...ownedProjects,
+        ...externalProjects,
+      ];
+
+      if (refreshGenerationRef.current !== currentGeneration) return;
+      setState((prev) => ({ ...prev, projects: mergedProjects, isLoading: false }));
+
+      // 3. アクティブな自分のリポジトリ＋指定された外部リポジトリを対象に各 Feature を並列取得
+      //    （直前の GraphQL 取得で pushedAt/updatedAt が記録済みのため、変化がないリポジトリの REST ポーリングは自動スキップされる）
+      const activePollingRepos = selectActiveRepositoriesForPolling(
+        ownedProjects,
+        settings.repositories
+      );
+
+      await Promise.all(
         enabledFeatures.map(async (feature) => {
           try {
             const data = await feature.loadData({
               pat: settings.pat,
               username: settings.username,
-              repositories: settings.repositories,
+              repositories: activePollingRepos,
               monitoredOrgs: settings.monitoredOrgs || [],
               settings: settings.features[feature.id] ?? {
                 enabled: feature.alwaysEnabled ?? feature.defaultEnabled,
@@ -349,8 +389,6 @@ export function App() {
           }
         })
       );
-
-      await Promise.all([repoFetchPromise, featuresFetchPromise]);
 
       if (refreshGenerationRef.current !== currentGeneration) return;
       setState((prev) => ({
@@ -429,13 +467,22 @@ export function App() {
     saveSettings(newSettings);
     setSettings(newSettings);
 
-    // 既存の projects も新しい順序に即座に並べ替えて即応性を高める
+    // 既存の自動取得済み所有リポジトリを維持しつつ、外部リポジトリを新しい順序に即座に並べ替える
     setState((prev) => {
-      const repoMap = new Map(prev.projects.map((p) => [p.fullName, p]));
-      const reorderedProjects = newSettings.repositories
-        .map((name) => repoMap.get(name))
+      const ownedProjects = prev.projects.filter(
+        (p) =>
+          newSettings.username &&
+          p.owner.toLowerCase() === newSettings.username.toLowerCase()
+      );
+      const ownedSet = new Set(ownedProjects.map((p) => p.fullName.toLowerCase()));
+      const repoMap = new Map(
+        prev.projects.map((p) => [p.fullName.toLowerCase(), p])
+      );
+      const reorderedExternal = newSettings.repositories
+        .filter((name) => !ownedSet.has(name.toLowerCase()))
+        .map((name) => repoMap.get(name.toLowerCase()))
         .filter((p): p is RepositoryDashboardData => Boolean(p));
-      return { ...prev, projects: reorderedProjects };
+      return { ...prev, projects: [...ownedProjects, ...reorderedExternal] };
     });
   };
 
@@ -460,6 +507,11 @@ export function App() {
       setIsSettingsOpen(false);
     }
   };
+
+  const effectiveMonitoredRepos =
+    state.projects.length > 0
+      ? state.projects.map((p) => p.fullName)
+      : settings.repositories;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500/30 selection:text-indigo-200">
@@ -546,7 +598,7 @@ export function App() {
                 </span>
               )}
               <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-900/90 text-slate-400 border border-slate-800">
-                {settings.repositories.length} {settings.repositories.length === 1 ? 'repo' : 'repos'}
+                {effectiveMonitoredRepos.length} {effectiveMonitoredRepos.length === 1 ? 'repo' : 'repos'}
               </span>
             </div>
             <div className="hidden sm:block flex-1 h-px bg-gradient-to-r from-slate-800 via-slate-800/50 to-transparent" />
@@ -579,7 +631,7 @@ export function App() {
 
           {/* Open PRs Section */}
           <RepositoriesCard
-            repositories={settings.repositories}
+            repositories={effectiveMonitoredRepos}
             projects={state.projects}
             isLoading={state.isLoading}
             isCompact={viewMode === 'compact'}

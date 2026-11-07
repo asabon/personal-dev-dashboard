@@ -108,19 +108,9 @@ REST API で個別に runs を叩くのではなく、GraphQL の `statusCheckRo
   }
   ```
 
-#### 複数リポジトリの一括取得（エイリアス対応）
-監視リポジトリが複数ある場合、GraphQL のエイリアス機能を使って 1 回のリクエストで複数リポジトリを同時に取得できます。
+#### 自分の全リポジトリの一括取得 (`viewer.repositories`)
 
-```graphql
-query GetMultiRepos {
-  repo1: repository(owner: "owner1", name: "repo-a") {
-    ...RepoPRFields
-  }
-  repo2: repository(owner: "owner2", name: "repo-b") {
-    ...RepoPRFields
-  }
-}
-```
+ログインユーザーが所有するリポジトリ（`affiliations: [OWNER], isArchived: false, first: 100`）については、設定画面での個別登録を不要とし、`viewer.repositories` クエリによって **1 回の GraphQL リクエストで全所有リポジトリの Open PR・CI 状態および最終更新日時 (`pushedAt` / `updatedAt`) を一括取得** します。指定された外部リポジトリのみ個別に `repository(owner, name)` クエリで取得します。
 
 ---
 
@@ -143,7 +133,9 @@ query GetMultiRepos {
 - **利用目的**:
   - PR 以外のトリガー（`push` マージ、タグ `release`、`schedule`、`workflow_dispatch` 等）も含めたワークフロー稼働状況の監視
   - 同一ワークフロー単位で最新実行状態を判定し、実行中（`in_progress` / `queued`）および未解決の失敗（`failure` / `timed_out` / `action_required` / `startup_failure`）を抽出表示
-- **レート制限保護**:
+- **レート制限保護 & スマート差分ポーリング**:
+  - 自動取得された所有リポジトリのうち、Open PR があるものや直近アクティブなリポジトリのみをポーリング対象に選出（長期間更新のない休眠リポジトリや古いフォークへの無駄なポーリングを除外）
+  - **スマート差分スキップ**: GraphQL で取得した各リポジトリの `pushedAt` / `updatedAt` が前回取得時から変化しておらず、かつ進行中（`in_progress` / `queued`）の Run がない場合は、TTL（20秒）経過後であっても REST API 呼び出しをスキップ（最大10分間）し、定常時の無駄なポーリング通信をゼロに抑制
   - 短時間メモリキャッシュ（TTL 20秒）、最大20リポジトリまでの取得上限、および API 残数が 100 未満になった際の一時スキップ保護を実施
 
 ---

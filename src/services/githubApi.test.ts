@@ -5,6 +5,9 @@ import {
   fetchAllWorkflowRuns,
   fetchOrgActionsUsage,
   fetchRepositoryWorkflowRuns,
+  fetchViewerOwnedRepositoriesAndPRs,
+  recordRepositoryActivity,
+  selectActiveRepositoriesForPolling,
 } from './githubApi';
 
 describe('githubApi - Actions 使用量および倍率計算テスト', () => {
@@ -306,5 +309,263 @@ describe('githubApi - Actions 使用量および倍率計算テスト', () => {
 
     expect(lowRateLimitResult.incompleteCoverage).toBe(true);
     expect(lowRateLimitResult.warning).toContain('レート制限残数が少ないため');
+  });
+
+  it('fetchViewerOwnedRepositoriesAndPRs は 1 回の GraphQL クエリで自分の全リポジトリと Open PR を一括取得すること', async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          data: {
+            viewer: {
+              repositories: {
+                nodes: [
+                  {
+                    name: 'personal-dev-dashboard',
+                    nameWithOwner: 'asabon/personal-dev-dashboard',
+                    isPrivate: false,
+                    isFork: false,
+                    pushedAt: '2026-11-07T10:00:00Z',
+                    updatedAt: '2026-11-07T10:05:00Z',
+                    owner: { login: 'asabon' },
+                    pullRequests: {
+                      nodes: [
+                        {
+                          id: 'pr-10',
+                          number: 10,
+                          title: 'feat: smart polling',
+                          url: 'https://github.com/asabon/personal-dev-dashboard/pull/10',
+                          updatedAt: '2026-11-07T10:00:00Z',
+                          headRefName: 'feature/smart-polling',
+                          author: { login: 'asabon', avatarUrl: '' },
+                          commits: {
+                            nodes: [
+                              {
+                                commit: {
+                                  oid: 'abcdef1234567',
+                                  abbreviatedOid: 'abcdef1',
+                                  statusCheckRollup: {
+                                    state: 'SUCCESS',
+                                    contexts: { nodes: [] },
+                                  },
+                                },
+                              },
+                            ],
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        }),
+        { status: 200 }
+      );
+    });
+    globalThis.fetch = fetchMock;
+
+    const repos = await fetchViewerOwnedRepositoriesAndPRs(TEST_PAT);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(repos).toHaveLength(1);
+    expect(repos[0].fullName).toBe('asabon/personal-dev-dashboard');
+    expect(repos[0].pushedAt).toBe('2026-11-07T10:00:00Z');
+    expect(repos[0].pullRequests).toHaveLength(1);
+    expect(repos[0].pullRequests[0].overallCiState).toBe('SUCCESS');
+  });
+
+  it('スマート差分スキップ: TTL 経過後でもリポジトリの pushedAt/updatedAt が変化しておらず進行中 Run がない場合は API 通信をスキップすること', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-11-07T10:00:00Z'));
+      clearWorkflowRunsCache();
+      recordRepositoryActivity(
+        TEST_PAT,
+        'asabon/personal-dev-dashboard',
+        '2026-11-07T09:00:00Z',
+        '2026-11-07T09:05:00Z'
+      );
+
+      const fetchMock = vi.fn(async () => {
+        return new Response(
+          JSON.stringify({
+            total_count: 1,
+            workflow_runs: [
+              {
+                id: 1001,
+                workflow_id: 10,
+                name: 'CI',
+                display_title: 'Initial run',
+                run_number: 1,
+                event: 'push',
+                status: 'completed',
+                conclusion: 'success',
+                html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/1001',
+                head_branch: 'main',
+                head_sha: '1234567890abcdef',
+                actor: { login: 'asabon', avatar_url: '' },
+                created_at: '2026-11-07T09:00:00Z',
+                updated_at: '2026-11-07T09:02:00Z',
+              },
+            ],
+          }),
+          { status: 200 }
+        );
+      });
+      globalThis.fetch = fetchMock;
+
+      // 初回取得: API が 1 回呼ばれる
+      const first = await fetchRepositoryWorkflowRuns(
+        TEST_PAT,
+        'asabon',
+        'personal-dev-dashboard'
+      );
+      expect(first.runs).toHaveLength(1);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // 1分経過（通常の 20秒 TTL は経過済み）だが、pushedAt/updatedAt は変化なし
+      vi.advanceTimersByTime(60 * 1000);
+      const second = await fetchRepositoryWorkflowRuns(
+        TEST_PAT,
+        'asabon',
+        'personal-dev-dashboard'
+      );
+      expect(second.runs).toHaveLength(1);
+      // 無駄なポーリングが発生せず、fetch 回数は 1 回のままであること
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // 新しい Push が発生して pushedAt が更新された場合は API を再取得すること
+      recordRepositoryActivity(
+        TEST_PAT,
+        'asabon/personal-dev-dashboard',
+        '2026-11-07T10:01:30Z',
+        '2026-11-07T10:01:30Z'
+      );
+      await fetchRepositoryWorkflowRuns(TEST_PAT, 'asabon', 'personal-dev-dashboard');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('スマート差分スキップ: 前回取得結果に失敗 Run が含まれる場合は Re-run 解消を検知するためスキップせず再取得すること', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-11-07T10:00:00Z'));
+      clearWorkflowRunsCache();
+      recordRepositoryActivity(
+        TEST_PAT,
+        'asabon/personal-dev-dashboard',
+        '2026-11-07T09:00:00Z',
+        '2026-11-07T09:05:00Z'
+      );
+
+      let conclusion: 'failure' | 'success' = 'failure';
+      const fetchMock = vi.fn(async () => {
+        return new Response(
+          JSON.stringify({
+            total_count: 1,
+            workflow_runs: [
+              {
+                id: 2001,
+                workflow_id: 10,
+                name: 'CI',
+                display_title: 'Run with rerun',
+                run_number: 2,
+                event: 'push',
+                status: 'completed',
+                conclusion,
+                html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/2001',
+                head_branch: 'main',
+                head_sha: '1234567890abcdef',
+                actor: { login: 'asabon', avatar_url: '' },
+                created_at: '2026-11-07T09:00:00Z',
+                updated_at: '2026-11-07T09:02:00Z',
+              },
+            ],
+          }),
+          { status: 200 }
+        );
+      });
+      globalThis.fetch = fetchMock;
+
+      // 初回取得: failure
+      const first = await fetchRepositoryWorkflowRuns(
+        TEST_PAT,
+        'asabon',
+        'personal-dev-dashboard'
+      );
+      expect(first.runs[0].conclusion).toBe('failure');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // GitHub 上で Re-run されて success に変わった（pushedAt は変化なし）
+      conclusion = 'success';
+      vi.advanceTimersByTime(60 * 1000);
+
+      const second = await fetchRepositoryWorkflowRuns(
+        TEST_PAT,
+        'asabon',
+        'personal-dev-dashboard'
+      );
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(second.runs[0].conclusion).toBe('success');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('selectActiveRepositoriesForPolling は外部指定リポジトリと直近アクティブな所有リポジトリのみを選出し休眠リポジトリを除外すること', () => {
+    const nowMs = new Date('2026-11-07T12:00:00Z').getTime();
+    const ownedProjects = [
+      {
+        owner: 'asabon',
+        name: 'active-repo',
+        fullName: 'asabon/active-repo',
+        isPrivate: false,
+        isFork: false,
+        pushedAt: '2026-11-06T12:00:00Z', // 1日前
+        pullRequests: [],
+      },
+      {
+        owner: 'asabon',
+        name: 'old-fork',
+        fullName: 'asabon/old-fork',
+        isPrivate: false,
+        isFork: true,
+        pushedAt: '2025-01-01T00:00:00Z', // 古いフォーク（Open PR なし）
+        pullRequests: [],
+      },
+      ...Array.from({ length: 6 }, (_, i) => ({
+        owner: 'asabon',
+        name: `recent-${i + 1}`,
+        fullName: `asabon/recent-${i + 1}`,
+        isPrivate: false,
+        isFork: false,
+        pushedAt: '2026-11-01T00:00:00Z',
+        pullRequests: [],
+      })),
+      {
+        owner: 'asabon',
+        name: 'dormant-2023',
+        fullName: 'asabon/dormant-2023',
+        isPrivate: false,
+        isFork: false,
+        pushedAt: '2023-05-01T00:00:00Z', // 3年前の休眠リポジトリ
+        pullRequests: [],
+      },
+    ];
+
+    const selected = selectActiveRepositoriesForPolling(
+      ownedProjects,
+      ['external-org/api-server'],
+      20,
+      nowMs
+    );
+
+    expect(selected[0]).toBe('external-org/api-server');
+    expect(selected).toContain('asabon/active-repo');
+    expect(selected).not.toContain('asabon/old-fork');
+    expect(selected).not.toContain('asabon/dormant-2023');
   });
 });

@@ -99,9 +99,9 @@ GitHub の [Fine-grained personal access tokens](https://github.com/settings/per
 1. **Personal Dev Dashboard** にアクセスします：  
    👉 **[https://asabon.github.io/personal-dev-dashboard/](https://asabon.github.io/personal-dev-dashboard/)**
 2. 初回アクセス時に表示される **「Personal Dev Dashboard へようこそ」** のダイアログで、コピーした PAT を入力します。
-3. **「利用を開始する」** をクリックします。
-4. トークンの検証が成功すると、ダッシュボードが開き Actions 無料枠使用量が表示されます。
-5. 画面上部の **「リポジトリ追加」** から、PR や CI 状況を監視したいリポジトリ（例: `owner/repo`）を登録してください。
+3. **「ダッシュボードを開始」** をクリックします。
+4. トークンの検証が成功すると、ダッシュボードが開き、Actions 無料枠使用量および **ご自身が所有するすべてのリポジトリ（非アーカイブ）の Open PR・CI 状況が登録不要で自動表示** されます。
+5. 他オーナーのリポジトリや Organization の特定リポジトリも追加で監視したい場合は、画面右上の設定アイコン（⚙️）から外部リポジトリ（例: `owner/repo`）を登録してください。
 
 ---
 
