@@ -31,6 +31,9 @@ interface SettingsModalProps {
   onLogout: () => void;
 }
 
+/**
+ * ダッシュボード設定モーダルコンポーネント（PAT・外部リポジトリ追加・自動更新間隔・各機能設定）
+ */
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   settings,
@@ -38,8 +41,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSave,
   onLogout,
 }) => {
+  /**
+   * 指定されたリポジトリ名が現在のログインユーザー所有かどうかを判定する
+   */
+  const isOwnedByCurrentUser = useCallback(
+    (repoFullName: string, targetUsername = settings.username) => {
+      if (!targetUsername) return false;
+      const owner = repoFullName.trim().split('/')[0];
+      return Boolean(owner && owner.toLowerCase() === targetUsername.toLowerCase());
+    },
+    [settings.username]
+  );
+
   const [pat, setPat] = useState(settings.pat);
-  const [repositories, setRepositories] = useState<string[]>(settings.repositories);
+  const [repositories, setRepositories] = useState<string[]>(() =>
+    settings.repositories.filter((r) => !isOwnedByCurrentUser(r, settings.username))
+  );
   const [newRepoInput, setNewRepoInput] = useState('');
   const [refreshInterval, setRefreshInterval] = useState(settings.refreshIntervalSec);
   const [features, setFeatures] = useState(settings.features);
@@ -50,8 +67,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // マイリポジトリ一覧用 State
-  const [addMode, setAddMode] = useState<'select' | 'manual'>('select');
+  // アクセス可能な外部リポジトリ（所属Org・コラボレーター）一覧用 State
   const [userRepos, setUserRepos] = useState<UserRepositoryOption[]>([]);
   const [isLoadingRepos, setIsLoadingRepos] = useState(false);
   const [reposError, setReposError] = useState<string | null>(null);
@@ -72,7 +88,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [pat]);
 
-  // モーダルが開かれたとき、または PAT が有効な状態で初回表示時にリポジトリ一覧を読み込む
+  // モーダルが開かれたときに最新の設定を同期する
+  useEffect(() => {
+    if (isOpen) {
+      setPat(settings.pat);
+      setRepositories(
+        settings.repositories.filter((r) => !isOwnedByCurrentUser(r, settings.username))
+      );
+      setRefreshInterval(settings.refreshIntervalSec);
+      setFeatures(settings.features);
+      setMonitoredOrgs(settings.monitoredOrgs || []);
+      setError(null);
+      setSuccessMessage(null);
+    }
+  }, [isOpen, settings, isOwnedByCurrentUser]);
+
+  // モーダルが開かれたとき、または PAT が有効な状態でリポジトリ候補一覧を読み込む
   useEffect(() => {
     if (isOpen && pat.trim()) {
       loadUserRepos();
@@ -101,7 +132,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       return;
     }
 
-    if (repositories.includes(clean)) {
+    if (isOwnedByCurrentUser(clean)) {
+      setError(
+        `自分のリポジトリ (${clean}) は自動的に監視対象に含まれるため、個別の登録は不要です。`
+      );
+      return;
+    }
+
+    if (repositories.some((r) => r.toLowerCase() === clean.toLowerCase())) {
       setError('そのリポジトリは既に追加されています。');
       return;
     }
@@ -154,10 +192,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         username = userInfo.username;
       }
 
+      const cleanedExternalRepos = repositories.filter(
+        (r) => !isOwnedByCurrentUser(r, username)
+      );
+
       const updated: AppSettings = {
         pat: pat.trim(),
         username,
-        repositories,
+        repositories: cleanedExternalRepos,
         refreshIntervalSec: refreshInterval,
         features,
         monitoredOrgs,
@@ -175,8 +217,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  // フィルタリングされたユーザーリポジトリ
-  const filteredRepos = userRepos.filter((repo) => {
+  // 自分の所有リポジトリは自動監視されるため、候補一覧には「外部リポジトリ（所属Org・コラボレーター）」のみを表示
+  const externalRepoCandidates = userRepos.filter(
+    (repo) => !isOwnedByCurrentUser(repo.fullName)
+  );
+
+  // フィルタリングされた外部リポジトリ候補
+  const filteredRepos = externalRepoCandidates.filter((repo) => {
     // 検索語句マッチ
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -248,41 +295,56 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                 <FolderGit2 className="w-3.5 h-3.5 text-indigo-400" />
                 監視対象リポジトリ
-                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono text-[10px] font-normal">
-                  {repositories.length}件 選択中
-                </span>
               </label>
+              <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono text-[10px]">
+                外部リポジトリ: {repositories.length}件
+              </span>
+            </div>
 
-              {/* タブ切り替えボタン */}
-              <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setAddMode('select')}
-                  className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer text-xs font-medium ${
-                    addMode === 'select'
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  マイリポジトリから選ぶ
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAddMode('manual')}
-                  className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer text-xs font-medium ${
-                    addMode === 'manual'
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  手動入力
-                </button>
+            {/* 自分のリポジトリ自動監視の案内 */}
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-slate-200 flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-semibold text-emerald-300">
+                  自分のリポジトリ（{settings.username ? `@${settings.username}` : 'ログインユーザー'} 所有）はすべて自動監視されます（登録不要）
+                </p>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  アーカイブ済みを除く所有リポジトリの Open PR を一括取得し、更新があったアクティブなリポジトリのみ Actions を差分チェックするため無駄なポーリングは発生しません。
+                </p>
               </div>
             </div>
 
-            {/* モード1: マイリポジトリから選択 */}
-            {addMode === 'select' && (
+            {/* 外部リポジトリの手動追加フォーム（常時表示） */}
+            <div className="space-y-2 pt-1">
+              <label className="block text-[11px] font-medium text-slate-300">
+                監視したい外部リポジトリ（Organization や他オーナーのリポジトリ）を追加:
+              </label>
+              <form onSubmit={handleAddManualRepo} className="flex gap-2">
+                <input
+                  type="text"
+                  value={newRepoInput}
+                  onChange={(e) => setNewRepoInput(e.target.value)}
+                  placeholder="例: facebook/react, my-org/backend-api"
+                  className="flex-1 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-mono text-xs"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-md shadow-indigo-600/20 shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" /> 追加
+                </button>
+              </form>
+            </div>
+
+            {/* アクセス可能な外部リポジトリ（所属 Org / コラボレーター）から選択 */}
+            {(isLoadingRepos || externalRepoCandidates.length > 0 || reposError) && (
               <div className="space-y-2.5 rounded-xl border border-slate-800 bg-slate-900/50 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    所属 Organization・コラボレーターの外部リポジトリから選ぶ:
+                  </span>
+                </div>
+
                 {/* 検索・フィルター・再取得ヘッダー */}
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative flex-1 min-w-[180px]">
@@ -291,7 +353,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="リポジトリを検索..."
+                      placeholder="外部リポジトリを検索..."
                       className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700/80 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-xs"
                     />
                   </div>
@@ -301,22 +363,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setFilterType('all')}
-                      className={`px-2 py-1 rounded-md cursor-pointer transition-colors ${
-                        filterType === 'all'
+                      className={`px-2 py-1 rounded-md cursor-pointer transition-colors ${filterType === 'all'
                           ? 'bg-slate-700 text-slate-100 font-medium'
                           : 'text-slate-400 hover:text-slate-200'
-                      }`}
+                        }`}
                     >
                       すべて
                     </button>
                     <button
                       type="button"
                       onClick={() => setFilterType('private')}
-                      className={`px-2 py-1 rounded-md cursor-pointer transition-colors flex items-center gap-1 ${
-                        filterType === 'private'
+                      className={`px-2 py-1 rounded-md cursor-pointer transition-colors flex items-center gap-1 ${filterType === 'private'
                           ? 'bg-slate-700 text-slate-100 font-medium'
                           : 'text-slate-400 hover:text-slate-200'
-                      }`}
+                        }`}
                     >
                       <Lock className="w-2.5 h-2.5 text-amber-400" />
                       Private
@@ -324,11 +384,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setFilterType('public')}
-                      className={`px-2 py-1 rounded-md cursor-pointer transition-colors flex items-center gap-1 ${
-                        filterType === 'public'
+                      className={`px-2 py-1 rounded-md cursor-pointer transition-colors flex items-center gap-1 ${filterType === 'public'
                           ? 'bg-slate-700 text-slate-100 font-medium'
                           : 'text-slate-400 hover:text-slate-200'
-                      }`}
+                        }`}
                     >
                       <Globe className="w-2.5 h-2.5 text-blue-400" />
                       Public
@@ -340,10 +399,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     type="button"
                     onClick={() => loadUserRepos(true)}
                     disabled={isLoadingRepos}
-                    title="リポジトリ一覧を再読み込み"
+                    title="外部リポジトリ候補を再読み込み"
                     className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingRepos ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingRepos ? 'motion-safe:animate-spin' : ''}`} />
                   </button>
                 </div>
 
@@ -353,17 +412,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 )}
 
                 {/* リスト表示領域 */}
-                <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1">
+                <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
                   {isLoadingRepos ? (
-                    <div className="flex items-center justify-center py-8 text-xs text-slate-400 gap-2">
-                      <RefreshCw className="w-4 h-4 animate-spin text-indigo-400" />
-                      <span>アクセス可能なリポジトリを読み込み中...</span>
+                    <div className="flex items-center justify-center py-6 text-xs text-slate-400 gap-2">
+                      <RefreshCw className="w-4 h-4 motion-safe:animate-spin text-indigo-400" />
+                      <span>外部リポジトリ候補を読み込み中...</span>
                     </div>
                   ) : filteredRepos.length === 0 ? (
-                    <div className="py-6 text-center text-xs text-slate-400">
-                      {userRepos.length === 0
-                        ? 'アクセス可能なリポジトリが見つかりませんでした。トークンの権限をご確認ください。'
-                        : '条件に一致するリポジトリがありません。'}
+                    <div className="py-4 text-center text-xs text-slate-400">
+                      条件に一致する外部リポジトリがありません。
                     </div>
                   ) : (
                     filteredRepos.map((repo) => {
@@ -371,11 +428,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       return (
                         <div
                           key={repo.fullName}
-                          className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${
-                            isSelected
+                          className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${isSelected
                               ? 'bg-indigo-950/30 border-indigo-500/40'
                               : 'bg-slate-900/80 border-slate-800/80 hover:border-slate-700'
-                          }`}
+                            }`}
                         >
                           <div className="min-w-0 flex-1 mr-3">
                             <div className="flex items-center gap-1.5">
@@ -411,11 +467,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <button
                             type="button"
                             onClick={() => handleToggleRepo(repo.fullName)}
-                            className={`shrink-0 px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-all cursor-pointer ${
-                              isSelected
+                            className={`shrink-0 px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-all cursor-pointer ${isSelected
                                 ? 'bg-emerald-500/20 hover:bg-rose-500/20 text-emerald-300 hover:text-rose-300 border border-emerald-500/30 hover:border-rose-500/30 group'
                                 : 'bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white border border-slate-700/80 hover:border-indigo-500'
-                            }`}
+                              }`}
                           >
                             {isSelected ? (
                               <>
@@ -439,34 +494,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {/* モード2: 手動入力 */}
-            {addMode === 'manual' && (
-              <form onSubmit={handleAddManualRepo} className="flex gap-2">
-                <input
-                  type="text"
-                  value={newRepoInput}
-                  onChange={(e) => setNewRepoInput(e.target.value)}
-                  placeholder="例: facebook/react, vercel/next.js"
-                  className="flex-1 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700/80 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-mono text-xs"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-md shadow-indigo-600/20"
-                >
-                  <Plus className="w-3.5 h-3.5" /> 追加
-                </button>
-              </form>
-            )}
-
-            {/* 現在登録されているリポジトリ一覧 */}
+            {/* 現在登録されている外部リポジトリ一覧 */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] text-slate-400 font-medium">現在登録中のリポジトリ:</span>
+                <span className="text-[11px] text-slate-400 font-medium">登録中の外部リポジトリ:</span>
                 <span className="text-[10px] text-slate-500">（矢印ボタンで表示順を変更できます）</span>
               </div>
               <div className="max-h-48 overflow-y-auto space-y-1 rounded-xl border border-slate-800 bg-slate-900/40 p-2">
                 {repositories.length === 0 ? (
-                  <p className="text-xs text-slate-500 py-3 text-center">監視対象のリポジトリがありません</p>
+                  <p className="text-xs text-slate-500 py-3 text-center">
+                    追加登録された外部リポジトリはありません（自分のリポジトリのみ自動監視中）
+                  </p>
                 ) : (
                   repositories.map((repo, idx) => (
                     <div

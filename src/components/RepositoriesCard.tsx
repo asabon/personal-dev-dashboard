@@ -120,12 +120,12 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                 <span>{erroredRepos.length} リポエラー</span>
               </span>
             )}
-            {repositories.length === 0 && (
+            {!isLoading && repositories.length === 0 && projects.length === 0 && (
               <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-400 shrink-0">
                 0リポジトリ
               </span>
             )}
-            {!isLoading && repositories.length > 0 && totalPrs > 0 && (
+            {!isLoading && (repositories.length > 0 || projects.length > 0) && totalPrs > 0 && (
               passedPrs.length === totalPrs && erroredRepos.length === 0 ? (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
@@ -159,7 +159,7 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                 </>
               )
             )}
-            {!isLoading && repositories.length > 0 && totalPrs === 0 && (
+            {!isLoading && (repositories.length > 0 || projects.length > 0) && totalPrs === 0 && (
               erroredRepos.length === 0 ? (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
@@ -187,7 +187,12 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
       {/* Body: リポジトリカード一覧 (アコーディオン開閉) */}
       {!isCollapsed && (
         <div className="p-4 sm:p-5 pt-0 border-t border-slate-800/50 mt-1">
-          {repositories.length === 0 ? (
+          {isLoading ? (
+            <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2 mt-2">
+              <Loader2 className="w-4 h-4 motion-safe:animate-spin text-indigo-400" />
+              <span>Pull Request と CI 状況を確認中...</span>
+            </div>
+          ) : repositories.length === 0 && projects.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-800 p-8 sm:p-12 text-center flex flex-col items-center justify-center space-y-3 mt-3">
               <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
                 <FolderGit2 className="w-6 h-6" />
@@ -209,11 +214,6 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                   <Settings className="w-4 h-4" /> 設定を開く
                 </button>
               )}
-            </div>
-          ) : isLoading ? (
-            <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2 mt-2">
-              <Loader2 className="w-4 h-4 motion-safe:animate-spin text-indigo-400" />
-              <span>Pull Request と CI 状況を確認中...</span>
             </div>
           ) : visibleProjects.length === 0 ? (
             <div className="py-8 text-center text-slate-500 flex flex-col items-center justify-center gap-2 mt-2">

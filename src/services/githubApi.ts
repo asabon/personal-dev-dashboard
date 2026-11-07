@@ -203,47 +203,41 @@ export async function fetchOrgActionsUsage(pat: string, orgName: string): Promis
   return parseActionsUsageResponse(data, orgName, 'org');
 }
 
-const REPO_PRS_QUERY = `
-  query GetRepositoryPRsAndChecks($owner: String!, $name: String!) {
-    repository(owner: $owner, name: $name) {
-      nameWithOwner
-      isPrivate
-      pullRequests(first: 20, states: OPEN, orderBy: { field: UPDATED_AT, direction: DESC }) {
+const PR_NODES_FRAGMENT = `
+  pullRequests(first: 20, states: OPEN, orderBy: { field: UPDATED_AT, direction: DESC }) {
+    nodes {
+      id
+      number
+      title
+      url
+      updatedAt
+      headRefName
+      author {
+        login
+        avatarUrl
+      }
+      commits(last: 1) {
         nodes {
-          id
-          number
-          title
-          url
-          updatedAt
-          headRefName
-          author {
-            login
-            avatarUrl
-          }
-          commits(last: 1) {
-            nodes {
-              commit {
-                oid
-                abbreviatedOid
-                statusCheckRollup {
-                  state
-                  contexts(first: 25) {
-                    nodes {
-                      __typename
-                      ... on CheckRun {
-                        id
-                        name
-                        status
-                        conclusion
-                        detailsUrl
-                      }
-                      ... on StatusContext {
-                        id
-                        context
-                        state
-                        targetUrl
-                      }
-                    }
+          commit {
+            oid
+            abbreviatedOid
+            statusCheckRollup {
+              state
+              contexts(first: 25) {
+                nodes {
+                  __typename
+                  ... on CheckRun {
+                    id
+                    name
+                    status
+                    conclusion
+                    detailsUrl
+                  }
+                  ... on StatusContext {
+                    id
+                    context
+                    state
+                    targetUrl
                   }
                 }
               }
@@ -255,61 +249,84 @@ const REPO_PRS_QUERY = `
   }
 `;
 
+const REPO_PRS_QUERY = `
+  query GetRepositoryPRsAndChecks($owner: String!, $name: String!) {
+    repository(owner: $owner, name: $name) {
+      nameWithOwner
+      isPrivate
+      isFork
+      pushedAt
+      updatedAt
+      ${PR_NODES_FRAGMENT}
+    }
+  }
+`;
+
+const VIEWER_OWNED_REPOS_PRS_QUERY = `
+  query GetViewerOwnedRepositoriesAndPRs {
+    viewer {
+      repositories(
+        affiliations: [OWNER]
+        isArchived: false
+        first: 100
+        orderBy: { field: PUSHED_AT, direction: DESC }
+      ) {
+        nodes {
+          name
+          nameWithOwner
+          isPrivate
+          isFork
+          pushedAt
+          updatedAt
+          owner {
+            login
+          }
+          ${PR_NODES_FRAGMENT}
+        }
+      }
+    }
+  }
+`;
+
 /**
- * リポジトリの Open PR および紐づく CI 実行結果を取得する
+ * リポジトリごとの最新活動日時（pushedAt / updatedAt / PR状態）を記録するキャッシュ（スマート差分ポーリング用）
  */
-export async function fetchRepositoryPRs(
+const repoActivityTimestamps = new Map<
+  string,
+  { pat: string; activityAt: string; hasPendingPrCi: boolean }
+>();
+
+/**
+ * リポジトリの最新活動日時および Open PR 状態の指紋をキャッシュに記録する
+ */
+export function recordRepositoryActivity(
   pat: string,
-  owner: string,
-  name: string
-): Promise<RepositoryDashboardData> {
-  const res = await fetch('https://api.github.com/graphql', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${pat.trim()}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      query: REPO_PRS_QUERY,
-      variables: { owner, name },
-    }),
+  repoFullName: string,
+  pushedAt?: string | null,
+  updatedAt?: string | null,
+  pullRequests: PullRequestItem[] = []
+): void {
+  const trimmedPat = pat.trim();
+  const prFingerprint = pullRequests
+    .map((pr) => `${pr.number}:${pr.headSha}:${pr.updatedAt}:${pr.overallCiState}`)
+    .join(',');
+  const activityAt = [pushedAt, updatedAt, prFingerprint].filter(Boolean).join('|');
+  if (!trimmedPat || !repoFullName || !activityAt) return;
+  const hasPendingPrCi = pullRequests.some((pr) => pr.overallCiState === 'PENDING');
+  repoActivityTimestamps.set(repoFullName.toLowerCase(), {
+    pat: trimmedPat,
+    activityAt,
+    hasPendingPrCi,
   });
+}
 
-  updateRateLimitFromHeaders(res.headers);
+/**
+ * GraphQL の pullRequests.nodes 配列を PullRequestItem 配列へ変換する
+ */
+function parseGraphqlPullRequests(prNodes: any[]): PullRequestItem[] {
+  if (!Array.isArray(prNodes)) return [];
 
-  if (!res.ok) {
-    throw new Error(`GraphQL API エラー (${res.status}): ${res.statusText}`);
-  }
-
-  const json = await res.json();
-
-  if (json.errors && json.errors.length > 0) {
-    const message = json.errors[0]?.message || 'GraphQL エラーが発生しました';
-    return {
-      owner,
-      name,
-      fullName: `${owner}/${name}`,
-      isPrivate: false,
-      pullRequests: [],
-      error: message,
-    };
-  }
-
-  const repo = json.data?.repository;
-  if (!repo) {
-    return {
-      owner,
-      name,
-      fullName: `${owner}/${name}`,
-      isPrivate: false,
-      pullRequests: [],
-      error: 'リポジトリが見つかりません（アクセス権限または名前をご確認ください）',
-    };
-  }
-
-  const prNodes = repo.pullRequests?.nodes || [];
-
-  const pullRequests: PullRequestItem[] = prNodes.map((pr: any) => {
+  return prNodes.map((pr: any) => {
     const latestCommit = pr.commits?.nodes?.[0]?.commit;
     const rollup = latestCommit?.statusCheckRollup;
     const contextNodes = rollup?.contexts?.nodes || [];
@@ -365,12 +382,147 @@ export async function fetchRepositoryPRs(
       checks,
     };
   });
+}
+
+/**
+ * ログインユーザーが所有する全リポジトリ（非アーカイブ・最大100件）と各 Open PR / CI 状況を 1 回の GraphQL リクエストで一括取得する
+ */
+export async function fetchViewerOwnedRepositoriesAndPRs(
+  pat: string
+): Promise<RepositoryDashboardData[]> {
+  const trimmedPat = pat.trim();
+  if (!trimmedPat) return [];
+
+  const cacheGeneration = workflowRunsCacheGeneration;
+
+  const res = await fetch('https://api.github.com/graphql', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${trimmedPat}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: VIEWER_OWNED_REPOS_PRS_QUERY,
+    }),
+  });
+
+  updateRateLimitFromHeaders(res.headers);
+
+  if (!res.ok) {
+    throw new Error(`GraphQL API エラー (${res.status}): ${res.statusText}`);
+  }
+
+  const json = await res.json();
+
+  if (json.errors && json.errors.length > 0 && !json.data?.viewer?.repositories) {
+    const message = json.errors[0]?.message || 'GraphQL エラーが発生しました';
+    throw new Error(message);
+  }
+
+  const repoNodes = json.data?.viewer?.repositories?.nodes;
+  if (!Array.isArray(repoNodes)) {
+    return [];
+  }
+
+  return repoNodes
+    .filter((repo: any) => Boolean(repo && repo.name))
+    .map((repo: any) => {
+      const owner = repo.owner?.login || String(repo.nameWithOwner || '').split('/')[0] || '';
+      const name = repo.name;
+      const fullName = repo.nameWithOwner || `${owner}/${name}`;
+      const pushedAt = typeof repo.pushedAt === 'string' ? repo.pushedAt : undefined;
+      const updatedAt = typeof repo.updatedAt === 'string' ? repo.updatedAt : undefined;
+      const pullRequests = parseGraphqlPullRequests(repo.pullRequests?.nodes || []);
+
+      if (cacheGeneration === workflowRunsCacheGeneration) {
+        recordRepositoryActivity(trimmedPat, fullName, pushedAt, updatedAt, pullRequests);
+      }
+
+      return {
+        owner,
+        name,
+        fullName,
+        isPrivate: Boolean(repo.isPrivate),
+        isFork: Boolean(repo.isFork),
+        pushedAt,
+        updatedAt,
+        pullRequests,
+      };
+    });
+}
+
+/**
+ * リポジトリの Open PR および紐づく CI 実行結果を取得する
+ */
+export async function fetchRepositoryPRs(
+  pat: string,
+  owner: string,
+  name: string
+): Promise<RepositoryDashboardData> {
+  const trimmedPat = pat.trim();
+  const cacheGeneration = workflowRunsCacheGeneration;
+
+  const res = await fetch('https://api.github.com/graphql', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${trimmedPat}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: REPO_PRS_QUERY,
+      variables: { owner, name },
+    }),
+  });
+
+  updateRateLimitFromHeaders(res.headers);
+
+  if (!res.ok) {
+    throw new Error(`GraphQL API エラー (${res.status}): ${res.statusText}`);
+  }
+
+  const json = await res.json();
+
+  if (json.errors && json.errors.length > 0) {
+    const message = json.errors[0]?.message || 'GraphQL エラーが発生しました';
+    return {
+      owner,
+      name,
+      fullName: `${owner}/${name}`,
+      isPrivate: false,
+      pullRequests: [],
+      error: message,
+    };
+  }
+
+  const repo = json.data?.repository;
+  if (!repo) {
+    return {
+      owner,
+      name,
+      fullName: `${owner}/${name}`,
+      isPrivate: false,
+      pullRequests: [],
+      error: 'リポジトリが見つかりません（アクセス権限または名前をご確認ください）',
+    };
+  }
+
+  const fullName = repo.nameWithOwner || `${owner}/${name}`;
+  const pushedAt = typeof repo.pushedAt === 'string' ? repo.pushedAt : undefined;
+  const updatedAt = typeof repo.updatedAt === 'string' ? repo.updatedAt : undefined;
+  const pullRequests = parseGraphqlPullRequests(repo.pullRequests?.nodes || []);
+
+  if (cacheGeneration === workflowRunsCacheGeneration) {
+    recordRepositoryActivity(trimmedPat, fullName, pushedAt, updatedAt, pullRequests);
+  }
 
   return {
     owner,
     name,
-    fullName: repo.nameWithOwner || `${owner}/${name}`,
-    isPrivate: repo.isPrivate,
+    fullName,
+    isPrivate: Boolean(repo.isPrivate),
+    isFork: Boolean(repo.isFork),
+    pushedAt,
+    updatedAt,
     pullRequests,
   };
 }
@@ -436,34 +588,79 @@ export async function fetchUserRepositories(
   return result;
 }
 
+const EMPTY_RUNNERS_CACHE_TTL_MS = 10 * 60 * 1000;
+const repoRunnersCache = new Map<
+  string,
+  {
+    pat: string;
+    runners: SelfHostedRunner[];
+    fetchedAt: number;
+    lastKnownActivityAt?: string;
+  }
+>();
+
 /**
- * リポジトリ単位のセルフホステッドランナー一覧を取得する
+ * リポジトリ単位のセルフホステッドランナー一覧を取得する（ランナー0台のリポジトリは10分間ポーリングを抑制）
  */
 async function fetchRepositoryRunners(
   pat: string,
   owner: string,
   repo: string
 ): Promise<SelfHostedRunner[]> {
+  const trimmedPat = pat.trim();
+  const repoFullName = `${owner}/${repo}`;
+  const cacheKey = repoFullName.toLowerCase();
+  const now = Date.now();
+  const cached = repoRunnersCache.get(cacheKey);
+  const recordedActivity = repoActivityTimestamps.get(cacheKey);
+  const currentActivityAt =
+    recordedActivity && recordedActivity.pat === trimmedPat
+      ? recordedActivity.activityAt
+      : undefined;
+  const cacheGeneration = workflowRunsCacheGeneration;
+
+  // 前回ランナーが 0 台だったリポジトリは、10分以内（またはリポジトリ更新がない間）再ポーリングをスキップ
+  if (
+    cached &&
+    cached.pat === trimmedPat &&
+    cached.runners.length === 0 &&
+    now - cached.fetchedAt < EMPTY_RUNNERS_CACHE_TTL_MS &&
+    (!currentActivityAt || !cached.lastKnownActivityAt || cached.lastKnownActivityAt === currentActivityAt)
+  ) {
+    return [];
+  }
+
   try {
-    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/runners`, {
-      headers: {
-        Authorization: `Bearer ${pat}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-    });
+    const res = await fetch(
+      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/runners`,
+      {
+        headers: {
+          Authorization: `Bearer ${trimmedPat}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      }
+    );
 
     updateRateLimitFromHeaders(res.headers);
 
     if (!res.ok) {
-      // 権限がない場合(403/404)は空リスト
+      // 権限がない場合(403/404)は空リストとしてキャッシュし、毎分の無駄な再試行を防止
+      if ((res.status === 403 || res.status === 404) && cacheGeneration === workflowRunsCacheGeneration) {
+        repoRunnersCache.set(cacheKey, {
+          pat: trimmedPat,
+          runners: [],
+          fetchedAt: Date.now(),
+          lastKnownActivityAt: currentActivityAt,
+        });
+      }
       return [];
     }
 
     const data = await res.json();
     if (!data.runners || !Array.isArray(data.runners)) return [];
 
-    return data.runners.map((r: any) => ({
+    const runners: SelfHostedRunner[] = data.runners.map((r: any) => ({
       id: r.id,
       name: r.name,
       os: r.os || 'Unknown',
@@ -471,10 +668,21 @@ async function fetchRepositoryRunners(
       busy: Boolean(r.busy),
       labels: Array.isArray(r.labels) ? r.labels.map((l: any) => l.name) : [],
       scopeType: 'repo',
-      scopeName: `${owner}/${repo}`,
+      scopeName: repoFullName,
     }));
+
+    if (cacheGeneration === workflowRunsCacheGeneration) {
+      repoRunnersCache.set(cacheKey, {
+        pat: trimmedPat,
+        runners,
+        fetchedAt: Date.now(),
+        lastKnownActivityAt: currentActivityAt,
+      });
+    }
+
+    return runners;
   } catch (err) {
-    console.warn(`Failed to fetch repo runners for ${owner}/${repo}:`, err);
+    console.warn(`Failed to fetch repo runners for ${repoFullName}:`, err);
     return [];
   }
 }
@@ -487,7 +695,7 @@ async function fetchOrgRunners(
   org: string
 ): Promise<{ runners: SelfHostedRunner[]; warning?: string }> {
   try {
-    const res = await fetch(`https://api.github.com/orgs/${org}/actions/runners`, {
+    const res = await fetch(`https://api.github.com/orgs/${encodeURIComponent(org)}/actions/runners`, {
       headers: {
         Authorization: `Bearer ${pat}`,
         Accept: 'application/vnd.github+json',
@@ -656,6 +864,7 @@ export async function fetchAllSelfHostedRunners(
 }
 
 const WORKFLOW_RUNS_CACHE_TTL_MS = 20 * 1000;
+const MAX_UNCHANGED_WORKFLOW_RUNS_TTL_MS = 10 * 60 * 1000;
 const MAX_WORKFLOW_RUN_REPOS = 20;
 const MIN_RATE_LIMIT_RESERVE = 100;
 
@@ -667,6 +876,7 @@ const workflowRunsCache = new Map<
     warning?: string;
     incompleteCoverage?: boolean;
     fetchedAt: number;
+    lastKnownActivityAt?: string;
   }
 >();
 const workflowAttemptConclusionCache = new Map<
@@ -679,11 +889,13 @@ const workflowAttemptConclusionCache = new Map<
 let workflowRunsCacheGeneration = 0;
 
 /**
- * Actions ワークフロー実行履歴のメモリキャッシュをクリアし、進行中の取得による再格納も無効化する
+ * Actions ワークフロー実行履歴およびスマート差分ポーリング用のメモリキャッシュをクリアし、進行中の取得による再格納も無効化する
  */
 export function clearWorkflowRunsCache(): void {
   workflowRunsCache.clear();
   workflowAttemptConclusionCache.clear();
+  repoActivityTimestamps.clear();
+  repoRunnersCache.clear();
   workflowRunsCacheGeneration += 1;
 }
 
@@ -713,14 +925,46 @@ export async function fetchRepositoryWorkflowRuns(
   const cacheKey = `${repoFullName}::${perPage}`;
   const now = Date.now();
   const cached = workflowRunsCache.get(cacheKey);
+  const recordedActivity = repoActivityTimestamps.get(repoFullName.toLowerCase());
+  const currentActivityAt =
+    recordedActivity && recordedActivity.pat === trimmedPat
+      ? recordedActivity.activityAt
+      : undefined;
   const cacheGeneration = workflowRunsCacheGeneration;
 
-  if (cached && cached.pat === trimmedPat && now - cached.fetchedAt < WORKFLOW_RUNS_CACHE_TTL_MS) {
-    return {
-      runs: cached.runs,
-      warning: cached.warning,
-      incompleteCoverage: cached.incompleteCoverage,
-    };
+  if (cached && cached.pat === trimmedPat) {
+    // 1. 短時間 TTL（20秒）以内の場合は無条件にキャッシュを返す
+    if (now - cached.fetchedAt < WORKFLOW_RUNS_CACHE_TTL_MS) {
+      return {
+        runs: cached.runs,
+        warning: cached.warning,
+        incompleteCoverage: cached.incompleteCoverage,
+      };
+    }
+
+    // 2. スマート差分スキップ: リポジトリの pushedAt/updatedAt/PR状態 が前回取得時から変化しておらず、
+    //    進行中（in_progress / queued 等）や失敗中の Run もない平常時は無駄なポーリングをスキップ（最大10分間）
+    //    ※失敗 Run がある場合は GitHub 上での Re-run 解消を即座に検知するためスキップしない
+    const hasPendingPrCi = Boolean(
+      recordedActivity && recordedActivity.pat === trimmedPat && recordedActivity.hasPendingPrCi
+    );
+    if (
+      now - cached.fetchedAt < MAX_UNCHANGED_WORKFLOW_RUNS_TTL_MS &&
+      currentActivityAt &&
+      cached.lastKnownActivityAt === currentActivityAt &&
+      !hasPendingPrCi &&
+      !cached.incompleteCoverage &&
+      !cached.warning &&
+      cached.runs.every(
+        (r) => r.status === 'completed' && !isFailedWorkflowConclusion(r.conclusion)
+      )
+    ) {
+      return {
+        runs: cached.runs,
+        warning: cached.warning,
+        incompleteCoverage: cached.incompleteCoverage,
+      };
+    }
   }
 
   // レート制限残数が少ない場合はキャッシュを返して通信を抑制
@@ -873,12 +1117,17 @@ export async function fetchRepositoryWorkflowRuns(
     }
 
     if (cacheGeneration === workflowRunsCacheGeneration) {
+      const latestActivity = repoActivityTimestamps.get(repoFullName.toLowerCase());
       workflowRunsCache.set(cacheKey, {
         pat: trimmedPat,
         runs,
         warning: attemptWarning,
         incompleteCoverage: attemptLookupIncomplete,
         fetchedAt: Date.now(),
+        lastKnownActivityAt:
+          latestActivity && latestActivity.pat === trimmedPat
+            ? latestActivity.activityAt
+            : currentActivityAt,
       });
     }
 
@@ -956,6 +1205,112 @@ export async function fetchAllWorkflowRuns(
     incompleteCoverage,
   };
 }
+
+const HOT_OWNED_REPO_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7日
+const RECENT_OWNED_REPO_WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // 30日
+const RECENT_FORK_REPO_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7日
+const MIN_INCLUDED_OWNED_NON_FORK_REPOS = 5;
+
+/**
+ * キャッシュ内に実行中または失敗状態のワークフローが存在するかどうかを判定する
+ */
+function hasActiveOrFailedCachedRuns(repoFullName: string): boolean {
+  const prefix = `${repoFullName.toLowerCase()}::`;
+  for (const [key, entry] of workflowRunsCache.entries()) {
+    if (key.toLowerCase().startsWith(prefix)) {
+      if (
+        entry.runs.some(
+          (r) => r.status !== 'completed' || isFailedWorkflowConclusion(r.conclusion)
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * 自動取得された自分のリポジトリ群と指定された外部リポジトリ一覧から、
+ * 無駄なポーリングを発生させないようアクティブな監視対象リポジトリ名一覧を選出する
+ */
+export function selectActiveRepositoriesForPolling(
+  ownedProjects: RepositoryDashboardData[],
+  configuredRepos: string[],
+  maxAutoTotal = MAX_WORKFLOW_RUN_REPOS,
+  nowMs = Date.now()
+): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  const addRepo = (fullName: string) => {
+    const trimmed = fullName.trim();
+    if (!trimmed) return;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(trimmed);
+  };
+
+  const getRepoAgeMs = (repo: RepositoryDashboardData): number => {
+    const activityIso = repo.pushedAt || repo.updatedAt;
+    const activityMs = activityIso ? new Date(activityIso).getTime() : 0;
+    return activityMs > 0 ? Math.max(0, nowMs - activityMs) : Number.POSITIVE_INFINITY;
+  };
+
+  // 1. ユーザーが明示指定した外部リポジトリは最優先ですべて含める
+  for (const repo of configuredRepos) {
+    addRepo(repo);
+  }
+
+  // 2. 前回取得時点で実行中または失敗中の Actions がある自分のリポジトリを優先追加（解消検知のため）
+  for (const repo of ownedProjects) {
+    if (result.length >= maxAutoTotal) break;
+    if (hasActiveOrFailedCachedRuns(repo.fullName)) {
+      addRepo(repo.fullName);
+    }
+  }
+
+  // 3. 直近 7 日以内に Push された開発中の自分のリポジトリ（非フォーク）を優先追加
+  for (const repo of ownedProjects) {
+    if (result.length >= maxAutoTotal) break;
+    if (!repo.isFork && getRepoAgeMs(repo) <= HOT_OWNED_REPO_WINDOW_MS) {
+      addRepo(repo.fullName);
+    }
+  }
+
+  // 4. Open PR が存在する自分のリポジトリを追加
+  for (const repo of ownedProjects) {
+    if (result.length >= maxAutoTotal) break;
+    if (repo.pullRequests.length > 0) {
+      addRepo(repo.fullName);
+    }
+  }
+
+  // 5. 直近 30 日以内にアクティブな自分のリポジトリ（非フォーク最低上位5件保証、および直近7日以内のフォーク）を追加
+  let includedNonForkCount = ownedProjects.filter(
+    (r) => !r.isFork && seen.has(r.fullName.toLowerCase())
+  ).length;
+
+  for (const repo of ownedProjects) {
+    if (result.length >= maxAutoTotal) break;
+    if (seen.has(repo.fullName.toLowerCase())) continue;
+
+    const ageMs = getRepoAgeMs(repo);
+
+    if (!repo.isFork) {
+      if (ageMs <= RECENT_OWNED_REPO_WINDOW_MS || includedNonForkCount < MIN_INCLUDED_OWNED_NON_FORK_REPOS) {
+        addRepo(repo.fullName);
+        includedNonForkCount += 1;
+      }
+    } else if (ageMs <= RECENT_FORK_REPO_WINDOW_MS) {
+      addRepo(repo.fullName);
+    }
+  }
+
+  return result;
+}
+
 
 
 
