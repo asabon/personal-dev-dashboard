@@ -26,8 +26,9 @@ CodeRabbit 等で新たな指摘を受けた際は、再発防止のため本フ
   - 複数フィールドを文字列結合してキーを作る際、異なる属性値同士が衝突しないよう一意な ID（`workflowId ?? workflowName`）やスコーププレフィックス（`pr:${headBranch}` vs `workflow-latest`）を付与しているか。
 - [ ] **進行中（Active / `in_progress`）状態の保護**:
   - 「同一ワークフローの最新実行のみを採用する」集約処理において、長時間実行中の古い `in_progress` Run が、後から開始して先に完了した `success` Run によって上書き・隠蔽されないか。
-- [ ] **サマリーバッジの個数表示と `All` 表記の整合性**:
-  - 状態別個数バッジ（`Running`, `Failed`, `Passed` 等）を並記する際、すべてのアイテムが正常完了しているとき（`passedChecks === totalChecks` 等）のみ `All ...`（`All Passed`, `All Online`, `All 目安以下`）を表示し、一部が異なる状態のときは各状態の個数バッジ（0件は非表示、`No CI` や `SKIPPED` / `NEUTRAL` 等のその他状態も含む）を色固定で並記しているか。
+- [ ] **サマリーバッジの個数表示と `All` 表記・残余（Other）ラベルの整合性**:
+  - 状態別個数バッジ（`Running`, `Failed`, `Passed` 等）を並記する際、すべてのアイテムが正常完了しているとき（`passedChecks === totalChecks` 等）のみ `All ...`（`All Passed`, `All Online`, `All 目安以下`）を表示し、一部が異なる状態のときは各状態の個数バッジ（0件は非表示）を色固定で並記しているか。
+  - `total - passed - failed - running` のように残余（catch-all）をまとめて表示する際、`SKIPPED` 以外に `NEUTRAL`・`STALE`・`ACTION_REQUIRED` 等も含まれうる場合は、特定状態名（`Skipped`）ではなく中立的なラベル（`Other` 等）を使用しているか。
 - [ ] **独立した並列非同期処理（`Promise.all`）の部分失敗耐性と前回データ保持**:
   - 複数リポジトリのデータを `Promise.all` で並列取得する際、1つのリポジトリの取得失敗で全体が reject されないよう、各要素の非同期処理内で `try / catch` してエラーレコードを返しているか。
   - 再取得失敗時に前回取得成功時のデータ（`pullRequests` 等）を空配列で上書き消去せず保持し、エラーバナーと併せて表示しているか。また、再取得エラーがある場合はサマリーバーやカードヘッダーで `異常なし` / `All Passed` と表示しないようガードしているか。

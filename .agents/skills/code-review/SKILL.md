@@ -15,11 +15,11 @@ description: Perform a comprehensive CodeRabbit-equivalent code review on curren
 レビュー実施時は、変更内容に応じて同階層 `references/` 配下のチェックリストを必ず参照してください：
 
 1. **[TypeScript / React / UI チェックリスト (`references/typescript-react.md`)](references/typescript-react.md)**
-   - 状態遷移（`isLoading` vs `isSilent`）、部分失敗・空状態表示、Map/Set 集約キー衝突、進行中ジョブ保護、モバイル幅 Flexbox 折り返し
+   - 状態遷移（`isLoading` vs `isSilent`）、部分失敗時の前回データ保持・Stale 更新破棄、Map/Set 集約キー衝突、進行中ジョブ保護、サマリーバッジと残余（`Other`）表記、キーボード操作・`motion-safe`・モバイル幅 Flexbox 折り返し
 2. **[GitHub API・レート制限・セキュリティ チェックリスト (`references/github-api-security.md`)](references/github-api-security.md)**
-   - レスポンス型防御、`total_count` と `per_page` の区別、`conclusion` 網羅性（`startup_failure` 等）、ファンアウト・レート制限保護、キャッシュクリア、PAT 秘匿
+   - レスポンス型防御、`total_count` と `per_page` の区別、`conclusion` 網羅性と再実行・キャンセル時の失敗保持、補助ルックアップの失敗通知とトークンスコープキャッシュ、In-flight リクエスト無効化、PAT 秘匿
 3. **[テスト・ドキュメント整合性 チェックリスト (`references/testing-and-docs.md`)](references/testing-and-docs.md)**
-   - テスト間のキャッシュ分離、UI アサーション強度（`rerender`・エラーカード表示）、`storage.test.ts` 後方互換、`security.test.ts` 新 API カバレッジ、設計ドキュメント同期
+   - テスト間のキャッシュ分離、UI アサーション強度、`storage.test.ts` 後方互換、`security.test.ts` 新 API カバレッジ、JSDoc（Docstring 80% 基準）、Markdownlint 空行ルール、設計ドキュメント同期
 
 ---
 
@@ -45,7 +45,7 @@ git diff --stat main
 ### 3. 指摘事項の修正とローカル検証（修正依頼または PR 作成・Push 前の場合）
 
 レビューのみの場合は作業ツリーを変更せず、指摘事項を報告します。
-修正依頼または PR 作成・Push 前の場合は、修正すべき項目をローカルで修正し、以下をすべて通過させます。
+修正依頼または PR 作成・Push 前の場合は、修正すべき項目をローカルで修正し、**修正によって新たに追加したコード（エラーパス・フォールバック分岐・補助 API 呼び出し・JSDoc 等）がチェックリストの他項目に違反していないか再確認したうえで**、以下をすべて通過させます。
 
 1. `npm run typecheck`
 2. `npm test`
