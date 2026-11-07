@@ -2,7 +2,7 @@
 
 ## 1. 概要
 
-本プロジェクトは **GitHub Flow** をベースに、AI コーディングエージェント（Antigravity）の **事前自己レビュースキル (`code-review`)**・**外部指摘対応スキル (`address-review-comments`)**、および **Release Drafter + GitHub Releases 自動公開 (`prepare-release` / `publish-release`)** を組み合わせた開発・リリースパイプラインを採用しています。
+本プロジェクトは **GitHub Flow** をベースに、AI コーディングエージェント（Antigravity）の **事前自己レビュースキル (`code-review`)**・**外部指摘対応スキル (`address-review-comments`)**、および **スキル主導の `CHANGELOG.md` 生成 + GitHub Releases 自動公開 (`prepare-release` / `publish-release`)** を組み合わせた開発・リリースパイプラインを採用しています。
 
 ---
 
@@ -16,8 +16,8 @@
 | **② ローカル差分の点検だけしたい** | 「今の変更をコードレビューして」 | **`code-review`（Read-Only）** でサブエージェントがチェックリスト検査し、指摘事項を報告（ファイルは変更しない） | 報告を見て修正するか判断する |
 | **③ PR で指摘が出た** | 「CodeRabbit の指摘が挙がっています」<br>「PR のレビュー指摘に対応して」 | **`address-review-comments`** で指摘収集・判定 → 修正 → **再発防止観点を `references/` に追記** → **`code-review` で内部レビュー** → 1回で Push & CI 確認 | 指摘が解消されたら PR をマージする |
 | **④ CodeRabbit 再実行後の監視** | 「CodeRabbit の再実行を行いました」<br>（PR 上で `@coderabbitai review` 投稿後） | `gh pr checks --watch` でレビュー完了を自動待機 → 指摘があればそのまま **③（`address-review-comments`）** を自動実行 | 完了報告を待ち、問題なければ PR をマージする |
-| **⑤ リリース PR を作る** | 「リリース準備して」 | **`prepare-release`** で `main` の CI 確認 → 次期バージョン判定 → `package.json` 更新 & リリース PR 作成 | リリース PR を確認してマージする |
-| **⑥ 本番デプロイ・公開する** | 「公開して」<br>（リリース PR マージ後） | **`publish-release`** でタグ（`vX.Y.Z`）を Push → `deploy.yml` 監視 → GitHub Pages デプロイ & Release 自動公開を確認 | 公開された本番ページ・Release を確認する |
+| **⑤ リリース PR を作る** | 「リリース準備して」 | **`prepare-release`** で `main` の CI 確認 → 前回タグからのコミット・コード差分を解析して次期バージョン判定 & リリースノート要約 → `package.json` と `CHANGELOG.md` 更新・GitHub Draft Release 作成・リリース PR 作成 | リリース PR（`CHANGELOG.md` 含む）を確認してマージする |
+| **⑥ 本番デプロイ・公開する** | 「公開して」<br>（リリース PR マージ後） | **`publish-release`** でタグ（`vX.Y.Z`）を Push → `deploy.yml` 監視 → GitHub Pages デプロイ & `CHANGELOG.md` の内容で Release 自動公開を確認 | 公開された本番ページ・Release を確認する |
 
 > [!IMPORTANT]
 > **人間のみが行う操作（エージェントによる自動実行禁止）**:
@@ -108,51 +108,52 @@ sequenceDiagram
 
 ---
 
-## 5. リリース運用フロー（3 つのステップ）
+## 5. リリース運用フロー（2 つのステップ）
 
-Web アプリケーション（GitHub Pages）の特性に合わせ、ストア審査や中間テスト（Pre-Release）を挟まず、**「デプロイ成功時に Release を正式公開する」** シンプルで事故のないフローを採用しています。
+Web アプリケーション（GitHub Pages）の特性に合わせ、ストア審査や中間テスト（Pre-Release）を挟まず、また通常 PR ごとに Actions 分数を消費する外部ボット（Release Drafter）も使わずに、**「リリース準備時に AI スキルが前回タグからのコード差分・コミット履歴を解析して `CHANGELOG.md` と Draft Release を作成し、デプロイ成功時に正式公開する」** シンプルで高品質なフローを採用しています。
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Dev as あなた / エージェント
-    participant GH as GitHub (PR / Release Drafter)
+    actor Dev as あなた
+    participant Agent as Antigravity (Main)
+    participant GH as GitHub (PR / Releases)
     participant Action as GitHub Actions
     participant Pages as GitHub Pages (本番環境)
 
-    Note over Dev,GH: 1. 通常開発フェーズ
-    Dev->>GH: トピックブランチを main にマージ
-    GH->>Action: Release Drafter が自動起動
-    Action->>GH: 下書きリリースノート ("Next Release") を自動蓄積
+    Note over Dev,GH: 1. リリース準備フェーズ (prepare-release スキル)
+    Dev->>Agent: ⑤「リリース準備して」
+    Agent->>GH: main の CI 確認 & 前回タグ (vX.Y.Z) からの git log / git diff 解析
+    Agent->>Agent: 次期バージョン判定 & 変更内容の要約作成
+    Agent->>Agent: package.json 更新 & CHANGELOG.md に新セクション追記
+    Agent->>GH: GitHub Draft Release (vX.Y.Z) を作成・更新
+    Agent->>GH: リリース PR (chore/release-vX.Y.Z) を作成 & CI 確認
+    Dev->>GH: リリース PR（CHANGELOG.md の記述含む）を確認し main にマージ
 
-    Note over Dev,GH: 2. リリース準備フェーズ (prepare-release)
-    Dev->>Dev: ⑤「リリース準備して」
-    Dev->>GH: package.json バージョン更新 & Release Note 取り込み PR 作成
-    Dev->>GH: PR を main にマージ
-
-    Note over Dev,GH: 3. 公開 & デプロイフェーズ (publish-release)
-    Dev->>Dev: ⑥「公開して」
-    Dev->>GH: タグ (vX.Y.Z) を push
+    Note over Dev,Pages: 2. 公開 & デプロイフェーズ (publish-release スキル)
+    Dev->>Agent: ⑥「公開して」
+    Agent->>GH: タグ (vX.Y.Z) を作成・push
     GH->>Action: デプロイワークフロー (deploy.yml) が起動
     Action->>Pages: 本番ビルド & GitHub Pages デプロイ
-    Action->>GH: デプロイ成功後、"Next Release" ドラフトを正式 Release (vX.Y.Z) として自動公開！
+    Action->>GH: デプロイ成功後、CHANGELOG.md のノートで正式 Release (vX.Y.Z) を自動公開！
 ```
 
-### ステップ 1: 通常開発時（Release Drafter が下書き蓄積）
+### ステップ 1: リリース準備 (`prepare-release` スキル)
 
-- トピックブランチが `main` にマージされるたび、`.github/workflows/release-drafter.yml` が自動起動します。
-- PR のタイトルやラベル（`feature`, `fix`, `chore`, `refactor`, `docs` 等）に基づいて、GitHub Releases 上の「Next Release」下書きに差分が自動分類・蓄積されます。
+- リリースを行いたいタイミングで、エージェントへ「リリース準備して」と依頼します。
+- エージェントは前回リリースタグから `HEAD` までのコミット履歴（`git log`）およびコード差分（`git diff`）を解析し、Semantic Versioning に基づいて次期バージョンを提案・決定します。
+- 変更点をカテゴリ（`### 🚀 新機能 / Features` / `### 🐛 バグ修正・改善 / Bug Fixes & Improvements` / `### 📖 ドキュメント・開発基盤 / Documentation & Developer Experience`）に整理・要約し、以下を一括実行します：
+  1. `package.json` の `version` 更新
+  2. [`CHANGELOG.md`](../../CHANGELOG.md) の先頭への新バージョンセクション追記
+  3. GitHub Releases 上への Draft Release（`vX.Y.Z`）の作成（または更新）
+  4. リリース PR（`chore/release-vX.Y.Z`）の作成（事前内部レビュー & CI 通過確認込み）
+- あなたは PR 上で `CHANGELOG.md` のリリースノート文面を確認（必要に応じて修正指示）し、`main` へマージします。
 
-### ステップ 2: リリース準備 (`prepare-release` スキル)
+### ステップ 2: リリース公開 & 自動デプロイ (`publish-release` スキル)
 
-- リリースを行いたいタイミングで、エージェントへ「リリース準備して」と依頼。
-- "Next Release" に蓄積された変更規模から次期バージョンを決定し、`package.json` のバージョン更新 PR（例: `chore/release-v0.2.0`）を作成します。
-
-### ステップ 3: リリース公開 & 自動デプロイ (`publish-release` スキル)
-
-- リリース PR を `main` にマージ後、エージェントへ「公開して」と連絡。
-- タグ（例: `v0.2.0`）が push され、`.github/workflows/deploy.yml` が起動します。
-- プロダクションビルドおよび GitHub Pages へのデプロイが実行され、**デプロイが成功したタイミングで、GitHub 上の "Next Release" 下書きが正式な Release（Latest）として自動公開** されます。
+- リリース PR を `main` にマージ後、エージェントへ「公開して」と連絡します。
+- タグ（例: `v1.7.0`）が作成・push され、`.github/workflows/deploy.yml` が起動します。
+- プロダクションビルドおよび GitHub Pages へのデプロイが実行され、**デプロイが成功したタイミングで、`CHANGELOG.md` の該当バージョンセクションを本文として GitHub 上の Draft Release が正式な Release（Latest）として自動公開** されます。
 
 ---
 
@@ -160,6 +161,5 @@ sequenceDiagram
 
 | ファイル | トリガー | 役割 |
 | :--- | :--- | :--- |
-| **`.github/workflows/ci.yml`** | `pull_request`, `push` (main) | TypeScript 型検査 (`typecheck`) & ビルドテスト (`build`) |
-| **`.github/workflows/release-drafter.yml`** | `push` (main), `pull_request_target` | リリースノート草案（"Next Release"）の自動生成・追記 |
-| **`.github/workflows/deploy.yml`** | `push` (tags: `v*.*.*`), 手動 | GitHub Pages デプロイ & 成功時の Release 自動公開 |
+| **`.github/workflows/ci.yml`** | `pull_request`, `push` (main) | TypeScript 型検査 (`typecheck`)、単体テスト (`test`) & ビルド検証 (`build`) |
+| **`.github/workflows/deploy.yml`** | `push` (tags: `v*.*.*`), 手動 | GitHub Pages デプロイ & 成功時の `CHANGELOG.md` 同期・Release 自動公開 |

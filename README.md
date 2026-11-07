@@ -163,6 +163,7 @@ npm run build
 - 🧪 [**テスト方針 & テスト観点仕様書 (docs/dev/testing.md)**](docs/dev/testing.md): Vitest テスト設計、セキュリティ・ロジック・UI の検証項目
 - 🚀 [**開発・リリース運用ガイド (docs/dev/release-flow.md)**](docs/dev/release-flow.md): AI 開発・レビューサイクル（指示チートシート）、ブランチ戦略、リリース自動公開、CI/CD 設計
 - 🗺️ [**開発ロードマップ & 実装実績 (docs/dev/roadmap.md)**](docs/dev/roadmap.md): 開発実績、マイルストーン、今後の拡張アイデア
+- 📋 [**変更履歴 (CHANGELOG.md)**](CHANGELOG.md): バージョンごとの新機能・修正・改善のリリースノート履歴
 
 ---
 
