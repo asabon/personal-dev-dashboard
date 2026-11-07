@@ -99,6 +99,20 @@ describe('workflowRuns feature module', () => {
     ]);
   });
 
+  it('close 済みの PR に紐づく失敗ワークフロー (pullRequestState === "closed") はアラート対象外となること', () => {
+    const closedPrRun: WorkflowRunItem = {
+      ...makeRun(1, 'CI', 'completed', 'failure'),
+      event: 'pull_request',
+      pullRequestNumber: 26,
+      pullRequestState: 'closed',
+    };
+    const data: WorkflowRunsFeatureData = {
+      runs: [closedPrRun],
+    };
+
+    expect(getWorkflowRunsAlerts(data)).toEqual([]);
+  });
+
   it('loadData が context の pat と repositories を使って fetchAllWorkflowRuns を呼び出すこと', async () => {
     const mockRuns = [makeRun(1, 'CI', 'completed', 'success')];
     vi.mocked(fetchAllWorkflowRuns).mockResolvedValue({ runs: mockRuns });

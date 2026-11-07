@@ -185,7 +185,7 @@
 ### 4.3 `Actions Status` カード（2階層）
 
 #### (1) 最上位階層：`Actions Status` 親カードヘッダー (`ActionsStatusCard`)
-- **タイトル横件数バッジ**: `{attentionRuns.length}件`（⚪ 灰：実行中＋未解決失敗の合計件数）
+- **タイトル横件数バッジ**: `{attentionRuns.length}件`（⚪ 灰：実行中＋未解決失敗の合計件数。close 済み PR に紐づく失敗は除外）
 - **右側サマリーバッジ**: 条件に応じて **左から順に並記** されます（初回ロード中 `isLoading=true` の間は Running / Failed / All Passed は非表示）。
 
 | ケース | 表示されるバッジ（左 → 右の順） | 備考 |
