@@ -1,12 +1,13 @@
 ---
 name: prepare-release
-description: Prepare a release for Personal Dev Dashboard. Checks main CI, analyzes code/commit diffs since the previous tag to write release notes, updates package.json and CHANGELOG.md, creates a GitHub Draft Release, and opens a release PR.
+description: Prepare a release for Personal Dev Dashboard. Checks main CI, analyzes code/commit diffs since the previous tag to write release notes, updates package.json, CHANGELOG.md, README.md, and screenshots, creates a GitHub Draft Release, and opens a release PR.
 ---
 
 # リリース準備スキル (`prepare-release`)
 
 ユーザーから「リリースして」「リリース準備をして」「vX.Y.Z をリリースしたい」等の指示を受けた際に実行する手順です。
 前回リリースタグからのコミット履歴およびコード差分を解析して高品質なリリースノートを生成し、[`CHANGELOG.md`](../../../CHANGELOG.md) と GitHub Draft Release の両方に反映します。
+また、新機能や UI 変更がある場合は、リポジトリ直下の [`README.md`](../../../README.md) およびプレビュー画像（スクリーンショット）も合わせて最新化します。
 
 ---
 
@@ -56,7 +57,22 @@ description: Prepare a release for Personal Dev Dashboard. Checks main CI, analy
    - [`package.json`](../../../package.json) の `version` フィールドを決定したバージョン（例: `"1.6.0"`）に更新します。
    - [`CHANGELOG.md`](../../../CHANGELOG.md) の導入文の下の `---` の直後（既存バージョンの最上部）に `## [vX.Y.Z] - YYYY-MM-DD` セクションを追加してリリースノートを記載し、セクション末尾を `---` で区切ります（GitHub Releases へ転記した際に 404 にならないよう、ファイル参照は相対リンクではなく `` `docs/dev/...` `` のようなインラインコード表記とします）。
 
-3. **GitHub Draft Release の作成（または更新）**:
+3. **`README.md` の点検と更新（新機能や重要仕様変更がある場合）**:
+   - 前回タグからの差分に新機能（`feat:`）や UI / 設定の重要な変更が含まれる場合、リポジトリ直下の [`README.md`](../../../README.md) を確認します。
+   - 「✨ 主な特徴 (Features)」、「🚀 はじめかた (Quick Start)」、「🔒 セキュリティ」などの該当セクションに、今回の新機能の説明が反映されているか点検します。
+   - 未反映または記述が不足している場合は、README のトーン＆マナー（絵文字付き箇条書き、簡潔な機能要約、太字ハイライト）に合わせて追記・更新します。
+   - ※内部リファクタリングや軽微なバグ修正のみの場合は更新不要です。
+
+4. **スクリーンショットの自動更新（UI 変更や新カード追加がある場合）**:
+   - UI デザインの刷新、新しいカードや設定項目の追加、レイアウト変更など画面に変化がある場合、キャプチャスクリプトを実行してプレビュー画像（PC簡易・PC詳細の 2 枚）を最新のデモ画面に自動更新します。
+
+   ```powershell
+   npm run capture-screenshots
+   ```
+
+   - ※UI に視覚的変化がないリリースでは実行をスキップして構いません。
+
+5. **GitHub Draft Release の作成（または更新）**:
    - `CHANGELOG.md` に記載した今回分のリリースノート本文を `scratch/release_notes.md`（先頭に `## 変更内容 / What's Changed` を付与）に書き出し、既存のドラフトがあれば Release ID で削除した上で、新しいドラフトを作成します。
 
    ```powershell
@@ -68,14 +84,16 @@ description: Prepare a release for Personal Dev Dashboard. Checks main CI, analy
    Remove-Item "scratch/release_notes.md" -Force
    ```
 
-4. **事前検証・LF 確認 & コミット作成**:
-   - `npm run typecheck` / `npm test` / `npm run build` の通過、[`local-review`](../local-review/SKILL.md) スキルによる事前点検、および `package.json`・`CHANGELOG.md` の改行コードが LF (`\n`) であることを確認してコミットします。
+6. **事前検証・LF 確認 & コミット作成**:
+   - `npm run typecheck` / `npm test` / `npm run build` の通過、[`local-review`](../local-review/SKILL.md) スキルによる事前点検、および変更したテキストファイルの改行コードが LF (`\n`) であることを確認してコミットします。
 
    ```powershell
    npm run typecheck
    npm test
    npm run build
    git add package.json CHANGELOG.md
+   # README.md や スクリーンショット画像に変更がある場合は合わせてステージング
+   git add README.md docs/assets/*.png
    git commit -m "chore: リリース vX.Y.Z に向けたバージョン・CHANGELOG更新"
    ```
 

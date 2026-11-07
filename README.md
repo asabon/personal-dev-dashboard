@@ -18,19 +18,24 @@
 
 **Personal Dev Dashboard** は、これらの情報をブラウザ 1 画面でリアルタイムに俯瞰できる、**完全クライアント完結型 (Zero-Backend SPA)** のダッシュボードです。
 
-### 🖥️ デスクトップ表示（詳細モード）
+<p align="center">
+  <img src="docs/assets/dashboard-compact-preview.png" alt="Personal Dev Dashboard (簡易表示モード)" width="900" />
+  <br />
+  <sub>日常の常時監視に最適な「簡易表示モード」。IDE の隣に置く幅狭ウィンドウやスマホ画面でもレイアウトを崩さずすっきり表示されます</sub>
+</p>
+
+<details>
+<summary>🔍 <b>全カード展開時の「詳細モード」画面を見る（クリックで展開）</b></summary>
+
+<br />
+
+各リポジトリの PR やジョブ詳細、OS 別 Actions 内訳などを 1 画面ですべて展開して深掘り確認したいときのモードです（画面右上のトグルでワンクリック切り替え可能）。
 
 <p align="center">
   <img src="docs/assets/dashboard-preview.png" alt="Personal Dev Dashboard - PC版 (詳細モード)" width="900" />
 </p>
 
-### 📱 スマホ表示（簡易表示モード / 最小構成）
-
-<p align="center">
-  <img src="docs/assets/dashboard-mobile-preview.png" alt="Personal Dev Dashboard - スマホ版 (最小構成)" width="360" />
-  <br />
-  <sub>スマートフォンや狭小画面でも 1 画面に収まるアコーディオン最小構成</sub>
-</p>
+</details>
 
 ---
 
@@ -41,9 +46,9 @@
 - **🚨 状況サマリーバー (Dashboard Highlights)**:
   - 画面最上部に異常（CI 失敗、Actions 枠の警戒、Runner 停止）や実行中ジョブの要約を集約表示。
   - クリックまたはタップで該当カードへ即座にスムーズスクロール。
-- **📱 スマホ向け簡易表示モード (Compact View) & レスポンシブヘッダー**:
+- **🪟 幅狭ウィンドウ常時監視 & 簡易表示モード (Compact View)**:
   - ヘッダーのトグルボタンで「詳細モード」と「簡易表示モード（アコーディオン折りたたみ）」をワンクリック切り替え。
-  - スマートフォンや狭小画面（360px〜）でもヘッダーが美しく折り返され、文字切れのない快適なモバイル監視を実現。
+  - IDE やブラウザ横に置く細長い独立ウィンドウ（幅 1024px 未満で自動切替）やスマートフォン（360px〜）でも、ヘッダーが美しく折り返され、文字切れのない快適な常時監視を実現。
 - **📊 GitHub Actions 使用状況の常時並列表示 & 残量ファースト**:
   - 個人（Personal）および全監視 Organization の Actions 使用状況を、タブ切り替え不要で常時並列表示。
   - 各アカウントの残り無料枠をタイトルのすぐ横（スマホでは見やすい縦並びリスト）に常時掲示。
@@ -146,6 +151,9 @@ npm test
 # 型チェック & プロダクションビルド
 npm run typecheck
 npm run build
+
+# README用スクリーンショットの自動撮影 (デモモード利用)
+npm run capture-screenshots
 ```
 
 ---
