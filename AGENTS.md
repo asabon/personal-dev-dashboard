@@ -20,6 +20,9 @@
 - **任意ダッシュボードカードの追加**:
   - すべてのエージェントは、カード追加・変更時に [feature module ルール](.agents/rules/dashboard-feature-modules.md) と [`src/features/types.ts`](src/features/types.ts) を確認してください。
   - 任意カードは feature module として追加し、通常は App・設定モーダル・registry に機能固有の分岐を加えません。共有契約を変える場合は理由を示し、移行と関連テストも更新してください。
+- **単体テストの完全性維持（都合の良い既存テスト修正の禁止）**:
+  - 本体コードの修正後に既存テストが失敗した場合は、テスト側を安易に書き換えるのではなく、まず本体コードのデグレ（リグレッション）として修正してください（[単体テスト完全性ルール (`.agents/rules/testing-integrity.md`)](.agents/rules/testing-integrity.md) 参照）。
+  - テストを通過させる目的での既存 `expect` の削除・緩和や不変条件テスト（[`security.test.ts`](src/services/security.test.ts)・[`storage.test.ts`](src/services/storage.test.ts)）の弱体化は厳禁です。仕様変更そのものに伴い既存テストの期待値を変更する必要がある場合は、変更理由を PR 本文および完了報告に明記してください。
 
 ---
 
@@ -51,7 +54,7 @@ GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合
 - **ローカル事前レビューの義務化とチェックリストの継続更新（CodeRabbit レート制限対策）**:
   - 新規 PR 作成時やレビュー修正の `git push` を行う前に、コード変更・ドキュメント変更を問わず、必ず [ローカル事前レビュールール (`.agents/rules/local-review.md`)](.agents/rules/local-review.md) およびスキル [`.agents/skills/local-review/SKILL.md`](.agents/skills/local-review/SKILL.md) に従い、独立した視点（サブエージェント等）で 2 段階レビュー（自由推論による深掘り ＋ `references/` のプロジェクト固有ベースライン照合）を実施・修正してから 1 回の Push にまとめてください。
   - また、CodeRabbit やユーザーから PR で新たな指摘を受けた際は、スキル [`.agents/skills/address-review-comments/SKILL.md`](.agents/skills/address-review-comments/SKILL.md) に従って指摘の収集・妥当性判定・修正・1 回の Push を行い、プロジェクト固有規約や非自明な仕様上の罠については再発防止のため [`.agents/skills/local-review/references/`](.agents/skills/local-review/references/) の該当チェックリストに厳選・統合して還元してください。`@coderabbitai review` 等のレビュー再実行コメントをエージェントが自動投稿することは禁止します。
-- 詳細ルール: [`.agents/rules/cli-markdown-escaping.md`](.agents/rules/cli-markdown-escaping.md), [`.agents/rules/windows-shell-commands.md`](.agents/rules/windows-shell-commands.md), [`.agents/rules/local-review.md`](.agents/rules/local-review.md)
+- 詳細ルール: [`.agents/rules/cli-markdown-escaping.md`](.agents/rules/cli-markdown-escaping.md), [`.agents/rules/windows-shell-commands.md`](.agents/rules/windows-shell-commands.md), [`.agents/rules/local-review.md`](.agents/rules/local-review.md), [`.agents/rules/testing-integrity.md`](.agents/rules/testing-integrity.md)
 
 ---
 
