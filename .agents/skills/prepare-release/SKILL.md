@@ -69,7 +69,7 @@ description: Prepare a release for Personal Dev Dashboard. Checks main CI, analy
    ```
 
 4. **事前検証・LF 確認 & コミット作成**:
-   - `npm run typecheck` / `npm test` / `npm run build` の通過、[`code-review`](../code-review/SKILL.md) スキルによる事前点検、および `package.json`・`CHANGELOG.md` の改行コードが LF (`\n`) であることを確認してコミットします。
+   - `npm run typecheck` / `npm test` / `npm run build` の通過、[`local-review`](../local-review/SKILL.md) スキルによる事前点検、および `package.json`・`CHANGELOG.md` の改行コードが LF (`\n`) であることを確認してコミットします。
 
    ```powershell
    npm run typecheck
