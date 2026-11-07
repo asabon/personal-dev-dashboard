@@ -568,4 +568,518 @@ describe('githubApi - Actions 使用量および倍率計算テスト', () => {
     expect(selected).not.toContain('asabon/old-fork');
     expect(selected).not.toContain('asabon/dormant-2023');
   });
+
+  it('fetchRepositoryWorkflowRuns は Open PR 一覧に含まれる PR 実行を open、含まれない PR 実行を closed として判定すること', async () => {
+    clearWorkflowRunsCache();
+    // PR #27 を Open PR として記録
+    recordRepositoryActivity(
+      TEST_PAT,
+      'asabon/personal-dev-dashboard',
+      '2026-11-07T10:00:00Z',
+      '2026-11-07T10:00:00Z',
+      [
+        {
+          id: 'pr-27',
+          number: 27,
+          title: 'feat: new feature',
+          url: 'https://github.com/asabon/personal-dev-dashboard/pull/27',
+          updatedAt: '2026-11-07T10:00:00Z',
+          author: { login: 'asabon', avatarUrl: '' },
+          headBranch: 'feat/branch-27',
+          headSha: 'abc1234',
+          shortSha: 'abc1234',
+          overallCiState: 'SUCCESS',
+          checks: [],
+        },
+      ]
+    );
+
+    globalThis.fetch = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          total_count: 2,
+          workflow_runs: [
+            {
+              id: 801,
+              workflow_id: 10,
+              name: 'CI',
+              display_title: 'feat: PR 27 update',
+              run_number: 10,
+              event: 'pull_request',
+              status: 'completed',
+              conclusion: 'success',
+              pull_requests: [{ number: 27 }],
+              html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/801',
+              head_branch: 'feat/branch-27',
+              head_sha: 'abc1234',
+              actor: { login: 'asabon', avatar_url: '' },
+              created_at: '2026-11-07T10:00:00Z',
+              updated_at: '2026-11-07T10:05:00Z',
+            },
+            {
+              id: 802,
+              workflow_id: 10,
+              name: 'CI',
+              display_title: 'fix: PR 26 old fix',
+              run_number: 9,
+              event: 'pull_request',
+              status: 'completed',
+              conclusion: 'failure',
+              pull_requests: [{ number: 26 }],
+              html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/802',
+              head_branch: 'fix/branch-26',
+              head_sha: 'def5678',
+              actor: { login: 'asabon', avatar_url: '' },
+              created_at: '2026-11-07T09:00:00Z',
+              updated_at: '2026-11-07T09:05:00Z',
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: {
+            'x-ratelimit-remaining': '4900',
+            'x-ratelimit-limit': '5000',
+            'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600),
+          },
+        }
+      );
+    });
+
+    const result = await fetchRepositoryWorkflowRuns(
+      TEST_PAT,
+      'asabon',
+      'personal-dev-dashboard'
+    );
+
+    expect(result.runs).toHaveLength(2);
+    const run27 = result.runs.find((r) => r.pullRequestNumber === 27);
+    const run26 = result.runs.find((r) => r.pullRequestNumber === 26);
+    expect(run27?.pullRequestState).toBe('open');
+    expect(run26?.pullRequestState).toBe('closed');
+  });
+
+  it('event: "push" の実行にマージ元 PR 情報 (pull_requests) が含まれていても pullRequestState を closed と誤認せず undefined のまま保持すること', async () => {
+    clearWorkflowRunsCache();
+    recordRepositoryActivity(
+      TEST_PAT,
+      'asabon/personal-dev-dashboard',
+      '2026-11-07T10:00:00Z',
+      '2026-11-07T10:00:00Z',
+      [] // Open PR なし（PR #26 は既にマージ済み）
+    );
+
+    globalThis.fetch = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          total_count: 1,
+          workflow_runs: [
+            {
+              id: 999,
+              workflow_id: 10,
+              name: 'Main CI',
+              display_title: 'Merge pull request #26 from feature/pr-26',
+              run_number: 100,
+              event: 'push',
+              status: 'completed',
+              conclusion: 'failure',
+              pull_requests: [{ number: 26 }], // GitHub API がマージ元 PR を含めて返すケース
+              html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/999',
+              head_branch: 'main',
+              head_sha: 'mainsha123',
+              actor: { login: 'asabon', avatar_url: '' },
+              created_at: '2026-11-07T10:00:00Z',
+              updated_at: '2026-11-07T10:05:00Z',
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: {
+            'x-ratelimit-remaining': '4900',
+            'x-ratelimit-limit': '5000',
+            'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600),
+          },
+        }
+      );
+    });
+
+    const result = await fetchRepositoryWorkflowRuns(
+      TEST_PAT,
+      'asabon',
+      'personal-dev-dashboard'
+    );
+
+    expect(result.runs).toHaveLength(1);
+    const mainRun = result.runs[0];
+    // push イベントのため pullRequestState は closed ではなく undefined であること
+    expect(mainRun.pullRequestState).toBeUndefined();
+    expect(mainRun.pullRequestNumber).toBeUndefined();
+    expect(mainRun.conclusion).toBe('failure');
+  });
+
+  it('スマート差分スキップ: close 済み PR の失敗 Run が含まれていても他の Run が成功していればポーリングがスキップされること', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-11-07T10:00:00Z'));
+      clearWorkflowRunsCache();
+      recordRepositoryActivity(
+        TEST_PAT,
+        'asabon/personal-dev-dashboard',
+        '2026-11-07T09:00:00Z',
+        '2026-11-07T09:00:00Z',
+        [] // Open PR なし（PR #26 は既に close 済み）
+      );
+
+      const fetchMock = vi.fn(async () => {
+        return new Response(
+          JSON.stringify({
+            total_count: 2,
+            workflow_runs: [
+              {
+                id: 901,
+                workflow_id: 10,
+                name: 'CI',
+                display_title: 'main build',
+                run_number: 20,
+                event: 'push',
+                status: 'completed',
+                conclusion: 'success',
+                html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/901',
+                head_branch: 'main',
+                head_sha: '1111111',
+                actor: { login: 'asabon', avatar_url: '' },
+                created_at: '2026-11-07T09:00:00Z',
+                updated_at: '2026-11-07T09:05:00Z',
+              },
+              {
+                id: 902,
+                workflow_id: 10,
+                name: 'CI',
+                display_title: 'closed PR build',
+                run_number: 19,
+                event: 'pull_request',
+                status: 'completed',
+                conclusion: 'failure',
+                pull_requests: [{ number: 26 }],
+                html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/902',
+                head_branch: 'feature/pr-26',
+                head_sha: '2222222',
+                actor: { login: 'asabon', avatar_url: '' },
+                created_at: '2026-11-07T08:00:00Z',
+                updated_at: '2026-11-07T08:05:00Z',
+              },
+            ],
+          }),
+          { status: 200 }
+        );
+      });
+      globalThis.fetch = fetchMock;
+
+      // 初回取得
+      const first = await fetchRepositoryWorkflowRuns(
+        TEST_PAT,
+        'asabon',
+        'personal-dev-dashboard'
+      );
+      expect(first.runs).toHaveLength(2);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // 1分経過。activityAt に変化なし。
+      // PR #26 の失敗は closed PR のものであるため、未解決失敗とみなされずスキップされること
+      vi.advanceTimersByTime(60 * 1000);
+      const second = await fetchRepositoryWorkflowRuns(
+        TEST_PAT,
+        'asabon',
+        'personal-dev-dashboard'
+      );
+      expect(second.runs).toHaveLength(2);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('PR-state fallback: recordedActivity が未記録の場合に REST API (/pulls/{number}) から状態を補完すること', async () => {
+    clearWorkflowRunsCache();
+    // recordedActivity を記録しない状態で呼び出す
+
+    const fetchMock = vi.fn(async (input: any) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (url.includes('/actions/runs')) {
+        return new Response(
+          JSON.stringify({
+            total_count: 1,
+            workflow_runs: [
+              {
+                id: 950,
+                workflow_id: 10,
+                name: 'CI',
+                display_title: 'PR test build',
+                run_number: 1,
+                event: 'pull_request',
+                status: 'completed',
+                conclusion: 'failure',
+                pull_requests: [{ number: 42 }],
+                html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/950',
+                head_branch: 'feature/pr-42',
+                head_sha: 'sha42',
+                actor: { login: 'asabon', avatar_url: '' },
+                created_at: '2026-11-07T08:00:00Z',
+                updated_at: '2026-11-07T08:05:00Z',
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: {
+              'x-ratelimit-remaining': '4900',
+              'x-ratelimit-limit': '5000',
+              'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600),
+            },
+          }
+        );
+      }
+      if (url.includes('/pulls/42')) {
+        return new Response(JSON.stringify({ state: 'closed' }), {
+          status: 200,
+          headers: {
+            'x-ratelimit-remaining': '4899',
+            'x-ratelimit-limit': '5000',
+            'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600),
+          },
+        });
+      }
+      return new Response('Not found', { status: 404 });
+    });
+    globalThis.fetch = fetchMock;
+
+    const result = await fetchRepositoryWorkflowRuns(
+      TEST_PAT,
+      'asabon',
+      'personal-dev-dashboard'
+    );
+
+    expect(result.runs).toHaveLength(1);
+    expect(result.runs[0].pullRequestState).toBe('closed');
+    // runs API と pulls/42 API の計2回呼ばれること
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('PR-state fallback: recordedActivity の Open PR 数が上限 (20件) に達している場合に REST API を呼び出して判定すること', async () => {
+    clearWorkflowRunsCache();
+    // 20件のダミー Open PR (PR #1..#20) を記録
+    const openPrs = Array.from({ length: 20 }, (_, i) => ({
+      id: `pr-${i + 1}`,
+      number: i + 1,
+      title: `PR ${i + 1}`,
+      url: `https://github.com/asabon/personal-dev-dashboard/pull/${i + 1}`,
+      updatedAt: '2026-11-07T10:00:00Z',
+      author: { login: 'asabon', avatarUrl: '' },
+      headBranch: `feature/pr-${i + 1}`,
+      headSha: `sha-${i + 1}`,
+      shortSha: `sha-${i + 1}`,
+      overallCiState: 'SUCCESS' as const,
+      checks: [],
+    }));
+
+    recordRepositoryActivity(
+      TEST_PAT,
+      'asabon/personal-dev-dashboard',
+      '2026-11-07T10:00:00Z',
+      '2026-11-07T10:00:00Z',
+      openPrs
+    );
+
+    const fetchMock = vi.fn(async (input: any) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (url.includes('/actions/runs')) {
+        return new Response(
+          JSON.stringify({
+            total_count: 1,
+            workflow_runs: [
+              {
+                id: 960,
+                workflow_id: 10,
+                name: 'CI',
+                display_title: 'PR 21 build',
+                run_number: 1,
+                event: 'pull_request',
+                status: 'completed',
+                conclusion: 'failure',
+                pull_requests: [{ number: 21 }], // 21件目の PR
+                html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/960',
+                head_branch: 'feature/pr-21',
+                head_sha: 'sha21',
+                actor: { login: 'asabon', avatar_url: '' },
+                created_at: '2026-11-07T08:00:00Z',
+                updated_at: '2026-11-07T08:05:00Z',
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: {
+              'x-ratelimit-remaining': '4900',
+              'x-ratelimit-limit': '5000',
+              'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600),
+            },
+          }
+        );
+      }
+      if (url.includes('/pulls/21')) {
+        return new Response(JSON.stringify({ state: 'open' }), {
+          status: 200,
+          headers: {
+            'x-ratelimit-remaining': '4899',
+            'x-ratelimit-limit': '5000',
+            'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600),
+          },
+        });
+      }
+      return new Response('Not found', { status: 404 });
+    });
+    globalThis.fetch = fetchMock;
+
+    const result = await fetchRepositoryWorkflowRuns(
+      TEST_PAT,
+      'asabon',
+      'personal-dev-dashboard'
+    );
+
+    expect(result.runs).toHaveLength(1);
+    // 上限20件のため即座に closed と決め打ちせず、REST API の結果から open と判定されること
+    expect(result.runs[0].pullRequestState).toBe('open');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('PR-state fallback: pullRequestNumber がなく head_branch のみの場合に /pulls?head=... から PR 状態を補完すること', async () => {
+    clearWorkflowRunsCache();
+
+    const fetchMock = vi.fn(async (input: any) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (url.includes('/actions/runs')) {
+        return new Response(
+          JSON.stringify({
+            total_count: 1,
+            workflow_runs: [
+              {
+                id: 970,
+                workflow_id: 10,
+                name: 'CI',
+                display_title: 'Fork PR build without pr number',
+                run_number: 1,
+                event: 'pull_request',
+                status: 'completed',
+                conclusion: 'failure',
+                pull_requests: [], // PR 番号なし（フォーク PR 等）
+                head_repository: { full_name: 'contributor/personal-dev-dashboard' },
+                html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/970',
+                head_branch: 'feature/fork-fix',
+                head_sha: 'forksha123',
+                actor: { login: 'contributor', avatar_url: '' },
+                created_at: '2026-11-07T08:00:00Z',
+                updated_at: '2026-11-07T08:05:00Z',
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: {
+              'x-ratelimit-remaining': '4900',
+              'x-ratelimit-limit': '5000',
+              'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600),
+            },
+          }
+        );
+      }
+      if (url.includes('/pulls?head=contributor%3Afeature%2Ffork-fix')) {
+        return new Response(JSON.stringify([{ state: 'open' }]), {
+          status: 200,
+          headers: {
+            'x-ratelimit-remaining': '4899',
+            'x-ratelimit-limit': '5000',
+            'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600),
+          },
+        });
+      }
+      return new Response('Not found', { status: 404 });
+    });
+    globalThis.fetch = fetchMock;
+
+    const result = await fetchRepositoryWorkflowRuns(
+      TEST_PAT,
+      'asabon',
+      'personal-dev-dashboard'
+    );
+
+    expect(result.runs).toHaveLength(1);
+    expect(result.runs[0].pullRequestState).toBe('open');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('PR-state fallback: PR 状態取得 API が 500 エラーを返した場合に incompleteCoverage と warning を設定すること', async () => {
+    clearWorkflowRunsCache();
+
+    const fetchMock = vi.fn(async (input: any) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (url.includes('/actions/runs')) {
+        return new Response(
+          JSON.stringify({
+            total_count: 1,
+            workflow_runs: [
+              {
+                id: 980,
+                workflow_id: 10,
+                name: 'CI',
+                display_title: 'PR error test',
+                run_number: 1,
+                event: 'pull_request',
+                status: 'completed',
+                conclusion: 'failure',
+                pull_requests: [{ number: 99 }],
+                html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/980',
+                head_branch: 'feature/pr-99',
+                head_sha: 'sha99',
+                actor: { login: 'asabon', avatar_url: '' },
+                created_at: '2026-11-07T08:00:00Z',
+                updated_at: '2026-11-07T08:05:00Z',
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: {
+              'x-ratelimit-remaining': '4900',
+              'x-ratelimit-limit': '5000',
+              'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600),
+            },
+          }
+        );
+      }
+      if (url.includes('/pulls/99')) {
+        return new Response('Internal Server Error', {
+          status: 500,
+          headers: {
+            'x-ratelimit-remaining': '4899',
+            'x-ratelimit-limit': '5000',
+            'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600),
+          },
+        });
+      }
+      return new Response('Not found', { status: 404 });
+    });
+    globalThis.fetch = fetchMock;
+
+    const result = await fetchRepositoryWorkflowRuns(
+      TEST_PAT,
+      'asabon',
+      'personal-dev-dashboard'
+    );
+
+    expect(result.runs).toHaveLength(1);
+    expect(result.runs[0].pullRequestState).toBeUndefined();
+    expect(result.incompleteCoverage).toBe(true);
+    expect(result.warning).toContain('Pull Request 状態の取得に失敗しました (500)');
+  });
 });

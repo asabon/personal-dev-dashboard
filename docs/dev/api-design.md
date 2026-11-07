@@ -133,6 +133,7 @@ REST API で個別に runs を叩くのではなく、GraphQL の `statusCheckRo
 - **利用目的**:
   - PR 以外のトリガー（`push` マージ、タグ `release`、`schedule`、`workflow_dispatch` 等）も含めたワークフロー稼働状況の監視
   - 同一ワークフロー単位で最新実行状態を判定し、実行中（`in_progress` / `queued`）および未解決の失敗（`failure` / `timed_out` / `action_required` / `startup_failure`）を抽出表示
+  - **close 済み PR の除外**: GraphQL で記録したリポジトリごとの Open PR 一覧と照合し、既に close / マージされた PR に紐づくワークフロー実行（失敗含む）は監視対象（Attention）から除外（過去に終了した PR の失敗残留を防止）
 - **レート制限保護 & スマート差分ポーリング**:
   - 自動取得された所有リポジトリのうち、Open PR があるものや直近アクティブなリポジトリのみをポーリング対象に選出（長期間更新のない休眠リポジトリや古いフォークへの無駄なポーリングを除外）
   - **スマート差分スキップ**: GraphQL で取得した各リポジトリの `pushedAt` / `updatedAt` が前回取得時から変化しておらず、かつ進行中（`in_progress` / `queued`）の Run がない場合は、TTL（20秒）経過後であっても REST API 呼び出しをスキップ（最大10分間）し、定常時の無駄なポーリング通信をゼロに抑制

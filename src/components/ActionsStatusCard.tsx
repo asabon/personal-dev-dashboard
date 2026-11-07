@@ -71,6 +71,11 @@ export function selectAttentionWorkflowRuns(runs: WorkflowRunItem[]): WorkflowRu
   const latestByWorkflowKey = new Map<string, WorkflowRunItem>();
 
   for (const run of sortedByNewest) {
+    // close 済みの PR に紐づくワークフロー実行は監視対象（Attention）から除外する
+    if (run.pullRequestState === 'closed') {
+      continue;
+    }
+
     // PR トリガーは PR 番号（未取得時は head リポジトリ + ブランチ）、それ以外はワークフロー単位で最新状態を追跡
     const isPullRequest =
       run.event === 'pull_request' || run.event === 'pull_request_target';
@@ -94,7 +99,10 @@ export function selectAttentionWorkflowRuns(runs: WorkflowRunItem[]): WorkflowRu
   }
 
   // 現在実行中のワークフローは常に表示し、最新状態が「失敗」のまま未解決のワークフローも抽出
-  const activeRuns = sortedByNewest.filter(isWorkflowRunActive);
+  // （close 済みの PR に紐づくものは除外）
+  const activeRuns = sortedByNewest.filter(
+    (run) => isWorkflowRunActive(run) && run.pullRequestState !== 'closed'
+  );
   const failedLatestRuns = Array.from(latestByWorkflowKey.values()).filter(isWorkflowRunFailed);
   const seenRunKeys = new Set<string>();
   const attentionRuns = [...activeRuns, ...failedLatestRuns].filter((run) => {

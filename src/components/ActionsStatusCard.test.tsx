@@ -304,4 +304,94 @@ describe('ActionsStatusCard', () => {
     expect(attention).toHaveLength(1);
     expect(attention[0].id).toBe(601);
   });
+
+  it('close 済みの PR (pullRequestState === "closed") に紐づく失敗ワークフローは監視対象から除外され、表示されないこと', () => {
+    const closedPrFailedRun: WorkflowRunItem = {
+      ...runningPrRun,
+      id: 701,
+      runNumber: 155,
+      pullRequestNumber: 26,
+      pullRequestState: 'closed',
+      status: 'completed',
+      conclusion: 'failure',
+      createdAt: '2026-09-25T11:10:00Z',
+      updatedAt: '2026-09-25T11:15:00Z',
+    };
+
+    const attention = selectAttentionWorkflowRuns([closedPrFailedRun]);
+    expect(attention).toEqual([]);
+
+    render(
+      <ActionsStatusCard
+        runs={[closedPrFailedRun]}
+        isLoading={false}
+        error={null}
+      />
+    );
+
+    // close 済み PR の失敗のみの場合は Failed ではなく All Passed になること
+    expect(screen.getByText('0件')).toBeInTheDocument();
+    expect(screen.getByText('All Passed')).toBeInTheDocument();
+    expect(screen.queryByText('E2E Playwright')).not.toBeInTheDocument();
+  });
+
+  it('同一リポジトリで open な PR の失敗は表示され、close 済みの PR の失敗のみが除外されること', () => {
+    const closedPrFailedRun: WorkflowRunItem = {
+      ...runningPrRun,
+      id: 702,
+      runNumber: 156,
+      workflowName: 'E2E Playwright',
+      pullRequestNumber: 26,
+      pullRequestState: 'closed',
+      status: 'completed',
+      conclusion: 'failure',
+      createdAt: '2026-09-25T11:10:00Z',
+      updatedAt: '2026-09-25T11:15:00Z',
+    };
+    const openPrFailedRun: WorkflowRunItem = {
+      ...runningPrRun,
+      id: 703,
+      runNumber: 157,
+      workflowName: 'Unit Tests',
+      pullRequestNumber: 27,
+      pullRequestState: 'open',
+      status: 'completed',
+      conclusion: 'failure',
+      createdAt: '2026-09-25T11:20:00Z',
+      updatedAt: '2026-09-25T11:25:00Z',
+    };
+
+    const attention = selectAttentionWorkflowRuns([closedPrFailedRun, openPrFailedRun]);
+    expect(attention).toHaveLength(1);
+    expect(attention[0].id).toBe(703);
+    expect(attention[0].workflowName).toBe('Unit Tests');
+
+    render(
+      <ActionsStatusCard
+        runs={[closedPrFailedRun, openPrFailedRun]}
+        isLoading={false}
+        error={null}
+      />
+    );
+
+    expect(screen.getByText('1件')).toBeInTheDocument();
+    expect(screen.getByText('1 Failed')).toBeInTheDocument();
+    expect(screen.getByText('Unit Tests')).toBeInTheDocument();
+    expect(screen.queryByText('E2E Playwright')).not.toBeInTheDocument();
+  });
+
+  it('close 済みの PR に紐づく実行中ワークフロー (status === "in_progress") も監視対象から除外されること', () => {
+    const closedPrActiveRun: WorkflowRunItem = {
+      ...runningPrRun,
+      id: 704,
+      runNumber: 158,
+      pullRequestNumber: 26,
+      pullRequestState: 'closed',
+      status: 'in_progress',
+      conclusion: null,
+    };
+
+    const attention = selectAttentionWorkflowRuns([closedPrActiveRun]);
+    expect(attention).toEqual([]);
+  });
 });

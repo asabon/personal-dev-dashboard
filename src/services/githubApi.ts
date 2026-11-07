@@ -288,16 +288,21 @@ const VIEWER_OWNED_REPOS_PRS_QUERY = `
   }
 `;
 
-/**
- * リポジトリごとの最新活動日時（pushedAt / updatedAt / PR状態）を記録するキャッシュ（スマート差分ポーリング用）
- */
-const repoActivityTimestamps = new Map<
-  string,
-  { pat: string; activityAt: string; hasPendingPrCi: boolean }
->();
+interface RepoActivityRecord {
+  pat: string;
+  activityAt: string;
+  hasPendingPrCi: boolean;
+  openPrNumbers: Set<number>;
+  openPrHeadBranches: Set<string>;
+}
 
 /**
- * リポジトリの最新活動日時および Open PR 状態の指紋をキャッシュに記録する
+ * リポジトリごとの最新活動日時（pushedAt / updatedAt / PR状態）および Open PR 一覧を記録するキャッシュ（スマート差分ポーリング & PR 状態判定用）
+ */
+const repoActivityTimestamps = new Map<string, RepoActivityRecord>();
+
+/**
+ * リポジトリの最新活動日時および Open PR 状態の指紋・一覧をキャッシュに記録する
  */
 export function recordRepositoryActivity(
   pat: string,
@@ -313,10 +318,18 @@ export function recordRepositoryActivity(
   const activityAt = [pushedAt, updatedAt, prFingerprint].filter(Boolean).join('|');
   if (!trimmedPat || !repoFullName || !activityAt) return;
   const hasPendingPrCi = pullRequests.some((pr) => pr.overallCiState === 'PENDING');
+  const openPrNumbers = new Set(
+    pullRequests.map((pr) => pr.number).filter((n) => typeof n === 'number')
+  );
+  const openPrHeadBranches = new Set(
+    pullRequests.map((pr) => pr.headBranch).filter(Boolean)
+  );
   repoActivityTimestamps.set(repoFullName.toLowerCase(), {
     pat: trimmedPat,
     activityAt,
     hasPendingPrCi,
+    openPrNumbers,
+    openPrHeadBranches,
   });
 }
 
@@ -886,6 +899,16 @@ const workflowAttemptConclusionCache = new Map<
     conclusion: WorkflowRunConclusion;
   }
 >();
+const WORKFLOW_PR_STATE_CACHE_TTL_MS = 60 * 1000; // open 状態の再検証用 TTL (1分)
+
+const workflowPrStateCache = new Map<
+  string,
+  {
+    pat: string;
+    state: 'open' | 'closed';
+    fetchedAt: number;
+  }
+>();
 let workflowRunsCacheGeneration = 0;
 
 /**
@@ -896,6 +919,8 @@ export function clearWorkflowRunsCache(): void {
   workflowAttemptConclusionCache.clear();
   repoActivityTimestamps.clear();
   repoRunnersCache.clear();
+  workflowPrStateCache.clear();
+  latestRateLimit = null;
   workflowRunsCacheGeneration += 1;
 }
 
@@ -956,7 +981,9 @@ export async function fetchRepositoryWorkflowRuns(
       !cached.incompleteCoverage &&
       !cached.warning &&
       cached.runs.every(
-        (r) => r.status === 'completed' && !isFailedWorkflowConclusion(r.conclusion)
+        (r) =>
+          r.pullRequestState === 'closed' ||
+          (r.status === 'completed' && !isFailedWorkflowConclusion(r.conclusion))
       )
     ) {
       return {
@@ -1011,39 +1038,70 @@ export async function fetchRepositoryWorkflowRuns(
       };
     }
 
-    const runs: WorkflowRunItem[] = data.workflow_runs.map((r: any) => ({
-      id: r.id,
-      workflowId: typeof r.workflow_id === 'number' ? r.workflow_id : undefined,
-      pullRequestNumber:
-        typeof r.pull_requests?.[0]?.number === 'number'
-          ? r.pull_requests[0].number
-          : undefined,
-      headRepositoryFullName:
-        typeof r.head_repository?.full_name === 'string'
-          ? r.head_repository.full_name
-          : undefined,
-      runAttempt: typeof r.run_attempt === 'number' ? r.run_attempt : undefined,
-      runStartedAt: r.run_started_at || r.created_at || new Date().toISOString(),
-      repoFullName,
-      workflowName: r.name || 'Workflow',
-      displayTitle: r.display_title || r.head_commit?.message?.split('\n')[0] || r.name || 'Run',
-      runNumber: r.run_number || 0,
-      event: r.event || 'unknown',
-      status: (r.status || 'completed') as WorkflowRunStatus,
-      conclusion: (r.conclusion ?? null) as WorkflowRunConclusion,
-      htmlUrl: r.html_url || `https://github.com/${repoFullName}/actions`,
-      headBranch: r.head_branch || '',
-      shortSha: typeof r.head_sha === 'string' ? r.head_sha.slice(0, 7) : '',
-      actor: {
-        login: r.actor?.login || r.triggering_actor?.login || 'github-actions',
-        avatarUrl: r.actor?.avatar_url || r.triggering_actor?.avatar_url || '',
-      },
-      createdAt: r.created_at || new Date().toISOString(),
-      updatedAt: r.updated_at || r.created_at || new Date().toISOString(),
-    }));
+    const runs: WorkflowRunItem[] = data.workflow_runs.map((r: any) => {
+      // PR スコープ判定: pull_request / pull_request_target イベントのみを対象とし、
+      // push や release、schedule 等の非 PR イベントは除外する
+      // (push マージコミットに pull_requests 配列が含まれていても main 実行等を PR 誤認しないよう保護)
+      const isPrEvent = r.event === 'pull_request' || r.event === 'pull_request_target';
 
-    // 再実行（run_attempt > 1）が cancelled / skipped / neutral / stale で終わった場合、
-    // 直前の試行から未解決の失敗ステータスを復元する（キャッシュ再利用＋レート制限保護）
+      const pullRequestNumber = isPrEvent
+        ? (Array.isArray(r.pull_requests) && typeof r.pull_requests[0]?.number === 'number'
+            ? r.pull_requests[0].number
+            : undefined)
+        : undefined;
+
+      let pullRequestState: 'open' | 'closed' | undefined;
+      if (isPrEvent && recordedActivity && recordedActivity.pat === trimmedPat) {
+        if (typeof pullRequestNumber === 'number') {
+          if (recordedActivity.openPrNumbers.has(pullRequestNumber)) {
+            pullRequestState = 'open';
+          } else if (recordedActivity.openPrNumbers.size < 20) {
+            // 取得件数が上限（20件）未満であれば全件網羅されているため確実に closed
+            pullRequestState = 'closed';
+          }
+          // 上限に達している場合は21件目以降の可能性を考慮し、undefined のまま REST フォールバックに委ねる
+        } else if (r.head_branch) {
+          if (recordedActivity.openPrHeadBranches.has(r.head_branch)) {
+            pullRequestState = 'open';
+          } else if (recordedActivity.openPrNumbers.size < 20) {
+            pullRequestState = 'closed';
+          }
+        }
+      }
+
+      return {
+        id: r.id,
+        workflowId: typeof r.workflow_id === 'number' ? r.workflow_id : undefined,
+        pullRequestNumber,
+        pullRequestState,
+        headRepositoryFullName:
+          typeof r.head_repository?.full_name === 'string'
+            ? r.head_repository.full_name
+            : undefined,
+        runAttempt: typeof r.run_attempt === 'number' ? r.run_attempt : undefined,
+        runStartedAt: r.run_started_at || r.created_at || new Date().toISOString(),
+        repoFullName,
+        workflowName: r.name || 'Workflow',
+        displayTitle: r.display_title || r.head_commit?.message?.split('\n')[0] || r.name || 'Run',
+        runNumber: r.run_number || 0,
+        event: r.event || 'unknown',
+        status: (r.status || 'completed') as WorkflowRunStatus,
+        conclusion: (r.conclusion ?? null) as WorkflowRunConclusion,
+        htmlUrl: r.html_url || `https://github.com/${repoFullName}/actions`,
+        headBranch: r.head_branch || '',
+        shortSha: typeof r.head_sha === 'string' ? r.head_sha.slice(0, 7) : '',
+        actor: {
+          login: r.actor?.login || r.triggering_actor?.login || 'github-actions',
+          avatarUrl: r.actor?.avatar_url || r.triggering_actor?.avatar_url || '',
+        },
+        createdAt: r.created_at || new Date().toISOString(),
+        updatedAt: r.updated_at || r.created_at || new Date().toISOString(),
+      };
+    });
+
+    // 1. 再実行（run_attempt > 1）が cancelled / skipped / neutral / stale で終わった場合、
+    //    直前の試行から未解決の失敗ステータスを復元する（キャッシュ再利用＋レート制限保護）
+    //    ※ PR 状態の解決前に実行結果を復元することで、直前失敗が復元された PR Run も確実に PR 状態判定の対象とする
     let attemptLookupIncomplete = false;
     let attemptWarning: string | undefined;
 
@@ -1116,13 +1174,104 @@ export async function fetchRepositoryWorkflowRuns(
       }
     }
 
+    // 2. recordedActivity が未記録または上限到達のリポジトリで、失敗または進行中の PR ワークフローがある場合、
+    //    PR ステータスキャッシュまたは GitHub API から PR 状態（open / closed）を補完する
+    let prLookupIncomplete = false;
+    let prLookupWarning: string | undefined;
+
+    for (const run of runs) {
+      const isPrEvent = run.event === 'pull_request' || run.event === 'pull_request_target';
+
+      if (
+        isPrEvent &&
+        run.pullRequestState === undefined &&
+        (typeof run.pullRequestNumber === 'number' || Boolean(run.headBranch)) &&
+        (run.status !== 'completed' || isFailedWorkflowConclusion(run.conclusion))
+      ) {
+        const prIdentifier = run.pullRequestNumber ? `pr:${run.pullRequestNumber}` : `branch:${run.headBranch}`;
+        const prCacheKey = `${repoFullName}::${prIdentifier}`;
+        const cachedPr = workflowPrStateCache.get(prCacheKey);
+        if (
+          cachedPr &&
+          cachedPr.pat === trimmedPat &&
+          Date.now() - cachedPr.fetchedAt < WORKFLOW_PR_STATE_CACHE_TTL_MS
+        ) {
+          run.pullRequestState = cachedPr.state;
+          continue;
+        }
+
+        if (
+          trimmedPat &&
+          (!latestRateLimit ||
+            latestRateLimit.remaining >= MIN_RATE_LIMIT_RESERVE ||
+            latestRateLimit.resetAt.getTime() <= Date.now())
+        ) {
+          try {
+            const prEndpoint =
+              typeof run.pullRequestNumber === 'number'
+                ? `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${encodeURIComponent(String(run.pullRequestNumber))}`
+                : `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls?head=${encodeURIComponent(run.headRepositoryFullName ? `${run.headRepositoryFullName.split('/')[0]}:${run.headBranch}` : run.headBranch)}&state=all`;
+
+            const prRes = await fetch(prEndpoint, {
+              headers: {
+                Authorization: `Bearer ${trimmedPat}`,
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28',
+              },
+            });
+            updateRateLimitFromHeaders(prRes.headers);
+            if (prRes.ok) {
+              const prData = await prRes.json();
+              let state: 'open' | 'closed';
+              if (Array.isArray(prData)) {
+                state = prData.some((p: any) => p?.state === 'open') ? 'open' : 'closed';
+              } else {
+                state = prData.state === 'closed' ? 'closed' : 'open';
+              }
+              if (cacheGeneration === workflowRunsCacheGeneration) {
+                workflowPrStateCache.set(prCacheKey, {
+                  pat: trimmedPat,
+                  state,
+                  fetchedAt: Date.now(),
+                });
+              }
+              run.pullRequestState = state;
+            } else if (prRes.status === 404) {
+              if (cacheGeneration === workflowRunsCacheGeneration) {
+                workflowPrStateCache.set(prCacheKey, {
+                  pat: trimmedPat,
+                  state: 'closed',
+                  fetchedAt: Date.now(),
+                });
+              }
+              run.pullRequestState = 'closed';
+            } else {
+              prLookupIncomplete = true;
+              prLookupWarning = `${repoFullName}: Pull Request 状態の取得に失敗しました (${prRes.status})`;
+            }
+          } catch {
+            prLookupIncomplete = true;
+            prLookupWarning = `${repoFullName}: Pull Request 状態の取得中に通信エラーが発生しました`;
+          }
+        } else if (trimmedPat && latestRateLimit && latestRateLimit.remaining < MIN_RATE_LIMIT_RESERVE) {
+          prLookupIncomplete = true;
+          prLookupWarning = `${repoFullName}: GitHub API レート制限残数が少ないため、Pull Request 状態の確認を一部スキップしました`;
+          break;
+        }
+      }
+    }
+
+    const combinedWarning =
+      [attemptWarning, prLookupWarning].filter(Boolean).join('\n') || undefined;
+    const combinedIncomplete = attemptLookupIncomplete || prLookupIncomplete;
+
     if (cacheGeneration === workflowRunsCacheGeneration) {
       const latestActivity = repoActivityTimestamps.get(repoFullName.toLowerCase());
       workflowRunsCache.set(cacheKey, {
         pat: trimmedPat,
         runs,
-        warning: attemptWarning,
-        incompleteCoverage: attemptLookupIncomplete,
+        warning: combinedWarning,
+        incompleteCoverage: combinedIncomplete,
         fetchedAt: Date.now(),
         lastKnownActivityAt:
           latestActivity && latestActivity.pat === trimmedPat
@@ -1133,8 +1282,8 @@ export async function fetchRepositoryWorkflowRuns(
 
     return {
       runs,
-      warning: attemptWarning,
-      incompleteCoverage: attemptLookupIncomplete,
+      warning: combinedWarning,
+      incompleteCoverage: combinedIncomplete,
     };
   } catch (err) {
     console.warn(`Failed to fetch workflow runs for ${repoFullName}:`, err);
@@ -1220,7 +1369,9 @@ function hasActiveOrFailedCachedRuns(repoFullName: string): boolean {
     if (key.toLowerCase().startsWith(prefix)) {
       if (
         entry.runs.some(
-          (r) => r.status !== 'completed' || isFailedWorkflowConclusion(r.conclusion)
+          (r) =>
+            r.pullRequestState !== 'closed' &&
+            (r.status !== 'completed' || isFailedWorkflowConclusion(r.conclusion))
         )
       ) {
         return true;

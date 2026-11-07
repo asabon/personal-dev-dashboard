@@ -147,6 +147,8 @@ export interface WorkflowRunItem {
   workflowId?: number;
   /** Pull Request 番号 (PR トリガー時、GitHub API から返却された場合) */
   pullRequestNumber?: number;
+  /** 紐づく Pull Request の状態 ('open' | 'closed')。PR トリガーでない場合は undefined */
+  pullRequestState?: 'open' | 'closed';
   /** Head リポジトリのフルネーム (フォーク PR 識別用) */
   headRepositoryFullName?: string;
   /** 再実行試行回数 (1 = 初回実行, 2+ = Rerun) */
