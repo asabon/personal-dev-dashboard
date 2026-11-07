@@ -2,14 +2,87 @@
 
 ## 1. 概要
 
-本プロジェクトは **GitHub Flow** をベースにしつつ、リリース・デプロイには **Release Drafter** と **GitHub Releases 自動公開** を組み合わせた、Web アプリケーションに最適化された安全な自動化パイプラインを採用しています。
+本プロジェクトは **GitHub Flow** をベースに、AI コーディングエージェント（Antigravity）の **事前自己レビュースキル (`code-review`)**・**外部指摘対応スキル (`address-review-comments`)**、および **Release Drafter + GitHub Releases 自動公開 (`prepare-release` / `publish-release`)** を組み合わせた開発・リリースパイプラインを採用しています。
 
 ---
 
-## 2. ブランチ戦略 (GitHub Flow)
+## 2. あなたの指示チートシート（場面別フレーズ一覧）
 
+日常の開発からリリースまで、あなたがチャットで伝える指示と、それによって自動起動するスキル・動作の早見表です。
+
+| 場面 | あなたの指示（例） | エージェントの動き（使用スキル） | あなたの次のアクション |
+| :--- | :--- | :--- | :--- |
+| **① 新機能・修正を始める** | 「〇〇を実装して」<br>「〇〇を修正して PR を出して」 | トピックブランチ作成 → 実装・テスト → **`code-review` で内部レビュー＆自己修正ループ** → 1回で Push & PR 作成 → CI 確認 | PR と CodeRabbit のレビュー結果を確認する |
+| **② ローカル差分の点検だけしたい** | 「今の変更をコードレビューして」 | **`code-review`（Read-Only）** でサブエージェントがチェックリスト検査し、指摘事項を報告（ファイルは変更しない） | 報告を見て修正するか判断する |
+| **③ PR で指摘が出た** | 「CodeRabbit の指摘が挙がっています」<br>「PR のレビュー指摘に対応して」 | **`address-review-comments`** で指摘収集・判定 → 修正 → **再発防止観点を `references/` に追記** → **`code-review` で内部レビュー** → 1回で Push & CI 確認 | 指摘が解消されたら PR をマージする |
+| **④ CodeRabbit 再実行後の監視** | 「CodeRabbit の再実行を行いました」<br>（PR 上で `@coderabbitai review` 投稿後） | `gh pr checks --watch` でレビュー完了を自動待機 → 指摘があればそのまま **③（`address-review-comments`）** を自動実行 | 完了報告を待ち、問題なければ PR をマージする |
+| **⑤ リリース PR を作る** | 「リリース準備して」 | **`prepare-release`** で `main` の CI 確認 → 次期バージョン判定 → `package.json` 更新 & リリース PR 作成 | リリース PR を確認してマージする |
+| **⑥ 本番デプロイ・公開する** | 「公開して」<br>（リリース PR マージ後） | **`publish-release`** でタグ（`vX.Y.Z`）を Push → `deploy.yml` 監視 → GitHub Pages デプロイ & Release 自動公開を確認 | 公開された本番ページ・Release を確認する |
+
+> [!IMPORTANT]
+> **人間のみが行う操作（エージェントによる自動実行禁止）**:
+> - **PR の承認（Approve）およびマージ**
+> - **PR 上での `@coderabbitai review` コメント投稿**（Free プランの使用制限・規約リスク回避のため）
+
+---
+
+## 3. 日常の開発・レビューサイクル（1 PR の流れ）
+
+CodeRabbit のレート制限（1時間あたりのレビュー回数上限）を節約しつつ、レビューを受けるたびに内部チェックリスト（`.agents/skills/code-review/references/`）が賢くなるループ構造になっています。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as あなた (User)
+    participant Agent as Antigravity (Main)
+    participant Sub as サブエージェント (research)
+    participant GH as GitHub PR / CI / CodeRabbit
+
+    Note over User,Sub: フェーズ A: ローカル実装 & 内部レビュー（Push 前に品質を作り込む）
+    User->>Agent: ①「〇〇を実装して」
+    Agent->>Agent: ブランチ作成・実装・単体テスト追加
+    loop 指摘がゼロになるまで繰り返す（code-review スキル）
+        Agent->>Sub: git diff main を references/ チェックリストで検査依頼
+        Sub-->>Agent: 内部レビュー結果（Critical / Major / Minor）
+        Agent->>Agent: 指摘箇所の修正 & 二次チェック (typecheck / test / build / LF)
+    end
+    Agent->>GH: 1回の git push & PR 作成 (gh pr checks --watch)
+    GH-->>Agent: CI パス & 初回 CodeRabbit レビュー完了
+    Agent-->>User: PR URL を案内して待機
+
+    Note over User,GH: フェーズ B: PR 外部レビュー対応 & チェックリスト育成
+    alt CodeRabbit またはあなたから指摘がある場合
+        User->>Agent: ③「CodeRabbit の指摘が挙がっています」
+        Note over Agent,Sub: address-review-comments スキルが起動
+        Agent->>GH: レビュー本文・インラインコメントを取得 & 妥当性判定
+        Agent->>Agent: コード修正 & 回帰テスト追加
+        Agent->>Agent: すり抜けた観点を汎用化して references/ チェックリストに追記！
+        Agent->>Sub: 修正差分を code-review スキルで再点検
+        Sub-->>Agent: 問題なし
+        Agent->>GH: 1回の git push & CI 通過確認
+        Agent-->>User: 修正内容と追加した再発防止観点を報告
+    end
+
+    Note over User,GH: フェーズ C: マージ完了
+    User->>GH: PR をマージ (Squash / Merge)
+    User->>Agent: 「マージしました」（次のタスクへ）
 ```
-[ feature/xxx ] ──(コミット)──> [ PR 作成 ] ──(CI 通過)──> [ main へマージ ]
+
+### 関連スキル・ルール定義ファイル
+
+| 種別 | パス | 役割 |
+| :--- | :--- | :--- |
+| **ルール** | [`.agents/rules/code-review.md`](../../.agents/rules/code-review.md) | 1〜8 の標準開発ループと厳守事項の定義 |
+| **スキル** | [`.agents/skills/code-review/SKILL.md`](../../.agents/skills/code-review/SKILL.md) | Push 前・依頼時の内部コードレビュー手順 |
+| **チェックリスト** | [`.agents/skills/code-review/references/`](../../.agents/skills/code-review/references/) | 蓄積されるレビュー観点（TS/React、GitHub API/Security、Test/Docs） |
+| **スキル** | [`.agents/skills/address-review-comments/SKILL.md`](../../.agents/skills/address-review-comments/SKILL.md) | PR 指摘の収集・トリアージ・修正・チェックリスト還元の手順 |
+
+---
+
+## 4. ブランチ戦略 (GitHub Flow)
+
+```text
+[ feature/xxx ] ──(内部レビュー通過後に Push)──> [ PR 作成 ] ──(CI & レビュー通過)──> [ main へマージ ]
 ```
 
 - **`main` ブランチ**:
@@ -26,21 +99,23 @@
 > [!TIP]
 > **ローカルでの誤コミット防止設定 (Git Hook)**:
 > リポジトリ内の `.githooks/` を有効化するため、初回セットアップ時に以下を実行します。
+>
 > ```bash
 > git config core.hooksPath .githooks
 > ```
+>
 > これにより、`main` ブランチでの直接 `git commit` および `git push` が自動でブロックされます。
 
 ---
 
-## 3. リリース運用フロー（3 つのステップ）
+## 5. リリース運用フロー（3 つのステップ）
 
 Web アプリケーション（GitHub Pages）の特性に合わせ、ストア審査や中間テスト（Pre-Release）を挟まず、**「デプロイ成功時に Release を正式公開する」** シンプルで事故のないフローを採用しています。
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Dev as 開発者 / エージェント
+    actor Dev as あなた / エージェント
     participant GH as GitHub (PR / Release Drafter)
     participant Action as GitHub Actions
     participant Pages as GitHub Pages (本番環境)
@@ -51,11 +126,12 @@ sequenceDiagram
     Action->>GH: 下書きリリースノート ("Next Release") を自動蓄積
 
     Note over Dev,GH: 2. リリース準備フェーズ (prepare-release)
-    Dev->>Dev: 「リリース準備して」
+    Dev->>Dev: ⑤「リリース準備して」
     Dev->>GH: package.json バージョン更新 & Release Note 取り込み PR 作成
     Dev->>GH: PR を main にマージ
 
     Note over Dev,GH: 3. 公開 & デプロイフェーズ (publish-release)
+    Dev->>Dev: ⑥「公開して」
     Dev->>GH: タグ (vX.Y.Z) を push
     GH->>Action: デプロイワークフロー (deploy.yml) が起動
     Action->>Pages: 本番ビルド & GitHub Pages デプロイ
@@ -63,21 +139,24 @@ sequenceDiagram
 ```
 
 ### ステップ 1: 通常開発時（Release Drafter が下書き蓄積）
+
 - トピックブランチが `main` にマージされるたび、`.github/workflows/release-drafter.yml` が自動起動します。
 - PR のタイトルやラベル（`feature`, `fix`, `chore`, `refactor`, `docs` 等）に基づいて、GitHub Releases 上の「Next Release」下書きに差分が自動分類・蓄積されます。
 
 ### ステップ 2: リリース準備 (`prepare-release` スキル)
+
 - リリースを行いたいタイミングで、エージェントへ「リリース準備して」と依頼。
 - "Next Release" に蓄積された変更規模から次期バージョンを決定し、`package.json` のバージョン更新 PR（例: `chore/release-v0.2.0`）を作成します。
 
 ### ステップ 3: リリース公開 & 自動デプロイ (`publish-release` スキル)
+
 - リリース PR を `main` にマージ後、エージェントへ「公開して」と連絡。
 - タグ（例: `v0.2.0`）が push され、`.github/workflows/deploy.yml` が起動します。
 - プロダクションビルドおよび GitHub Pages へのデプロイが実行され、**デプロイが成功したタイミングで、GitHub 上の "Next Release" 下書きが正式な Release（Latest）として自動公開** されます。
 
 ---
 
-## 4. GitHub Actions ワークフロー構成
+## 6. GitHub Actions ワークフロー構成
 
 | ファイル | トリガー | 役割 |
 | :--- | :--- | :--- |

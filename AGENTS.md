@@ -76,6 +76,6 @@ GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合
 - 📡 [GitHub API & GraphQL Rollup 設計 (`docs/dev/api-design.md`)](docs/dev/api-design.md)
 - 🧩 [データモデル & State 定義 (`docs/dev/data-model.md`)](docs/dev/data-model.md)
 - 🖥️ [UI / UX コンポーネント設計 (`docs/dev/ui-design.md`)](docs/dev/ui-design.md)
-- 🚀 [開発・ブランチ・リリース運用ガイド (`docs/dev/release-flow.md`)](docs/dev/release-flow.md)
+- 🚀 [開発・ブランチ・リリース運用ガイド (`docs/dev/release-flow.md`)](docs/dev/release-flow.md)（AI 開発ループ & 指示チートシート含む）
 - 🧪 [テスト方針 & テスト観点仕様書 (`docs/dev/testing.md`)](docs/dev/testing.md)
 - 🗺️ [開発ロードマップ & 実装実績 (`docs/dev/roadmap.md`)](docs/dev/roadmap.md)
