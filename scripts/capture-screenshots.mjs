@@ -1,5 +1,5 @@
 /**
- * @fileoverview デモモード（?demo=true）を利用して、README用の最新スクリーンショット（PC版・スマホ版）を自動撮影するスクリプト。
+ * @fileoverview デモモード（?demo=true）を利用して、README用の最新スクリーンショット（PC詳細モード・PC簡易モード・スマホ版）を自動撮影するスクリプト。
  * Vite 開発サーバーを一時起動し、Puppeteer (Chromium) で高精細キャプチャを行って docs/assets/ に上書き保存します。
  */
 
@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
 /**
- * デスクトップ表示およびスマートフォン表示のスクリーンショットを自動撮影して docs/assets/ に保存する。
+ * デスクトップ表示（詳細・簡易）およびスマートフォン表示のスクリーンショットを自動撮影して docs/assets/ に保存する。
  *
  * @returns {Promise<void>}
  */
@@ -73,7 +73,33 @@ async function captureScreenshots() {
       await desktopPage.close().catch(() => {});
     }
 
-    // 2. Mobile Screenshot (Compact View Mode)
+    // 2. Desktop Screenshot (Compact View Mode - 基本スタイル)
+    console.log('🖥️ Capturing Desktop preview (compact view mode)...');
+    const desktopCompactPage = await browser.newPage();
+    try {
+      await desktopCompactPage.setViewport({
+        width: 1280,
+        height: 900,
+        deviceScaleFactor: 2,
+      });
+      await desktopCompactPage.evaluateOnNewDocument(() => {
+        localStorage.setItem('dashboard_view_mode', 'compact');
+      });
+      await desktopCompactPage.goto(baseUrl, { waitUntil: 'networkidle0' });
+      await desktopCompactPage.waitForSelector('main');
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      const desktopCompactPath = path.join(assetsDir, 'dashboard-compact-preview.png');
+      await desktopCompactPage.screenshot({
+        path: desktopCompactPath,
+        fullPage: true,
+      });
+      console.log(`✅ Saved desktop compact preview: ${desktopCompactPath}`);
+    } finally {
+      await desktopCompactPage.close().catch(() => {});
+    }
+
+    // 3. Mobile Screenshot (Compact View Mode)
     console.log('📱 Capturing Mobile preview (compact view mode)...');
     const mobilePage = await browser.newPage();
     try {

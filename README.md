@@ -18,7 +18,17 @@
 
 **Personal Dev Dashboard** は、これらの情報をブラウザ 1 画面でリアルタイムに俯瞰できる、**完全クライアント完結型 (Zero-Backend SPA)** のダッシュボードです。
 
-### 🖥️ デスクトップ表示（詳細モード）
+### 🖥️ デスクトップ表示（簡易表示モード / 日常の常時監視）
+
+普段はアコーディオンを折りたたんだ「簡易表示モード」でコンパクトに一覧し、異常や気になるカードだけをクリックして展開・確認できます（画面右上のトグルでワンクリック切り替え）。
+
+<p align="center">
+  <img src="docs/assets/dashboard-compact-preview.png" alt="Personal Dev Dashboard - PC版 (簡易表示モード)" width="900" />
+</p>
+
+### 🔍 デスクトップ表示（詳細モード / 全カード展開）
+
+各リポジトリの PR やジョブ詳細、OS 別 Actions 内訳などを 1 画面で一望したいときの全展開モードです。
 
 <p align="center">
   <img src="docs/assets/dashboard-preview.png" alt="Personal Dev Dashboard - PC版 (詳細モード)" width="900" />

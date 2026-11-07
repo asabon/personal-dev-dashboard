@@ -64,7 +64,7 @@ description: Prepare a release for Personal Dev Dashboard. Checks main CI, analy
    - ※内部リファクタリングや軽微なバグ修正のみの場合は更新不要です。
 
 4. **スクリーンショットの自動更新（UI 変更や新カード追加がある場合）**:
-   - UI デザインの刷新、新しいカードや設定項目の追加、レイアウト変更など画面に変化がある場合、キャプチャスクリプトを実行して [`docs/assets/dashboard-preview.png`](../../../docs/assets/dashboard-preview.png) および [`docs/assets/dashboard-mobile-preview.png`](../../../docs/assets/dashboard-mobile-preview.png) を最新のデモ画面に自動更新します。
+   - UI デザインの刷新、新しいカードや設定項目の追加、レイアウト変更など画面に変化がある場合、キャプチャスクリプトを実行してプレビュー画像（PC簡易・PC詳細・スマホ簡易の 3 枚）を最新のデモ画面に自動更新します。
 
    ```powershell
    npm run capture-screenshots
