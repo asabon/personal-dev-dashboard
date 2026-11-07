@@ -1,12 +1,12 @@
 ---
-name: code-review
-description: Perform a comprehensive CodeRabbit-equivalent code review on current branch/working-tree changes against main, before git push/PR creation or on demand.
+name: local-review
+description: Perform a comprehensive CodeRabbit-equivalent local review on current branch/working-tree changes (code, tests, and documentation) against main, before git push/PR creation or on demand.
 ---
 
-# コードレビュースキル (`code-review`)
+# ローカル事前レビュースキル (`local-review`)
 
-実装中の変更（未コミット変更を含む）やトピックブランチ全体の差分に対して、独立した視点で CodeRabbit 相当のコードレビューを実施するスキルです。
-コミット前・PR 作成前・Push 前の事前点検、およびユーザーから「コードレビューして」と依頼された際に使用します。
+実装中の変更（未コミット変更を含む）やトピックブランチ全体の差分（**コード・単体テスト・ドキュメント・設定ファイルすべて**）に対して、独立した視点で CodeRabbit 相当の事前レビューを実施するスキルです。
+コミット前・PR 作成前・Push 前の事前点検、およびユーザーから「レビューして」「ローカルレビューして」と依頼された際に使用します。
 
 ---
 
@@ -49,15 +49,16 @@ git diff --stat main
 実装者バイアスとチェックリスト固着（アンカリング）の両方を排除するため、`invoke_subagent` で `research` サブエージェントを起動し、**必ず以下の順序（Stage 1 → Stage 2）** でレビューするよう指示します：
 
 1. **Stage 1: オープンエンドな深掘りレビュー（チェックリスト参照前）**
-   - **まだ `references/` のチェックリストを読まずに**、`git diff main` の差分および変更・新規作成されたファイルの全文（必要に応じて呼び出し元・型定義等の周辺コード）を読むこと。
+   - **まだ `references/` のチェックリストを読まずに**、`git diff main` の差分および変更・新規作成されたファイルの全文（必要に応じて呼び出し元・型定義・関連ドキュメント等の周辺ファイル）を読むこと。
    - モデル自身の最大限の推論能力を使い、先入観なしで以下を徹底的に洗い出すこと：
      - ロジックの破綻、境界値・エッジケースの考慮漏れ、データ不整合
      - 非同期処理の競合（Race Condition）、状態遷移の不備、メモリリーク・キャッシュ不整合
      - アーキテクチャや既存コードベースとの設計上の不整合、セキュリティ・パフォーマンス上の懸念
      - テストケースの抜け漏れやアサーションの不十分さ
+     - ドキュメント・設計書・スキル定義・設定ファイルにおける記述の矛盾、リンク切れ、実装との乖離
 2. **Stage 2: プロジェクト固有ベースライン（`references/`）の照合**
-   - Stage 1 の洗い出しが完了した後に、`.agents/skills/code-review/references/` 配下の 3 つのチェックリストファイルを読み込むこと。
-   - リポジトリ固有の UI ルール、GitHub API の仕様上の罠、CodeRabbit の基準（Docstring 等）に照らして見落としがないか検査すること。
+   - Stage 1 の洗い出しが完了した後に、`.agents/skills/local-review/references/` 配下の 3 つのチェックリストファイルを読み込むこと。
+   - リポジトリ固有の UI ルール、GitHub API の仕様上の罠、CodeRabbit の基準（Docstring・Markdownlint 等）に照らして見落としがないか検査すること。
 3. **統合レポートの作成**
    - Stage 1（自由推論による発見）と Stage 2（固有ベースライン照合）の結果を統合し、重大度別（🔴 Critical / 🟠 Major / 🟡 Minor・Nitpick / ✅ 問題なし確認済み項目）に報告すること。
 

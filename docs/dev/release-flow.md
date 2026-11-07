@@ -2,7 +2,7 @@
 
 ## 1. 概要
 
-本プロジェクトは **GitHub Flow** をベースに、AI コーディングエージェント（Antigravity）の **事前自己レビュースキル (`code-review`)**・**外部指摘対応スキル (`address-review-comments`)**、および **スキル主導の `CHANGELOG.md` 生成 + GitHub Releases 自動公開 (`prepare-release` / `publish-release`)** を組み合わせた開発・リリースパイプラインを採用しています。
+本プロジェクトは **GitHub Flow** をベースに、AI コーディングエージェント（Antigravity）の **ローカル事前レビュースキル (`local-review`)**・**外部指摘対応スキル (`address-review-comments`)**、および **スキル主導の `CHANGELOG.md` 生成 + GitHub Releases 自動公開 (`prepare-release` / `publish-release`)** を組み合わせた開発・リリースパイプラインを採用しています。
 
 ---
 
@@ -12,9 +12,9 @@
 
 | 場面 | あなたの指示（例） | エージェントの動き（使用スキル） | あなたの次のアクション |
 | :--- | :--- | :--- | :--- |
-| **① 新機能・修正を始める** | 「〇〇を実装して」<br>「〇〇を修正して PR を出して」 | トピックブランチ作成 → 実装・テスト → **`code-review` で内部レビュー＆自己修正ループ** → 1回で Push & PR 作成 → CI 確認 | PR と CodeRabbit のレビュー結果を確認する |
-| **② ローカル差分の点検だけしたい** | 「今の変更をコードレビューして」 | **`code-review`（Read-Only）** でサブエージェントが 2 段階レビュー（自由推論 ＋ 固有ベースライン照合）を行い、指摘事項を報告（ファイルは変更しない） | 報告を見て修正するか判断する |
-| **③ PR で指摘が出た** | 「CodeRabbit の指摘が挙がっています」<br>「PR のレビュー指摘に対応して」 | **`address-review-comments`** で指摘収集・判定 → 修正 → **プロジェクト固有の再発防止観点を `references/` に厳選還元** → **`code-review` で内部レビュー** → 1回で Push & CI 確認 | 指摘が解消されたら PR をマージする |
+| **① 新機能・修正を始める** | 「〇〇を実装して」<br>「〇〇を修正して PR を出して」 | トピックブランチ作成 → 実装・テスト・ドキュメント更新 → **`local-review` でローカル事前レビュー＆自己修正ループ** → 1回で Push & PR 作成 → CI 確認 | PR と CodeRabbit のレビュー結果を確認する |
+| **② ローカル差分の点検だけしたい** | 「今の変更をレビューして」<br>「ローカルレビューして」 | **`local-review`（Read-Only）** でサブエージェントが 2 段階レビュー（自由推論 ＋ 固有ベースライン照合）を行い、指摘事項を報告（ファイルは変更しない） | 報告を見て修正するか判断する |
+| **③ PR で指摘が出た** | 「CodeRabbit の指摘が挙がっています」<br>「PR のレビュー指摘に対応して」 | **`address-review-comments`** で指摘収集・判定 → 修正 → **プロジェクト固有の再発防止観点を `references/` に厳選還元** → **`local-review` で事前レビュー** → 1回で Push & CI 確認 | 指摘が解消されたら PR をマージする |
 | **④ CodeRabbit 再実行後の監視** | 「CodeRabbit の再実行を行いました」<br>（PR 上で `@coderabbitai review` 投稿後） | `gh pr checks --watch` でレビュー完了を自動待機 → 指摘があればそのまま **③（`address-review-comments`）** を自動実行 | 完了報告を待ち、問題なければ PR をマージする |
 | **⑤ リリース PR を作る** | 「リリース準備して」 | **`prepare-release`** で `main` の CI 確認 → 前回タグからのコミット・コード差分を解析して次期バージョン判定 & リリースノート要約 → `package.json` と `CHANGELOG.md` 更新・GitHub Draft Release 作成・リリース PR 作成 | リリース PR（`CHANGELOG.md` 含む）を確認してマージする |
 | **⑥ 本番デプロイ・公開する** | 「公開して」<br>（リリース PR マージ後） | **`publish-release`** でタグ（`vX.Y.Z`）を Push → `deploy.yml` 監視 → GitHub Pages デプロイ & `CHANGELOG.md` の内容で Release 自動公開を確認 | 公開された本番ページ・Release を確認する |
@@ -28,7 +28,7 @@
 
 ## 3. 日常の開発・レビューサイクル（1 PR の流れ）
 
-CodeRabbit のレート制限（1時間あたりのレビュー回数上限）を節約しつつ、レビューを受けるたびに内部チェックリスト（`.agents/skills/code-review/references/`）が賢くなるループ構造になっています。
+CodeRabbit のレート制限（1時間あたりのレビュー回数上限）を節約しつつ、レビューを受けるたびに内部チェックリスト（`.agents/skills/local-review/references/`）が賢くなるループ構造になっています。
 
 ```mermaid
 sequenceDiagram
@@ -38,12 +38,12 @@ sequenceDiagram
     participant Sub as サブエージェント (research)
     participant GH as GitHub PR / CI / CodeRabbit
 
-    Note over User,Sub: フェーズ A: ローカル実装 & 内部レビュー（Push 前に品質を作り込む）
+    Note over User,Sub: フェーズ A: ローカル実装 & 事前レビュー（Push 前に品質を作り込む）
     User->>Agent: ①「〇〇を実装して」
-    Agent->>Agent: ブランチ作成・実装・単体テスト追加
-    loop 指摘がゼロになるまで繰り返す（code-review スキル）
+    Agent->>Agent: ブランチ作成・実装・単体テスト・ドキュメント更新
+    loop 指摘がゼロになるまで繰り返す（local-review スキル）
         Agent->>Sub: git diff main を2段階レビュー（自由推論＋固有ベースライン）で検査依頼
-        Sub-->>Agent: 内部レビュー結果（Critical / Major / Minor）
+        Sub-->>Agent: 事前レビュー結果（Critical / Major / Minor）
         Agent->>Agent: 指摘箇所の修正 & 二次チェック (typecheck / test / build / LF)
     end
     Agent->>GH: 1回の git push & PR 作成 (gh pr checks --watch)
@@ -55,9 +55,9 @@ sequenceDiagram
         User->>Agent: ③「CodeRabbit の指摘が挙がっています」
         Note over Agent,Sub: address-review-comments スキルが起動
         Agent->>GH: レビュー本文・インラインコメントを取得 & 妥当性判定
-        Agent->>Agent: コード修正 & 回帰テスト追加
+        Agent->>Agent: コード・ドキュメント修正 & 回帰テスト追加
         Agent->>Agent: プロジェクト固有の再発防止知見を厳選・抽象化して references/ に還元！
-        Agent->>Sub: 修正差分を code-review スキルで再点検
+        Agent->>Sub: 修正差分を local-review スキルで再点検
         Sub-->>Agent: 問題なし
         Agent->>GH: 1回の git push & CI 通過確認
         Agent-->>User: 修正内容と追加した再発防止観点を報告
@@ -72,9 +72,9 @@ sequenceDiagram
 
 | 種別 | パス | 役割 |
 | :--- | :--- | :--- |
-| **ルール** | [`.agents/rules/code-review.md`](../../.agents/rules/code-review.md) | 1〜8 の標準開発ループと厳守事項の定義 |
-| **スキル** | [`.agents/skills/code-review/SKILL.md`](../../.agents/skills/code-review/SKILL.md) | Push 前・依頼時の 2 段階内部コードレビュー手順（Stage 1: 自由推論 → Stage 2: 固有ベースライン） |
-| **チェックリスト** | [`.agents/skills/code-review/references/`](../../.agents/skills/code-review/references/) | Stage 2 で照合するプロジェクト固有規約・既知トラップ集（TS/React、GitHub API/Security、Test/Docs） |
+| **ルール** | [`.agents/rules/local-review.md`](../../.agents/rules/local-review.md) | 1〜8 の標準開発ループと厳守事項の定義 |
+| **スキル** | [`.agents/skills/local-review/SKILL.md`](../../.agents/skills/local-review/SKILL.md) | Push 前・依頼時の 2 段階ローカル事前レビュー手順（Stage 1: 自由推論 → Stage 2: 固有ベースライン） |
+| **チェックリスト** | [`.agents/skills/local-review/references/`](../../.agents/skills/local-review/references/) | Stage 2 で照合するプロジェクト固有規約・既知トラップ集（TS/React、GitHub API/Security、Test/Docs） |
 | **スキル** | [`.agents/skills/address-review-comments/SKILL.md`](../../.agents/skills/address-review-comments/SKILL.md) | PR 指摘の収集・トリアージ・修正・チェックリストへの厳選還元手順 |
 
 ---

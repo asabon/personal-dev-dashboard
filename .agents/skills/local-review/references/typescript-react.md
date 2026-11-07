@@ -1,6 +1,6 @@
 # TypeScript / React / UI レビューチェックリスト
 
-`code-review` スキルの **Stage 2（プロジェクト固有ベースライン照合）** で確認する TypeScript・React コンポーネント・Tailwind CSS レイアウトのチェック項目です。
+`local-review` スキルの **Stage 2（プロジェクト固有ベースライン照合）** で確認する TypeScript・React コンポーネント・Tailwind CSS レイアウトのチェック項目です。
 本リストは最低限のベースラインであり、レビュー範囲の上限ではありません（Stage 1 の自由推論を先に実施してください）。
 CodeRabbit 等でプロジェクト固有規約や非自明な仕様に関する新たな指摘を受けた際は、既存項目への統合を優先しつつ本ファイルに還元してください。
 
