@@ -5,6 +5,7 @@ import {
   fetchOrgActionsUsage,
   fetchRepositoryPRs,
   fetchUserRepositories,
+  fetchAllWorkflowRuns,
 } from './githubApi';
 import { saveSettings } from './storage';
 import type { AppSettings } from '../types';
@@ -64,6 +65,7 @@ describe('PAT セキュリティ・漏洩防止テスト (Zero-Backend Privacy G
     await fetchOrgActionsUsage(TEST_PAT, 'test-org');
     await fetchRepositoryPRs(TEST_PAT, 'test-user', 'test-repo');
     await fetchUserRepositories(TEST_PAT);
+    await fetchAllWorkflowRuns(TEST_PAT, ['test-user/test-repo']);
 
     expect(capturedRequests.length).toBeGreaterThan(0);
 
@@ -80,6 +82,7 @@ describe('PAT セキュリティ・漏洩防止テスト (Zero-Backend Privacy G
   it('PAT が URL クエリパラメータやパスに露出せず、Authorization ヘッダーにのみ格納されること', async () => {
     await validateToken(TEST_PAT);
     await fetchActionsUsage(TEST_PAT, 'test-user');
+    await fetchAllWorkflowRuns(TEST_PAT, ['test-user/test-repo']);
 
     for (const req of capturedRequests) {
       // URL に生の PAT が含まれていないこと

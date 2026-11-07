@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, FolderGit2, AlertCircle } from 'lucide-react';
+import { Plus, FolderGit2, AlertCircle, ShieldCheck } from 'lucide-react';
 import type {
   AppSettings,
   DashboardState,
@@ -7,6 +7,7 @@ import type {
 } from './types';
 import { loadSettings, saveSettings, clearSettings, createDefaultSettings } from './services/storage';
 import {
+  clearWorkflowRunsCache,
   fetchRepositoryPRs,
   getLatestRateLimit,
 } from './services/githubApi';
@@ -131,6 +132,13 @@ export function App() {
     featureStatesRef.current = featureStates;
   }, [featureStates]);
 
+  const projectsRef = useRef(state.projects);
+  useEffect(() => {
+    projectsRef.current = state.projects;
+  }, [state.projects]);
+
+  const refreshGenerationRef = useRef(0);
+
   // デバッグモード用の選択状態
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(
     isDebugMode ? 'healthy' : null
@@ -233,34 +241,14 @@ export function App() {
 
     if (!settings.pat || !settings.username) return;
 
+    const currentGeneration = ++refreshGenerationRef.current;
+
     if (!isSilent) {
+      clearWorkflowRunsCache();
       setState((prev) => ({ ...prev, isRefreshing: true }));
     }
 
     try {
-      // 監視対象リポジトリの PR / CI 取得
-      if (settings.repositories.length > 0) {
-        const repoPromises = settings.repositories.map(async (repoFullName) => {
-          const [owner, name] = repoFullName.split('/');
-          if (!owner || !name) {
-            return {
-              owner: '',
-              name: '',
-              fullName: repoFullName,
-              isPrivate: false,
-              pullRequests: [],
-              error: 'リポジトリ名が不正です (owner/repo 形式である必要があります)',
-            } as RepositoryDashboardData;
-          }
-          return await fetchRepositoryPRs(settings.pat, owner, name);
-        });
-
-        const repoResults = await Promise.all(repoPromises);
-        setState((prev) => ({ ...prev, projects: repoResults }));
-      } else {
-        setState((prev) => ({ ...prev, projects: [] }));
-      }
-
       const enabledFeatures = dashboardFeatures.filter(
         (feature) => isFeatureEnabled(feature, settings.features)
       );
@@ -271,17 +259,64 @@ export function App() {
           if (!enabledFeatureIds.has(feature.id)) {
             delete next[feature.id];
           } else {
+            const prevData = previous[feature.id]?.data ?? null;
             next[feature.id] = {
-              data: previous[feature.id]?.data ?? null,
+              data: prevData,
               error: null,
-              isLoading: true,
+              // 初回取得時（データ未保持時）のみ isLoading: true にして自動更新時のちらつきを防止
+              isLoading: prevData == null,
             };
           }
         }
         return next;
       });
 
-      await Promise.all(
+      if (settings.repositories.length > 0) {
+        setState((prev) => ({
+          ...prev,
+          isLoading: prev.projects.length === 0,
+        }));
+      } else {
+        setState((prev) => ({ ...prev, projects: [], isLoading: false }));
+      }
+
+      // 監視対象リポジトリの PR / CI 取得と Feature 取得を並列実行
+      const repoFetchPromise =
+        settings.repositories.length > 0
+          ? Promise.all(
+              settings.repositories.map(async (repoFullName) => {
+                const [owner, name] = repoFullName.split('/');
+                if (!owner || !name) {
+                  return {
+                    owner: '',
+                    name: '',
+                    fullName: repoFullName,
+                    isPrivate: false,
+                    pullRequests: [],
+                    error: 'リポジトリ名が不正です (owner/repo 形式である必要があります)',
+                  } as RepositoryDashboardData;
+                }
+                try {
+                  return await fetchRepositoryPRs(settings.pat, owner, name);
+                } catch (err: any) {
+                  const prevRepo = projectsRef.current.find((p) => p.fullName === repoFullName);
+                  return {
+                    owner,
+                    name,
+                    fullName: repoFullName,
+                    isPrivate: prevRepo?.isPrivate ?? false,
+                    pullRequests: prevRepo?.pullRequests ?? [],
+                    error: err?.message || 'リポジトリ情報の取得に失敗しました',
+                  } as RepositoryDashboardData;
+                }
+              })
+            ).then((repoResults) => {
+              if (refreshGenerationRef.current !== currentGeneration) return;
+              setState((prev) => ({ ...prev, projects: repoResults, isLoading: false }));
+            })
+          : Promise.resolve();
+
+      const featuresFetchPromise = Promise.all(
         enabledFeatures.map(async (feature) => {
           try {
             const data = await feature.loadData({
@@ -295,11 +330,13 @@ export function App() {
               },
               previousData: featureStatesRef.current[feature.id]?.data,
             });
+            if (refreshGenerationRef.current !== currentGeneration) return;
             setFeatureStates((previous) => ({
               ...previous,
               [feature.id]: { data, error: null, isLoading: false },
             }));
           } catch (err: any) {
+            if (refreshGenerationRef.current !== currentGeneration) return;
             console.warn(`Dashboard feature (${feature.id}) fetch failed:`, err);
             setFeatureStates((previous) => ({
               ...previous,
@@ -313,6 +350,9 @@ export function App() {
         })
       );
 
+      await Promise.all([repoFetchPromise, featuresFetchPromise]);
+
+      if (refreshGenerationRef.current !== currentGeneration) return;
       setState((prev) => ({
         ...prev,
         rateLimit: getLatestRateLimit(),
@@ -321,9 +361,11 @@ export function App() {
         error: null,
       }));
     } catch (err: any) {
+      if (refreshGenerationRef.current !== currentGeneration) return;
       console.error('Refresh error:', err);
       setState((prev) => ({
         ...prev,
+        isLoading: false,
         isRefreshing: false,
         error: err.message || 'データの取得中にエラーが発生しました',
       }));
@@ -400,7 +442,9 @@ export function App() {
   // ログアウト / リセットハンドラ
   const handleLogout = () => {
     if (window.confirm('ダッシュボードの設定とトークンを消去して初期化しますか？')) {
+      refreshGenerationRef.current += 1;
       clearSettings();
+      clearWorkflowRunsCache();
       setSettings({
         ...createDefaultSettings(),
       });
@@ -486,25 +530,62 @@ export function App() {
           })}
         />
 
-        {dashboardFeatures.map((feature) => {
-          if (!isFeatureEnabled(feature, settings.features)) return null;
-          const FeatureCard = feature.Card;
-          return (
-            <FeatureCard
-              key={feature.id}
-              state={featureStates[feature.id] ?? { data: null, error: null, isLoading: false }}
-              isCompact={viewMode === 'compact'}
-            />
-          );
-        })}
+        {/* GitHub Section (Pattern B: セクション見出し + カード群) */}
+        <section aria-label="GitHub" className="space-y-4 sm:space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-200 shadow-sm">
+                <FolderGit2 className="w-4 h-4 text-indigo-400" />
+              </div>
+              <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-slate-100">
+                GitHub
+              </h2>
+              {settings.username && (
+                <span className="text-xs text-slate-400">
+                  Logged in as <span className="text-slate-200 font-medium font-mono">@{settings.username}</span>
+                </span>
+              )}
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-900/90 text-slate-400 border border-slate-800">
+                {settings.repositories.length} {settings.repositories.length === 1 ? 'repo' : 'repos'}
+              </span>
+            </div>
+            <div className="hidden sm:block flex-1 h-px bg-gradient-to-r from-slate-800 via-slate-800/50 to-transparent" />
+            {state.rateLimit && (
+              <div
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-slate-300 cursor-help shrink-0"
+                title={`GitHub API レート制限の残数（1時間上限: ${state.rateLimit.limit}回）\n枠のリセット予定: ${state.rateLimit.resetAt.toLocaleTimeString()}`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>API残数:</span>
+                <span className="font-mono font-medium text-slate-100">
+                  {state.rateLimit.remaining}
+                </span>
+                <span className="text-slate-500">/ {state.rateLimit.limit}</span>
+              </div>
+            )}
+          </div>
 
-        {/* 3. Repositories Section (統一親カード) */}
-        <RepositoriesCard
-          repositories={settings.repositories}
-          projects={state.projects}
-          isCompact={viewMode === 'compact'}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-        />
+          {dashboardFeatures.map((feature) => {
+            if (!isFeatureEnabled(feature, settings.features)) return null;
+            const FeatureCard = feature.Card;
+            return (
+              <FeatureCard
+                key={feature.id}
+                state={featureStates[feature.id] ?? { data: null, error: null, isLoading: false }}
+                isCompact={viewMode === 'compact'}
+              />
+            );
+          })}
+
+          {/* Open PRs Section */}
+          <RepositoriesCard
+            repositories={settings.repositories}
+            projects={state.projects}
+            isLoading={state.isLoading}
+            isCompact={viewMode === 'compact'}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
+        </section>
       </main>
 
       {/* Footer */}

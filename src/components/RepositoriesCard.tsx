@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   FolderGit2,
+  GitPullRequest,
   ChevronDown,
   ChevronUp,
   XCircle,
   Loader2,
   CheckCircle2,
-  AlertTriangle,
   Settings,
 } from 'lucide-react';
 import type { RepositoryDashboardData } from '../types';
@@ -15,13 +15,18 @@ import { RepoCard } from './RepoCard';
 interface RepositoriesCardProps {
   repositories: string[];
   projects: RepositoryDashboardData[];
+  isLoading?: boolean;
   isCompact?: boolean;
   onOpenSettings?: () => void;
 }
 
+/**
+ * 監視対象リポジトリ群の Open な Pull Request 一覧と CI 状況を統合表示するダッシュボードカード
+ */
 export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
   repositories,
   projects,
+  isLoading = false,
   isCompact = false,
   onOpenSettings,
 }) => {
@@ -32,10 +37,15 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
   const failedPrs = allPrs.filter((pr) => pr.overallCiState === 'FAILURE');
   const runningPrs = allPrs.filter((pr) => pr.overallCiState === 'PENDING');
   const passedPrs = allPrs.filter((pr) => pr.overallCiState === 'SUCCESS');
+  const noCiPrs = allPrs.filter((pr) => pr.overallCiState === 'NONE');
 
   // リポジトリ自体のエラー
   const erroredRepos = projects.filter((p) => Boolean(p.error));
-  const hasFailure = failedPrs.length > 0 || erroredRepos.length > 0;
+
+  // Open PR があるリポジトリ、または取得エラーが発生しているリポジトリのみを表示対象とする（Open PR 0件は非表示）
+  const visibleProjects = projects.filter(
+    (repo) => repo.pullRequests.length > 0 || Boolean(repo.error)
+  );
 
   // isCompact 時は初期折りたたみ（明示的にクリックされた場合のみ開閉）
   const [isCollapsed, setIsCollapsed] = useState(isCompact);
@@ -43,6 +53,10 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
   useEffect(() => {
     setIsCollapsed(isCompact);
   }, [isCompact]);
+
+  const handleToggleCollapse = () => {
+    setIsCollapsed((prev) => !prev);
+  };
 
   return (
     <div
@@ -52,27 +66,36 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
       {/* Background ambient glow */}
       <div className="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Header Row (クリックで開閉) */}
+      {/* Header Row (クリックまたは Enter/Space キーで開閉) */}
       <div
-        onClick={() => setIsCollapsed(!isCollapsed)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={!isCollapsed}
+        onClick={handleToggleCollapse}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleToggleCollapse();
+          }
+        }}
         className="p-3.5 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 cursor-pointer hover:bg-slate-900/40 transition-colors select-none"
       >
         <div className="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 w-full sm:w-auto">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 shadow-inner shrink-0">
-              <FolderGit2 className="w-4 h-4 shrink-0" />
+              <GitPullRequest className="w-4 h-4 shrink-0" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm sm:text-base font-bold text-slate-100 tracking-tight whitespace-nowrap">
-                  監視リポジトリ
+                  Open PRs
                 </h2>
                 <span className="text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono shrink-0">
-                  {repositories.length}リポジトリ
+                  {totalPrs}件
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 hidden md:block">
-                CIパイプライン実行状況および Open PR の監視
+                Open な Pull Request のマージ可否・CI チェック状況
               </p>
             </div>
           </div>
@@ -90,7 +113,7 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
         {/* ヘッダー右側（スマホ時は2行目）: サマリーバッジ & PC開閉アイコン */}
         <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto pt-0.5 sm:pt-0">
           {/* サマリーバッジ */}
-          <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
             {erroredRepos.length > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
                 <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
@@ -102,36 +125,41 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                 0リポジトリ
               </span>
             )}
-            {runningPrs.length > 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
-                <Loader2 className="w-3 h-3 text-amber-400 animate-spin shrink-0" />
-                <span>{runningPrs.length} Running</span>
-              </span>
-            )}
-            {repositories.length > 0 && totalPrs > 0 && (
-              passedPrs.length === totalPrs ? (
+            {!isLoading && repositories.length > 0 && totalPrs > 0 && (
+              passedPrs.length === totalPrs && erroredRepos.length === 0 ? (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
-                  <span>{passedPrs.length}/{totalPrs} Passed</span>
-                </span>
-              ) : failedPrs.length === 0 ? (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
-                  <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span>{passedPrs.length}/{totalPrs} Passed</span>
-                </span>
-              ) : passedPrs.length === 0 ? (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
-                  <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
-                  <span>0/{totalPrs} Passed</span>
+                  <span>All Passed</span>
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
-                  <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span>{passedPrs.length}/{totalPrs} Passed</span>
-                </span>
+                <>
+                  {runningPrs.length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
+                      <Loader2 className="w-3 h-3 text-amber-400 motion-safe:animate-spin shrink-0" />
+                      <span>{runningPrs.length} Running</span>
+                    </span>
+                  )}
+                  {failedPrs.length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
+                      <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                      <span>{failedPrs.length} Failed</span>
+                    </span>
+                  )}
+                  {passedPrs.length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
+                      <CheckCircle2 className="w-3 h-3 shrink-0" />
+                      <span>{passedPrs.length} Passed</span>
+                    </span>
+                  )}
+                  {noCiPrs.length > 0 && (
+                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700 text-slate-400 shrink-0">
+                      {noCiPrs.length} No CI
+                    </span>
+                  )}
+                </>
               )
             )}
-            {repositories.length > 0 && totalPrs === 0 && (
+            {!isLoading && repositories.length > 0 && totalPrs === 0 && (
               erroredRepos.length === 0 ? (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
@@ -182,9 +210,21 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
                 </button>
               )}
             </div>
+          ) : isLoading ? (
+            <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2 mt-2">
+              <Loader2 className="w-4 h-4 motion-safe:animate-spin text-indigo-400" />
+              <span>Pull Request と CI 状況を確認中...</span>
+            </div>
+          ) : visibleProjects.length === 0 ? (
+            <div className="py-8 text-center text-slate-500 flex flex-col items-center justify-center gap-2 mt-2">
+              <CheckCircle2 className="w-7 h-7 text-slate-700" />
+              <p className="text-xs font-medium text-slate-400">
+                現在 Open な Pull Request はありません
+              </p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 pt-3">
-              {projects.map((repo) => (
+              {visibleProjects.map((repo) => (
                 <RepoCard
                   key={repo.fullName}
                   repo={repo}

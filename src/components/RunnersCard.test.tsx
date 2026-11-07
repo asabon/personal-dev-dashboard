@@ -37,8 +37,8 @@ describe('RunnersCard', () => {
     scopeName: 'test-org',
   };
 
-  describe('ヘッダーサマリーバッジ（分数表示とステータス）', () => {
-    it('1台登録で待機中の場合、"1/1 Online"（緑色）のみ表示されること', () => {
+  describe('ヘッダーサマリーバッジ（個数表示と All Online）', () => {
+    it('1台登録で待機中の場合、"All Online"（緑色）のみ表示されること', () => {
       render(
         <RunnersCard
           runners={[dummyRunnerIdle]}
@@ -47,13 +47,13 @@ describe('RunnersCard', () => {
         />
       );
 
-      expect(screen.getByText('1/1 Online')).toBeInTheDocument();
+      expect(screen.getByText('All Online')).toBeInTheDocument();
       expect(screen.queryByText(/Running/)).not.toBeInTheDocument();
       expect(screen.queryByText(/Offline/)).not.toBeInTheDocument();
       expect(screen.getByText('1台')).toBeInTheDocument();
     });
 
-    it('1台登録でジョブ実行中の場合、"1/1 Online"（緑色）と "1台 Running"（黄色）が表示されること', () => {
+    it('1台登録でジョブ実行中の場合、"All Online"（緑色）と "1台 Running"（黄色）が表示されること', () => {
       render(
         <RunnersCard
           runners={[dummyRunnerBusy]}
@@ -62,7 +62,7 @@ describe('RunnersCard', () => {
         />
       );
 
-      const onlineBadge = screen.getByText('1/1 Online');
+      const onlineBadge = screen.getByText('All Online');
       const runningBadge = screen.getByText('1台 Running');
       expect(onlineBadge).toBeInTheDocument();
       expect(runningBadge).toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('RunnersCard', () => {
       expect(screen.getByText('1台')).toBeInTheDocument();
     });
 
-    it('2台登録（1台実行中、1台待機中）の場合、"2/2 Online" と "1台 Running" が表示されること', () => {
+    it('2台登録（1台実行中、1台待機中）の場合、"All Online" と "1台 Running" が表示されること', () => {
       render(
         <RunnersCard
           runners={[dummyRunnerIdle, dummyRunnerBusy]}
@@ -81,13 +81,13 @@ describe('RunnersCard', () => {
         />
       );
 
-      expect(screen.getByText('2/2 Online')).toBeInTheDocument();
+      expect(screen.getByText('All Online')).toBeInTheDocument();
       expect(screen.getByText('1台 Running')).toBeInTheDocument();
       expect(screen.queryByText(/Offline/)).not.toBeInTheDocument();
       expect(screen.getByText('2台')).toBeInTheDocument();
     });
 
-    it('1台登録でオフラインの場合、"0/1 Online"（赤色）が表示され "Offline" バッジは重複表示されないこと', () => {
+    it('1台登録でオフラインの場合、"1台 Offline"（赤色）が表示されること', () => {
       render(
         <RunnersCard
           runners={[dummyRunnerOffline]}
@@ -96,14 +96,14 @@ describe('RunnersCard', () => {
         />
       );
 
-      expect(screen.getByText('0/1 Online')).toBeInTheDocument();
-      const badge = screen.getByText('0/1 Online').parentElement;
+      expect(screen.getByText('1台 Offline')).toBeInTheDocument();
+      const badge = screen.getByText('1台 Offline').parentElement;
       expect(badge?.className).toContain('text-rose-300');
-      expect(screen.queryByText(/台 Offline/)).not.toBeInTheDocument();
+      expect(screen.queryByText('All Online')).not.toBeInTheDocument();
       expect(screen.getByText('1台')).toBeInTheDocument();
     });
 
-    it('3台登録（実行中1台、待機中1台、オフライン1台）の場合、"2/3 Online"（黄色）と "1台 Running" が表示され "Offline" バッジは表示されないこと', () => {
+    it('3台登録（実行中1台、待機中1台、オフライン1台）の場合、"1台 Running"、"1台 Offline"、"2台 Online" が個別に表示されること', () => {
       render(
         <RunnersCard
           runners={[dummyRunnerIdle, dummyRunnerBusy, dummyRunnerOffline]}
@@ -112,11 +112,11 @@ describe('RunnersCard', () => {
         />
       );
 
-      expect(screen.getByText('2/3 Online')).toBeInTheDocument();
-      const badge = screen.getByText('2/3 Online').parentElement;
-      expect(badge?.className).toContain('text-amber-300');
-      expect(screen.queryByText(/台 Offline/)).not.toBeInTheDocument();
       expect(screen.getByText('1台 Running')).toBeInTheDocument();
+      expect(screen.getByText('1台 Offline')).toBeInTheDocument();
+      expect(screen.getByText('2台 Online')).toBeInTheDocument();
+      expect(screen.getByText('1台 Offline').parentElement?.className).toContain('text-rose-300');
+      expect(screen.getByText('2台 Online').parentElement?.className).toContain('text-emerald-400');
       expect(screen.getByText('3台')).toBeInTheDocument();
     });
 
@@ -182,7 +182,7 @@ describe('RunnersCard', () => {
       );
 
       // サマリーバッジは見えるが、中身は折りたたまれている
-      expect(screen.getByText('1/1 Online')).toBeInTheDocument();
+      expect(screen.getByText('All Online')).toBeInTheDocument();
       expect(screen.queryByText('worker-node-1')).not.toBeInTheDocument();
 
       // 1. ヘッダーをクリックして親カードを開くと、1行表示でランナーが表示されること
@@ -209,8 +209,8 @@ describe('RunnersCard', () => {
         />
       );
 
-      // サマリーバッジには0/1 Onlineが表示されるが、中身は折りたたまれている
-      expect(screen.getByText('0/1 Online')).toBeInTheDocument();
+      // サマリーバッジには1台 Offlineが表示されるが、中身は折りたたまれている
+      expect(screen.getByText('1台 Offline')).toBeInTheDocument();
       expect(screen.queryByText('worker-node-3')).not.toBeInTheDocument();
 
       // ヘッダークリックで展開される

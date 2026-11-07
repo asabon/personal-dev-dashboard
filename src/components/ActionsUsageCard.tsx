@@ -24,6 +24,9 @@ interface AccountUsageCardProps {
   isCompact?: boolean;
 }
 
+/**
+ * 単一アカウント（個人または Organization）の GitHub Actions 無料枠消費量とペース予測を表示するサブカード
+ */
 export const AccountUsageCard: React.FC<AccountUsageCardProps> = ({
   account,
   usage,
@@ -320,6 +323,9 @@ interface ActionsUsageCardProps {
   onSelectAccount?: (accountName: string) => void;
 }
 
+/**
+ * 個人および Organization アカウントの GitHub Actions 無料枠使用量を統合表示するダッシュボードカード
+ */
 export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
   accounts = [],
   usageMap = {},
@@ -353,10 +359,10 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
           },
         ];
 
-  // 全アカウントの使用量ステータス集約（監視リポジトリカードと同様のサマリー計算）
+  // 全アカウントの使用量ステータス集約
   let hasError = false;
-  let hasOverPace = false; // 目安越え (残り僅か / ハイペース / 残り200分未満 / 使用率90%以上)
-  let hasNearPace = false; // 目安間近 (やや速い / 使用率85%以上)
+  let overPaceCount = 0; // 目安越え (残り僅か / ハイペース / 残り200分未満 / 使用率90%以上)
+  let nearPaceCount = 0; // 目安間近 (やや速い / 使用率85%以上)
   let underPaceCount = 0;
   const totalAccounts = resolvedAccounts.length;
 
@@ -379,16 +385,14 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
         remainingMinutes < 200 ||
         usagePercentage >= 90
       ) {
-        hasOverPace = true;
+        overPaceCount += 1;
       } else if (paceStatusText === 'やや速い' || usagePercentage >= 85) {
-        hasNearPace = true;
+        nearPaceCount += 1;
       } else {
         underPaceCount += 1;
       }
     }
   }
-
-  const hasWarningOrError = hasError || hasOverPace || hasNearPace;
 
   // isCompact 時は初期折りたたみ（明示的にクリックされた場合のみ開閉）
   const [isCollapsed, setIsCollapsed] = useState(isCompact);
@@ -418,7 +422,7 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm sm:text-base font-bold text-slate-100 whitespace-nowrap">
-                  GitHub Actions 使用状況
+                  Actions Usage
                 </h2>
                 <span className="text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono shrink-0">
                   {resolvedAccounts.length}アカウント
@@ -453,8 +457,8 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
 
         {/* ヘッダー右側（スマホ時は2行目）: 全体サマリーバッジ & PC開閉アイコン */}
         <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto pt-0.5 sm:pt-0">
-          {/* 全体サマリーバッジ（監視リポジトリと同様に全体の概要をラベル形式で表示） */}
-          <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
+          {/* 全体サマリーバッジ */}
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-mono">
             {hasError && (
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
                 <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
@@ -465,18 +469,29 @@ export const ActionsUsageCard: React.FC<ActionsUsageCardProps> = ({
               underPaceCount === totalAccounts ? (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
-                  <span>{underPaceCount}/{totalAccounts} 目安以下</span>
-                </span>
-              ) : underPaceCount === 0 ? (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
-                  <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
-                  <span>0/{totalAccounts} 目安以下</span>
+                  <span>All 目安以下</span>
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
-                  <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span>{underPaceCount}/{totalAccounts} 目安以下</span>
-                </span>
+                <>
+                  {overPaceCount > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
+                      <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                      <span>{overPaceCount} 超過</span>
+                    </span>
+                  )}
+                  {nearPaceCount > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
+                      <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                      <span>{nearPaceCount} やや速い</span>
+                    </span>
+                  )}
+                  {underPaceCount > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
+                      <CheckCircle2 className="w-3 h-3 shrink-0" />
+                      <span>{underPaceCount} 目安以下</span>
+                    </span>
+                  )}
+                </>
               )
             )}
             {totalAccounts === 0 && (

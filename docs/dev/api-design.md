@@ -135,6 +135,19 @@ query GetMultiRepos {
 
 ---
 
+### 2.4 Actions ワークフロー実行履歴取得 (REST API)
+
+監視対象リポジトリごとの直近の Actions ワークフロー実行履歴を取得し、`Actions Status` カードで横断集計します。
+
+- **Endpoint**: `GET https://api.github.com/repos/{owner}/{repo}/actions/runs?per_page=30`
+- **利用目的**:
+  - PR 以外のトリガー（`push` マージ、タグ `release`、`schedule`、`workflow_dispatch` 等）も含めたワークフロー稼働状況の監視
+  - 同一ワークフロー単位で最新実行状態を判定し、実行中（`in_progress` / `queued`）および未解決の失敗（`failure` / `timed_out` / `action_required` / `startup_failure`）を抽出表示
+- **レート制限保護**:
+  - 短時間メモリキャッシュ（TTL 20秒）、最大20リポジトリまでの取得上限、および API 残数が 100 未満になった際の一時スキップ保護を実施
+
+---
+
 ## 3. レートリミットとキャッシュ戦略
 
 | API 種別 | 制限（PAT 認証時） | 本アプリの戦略 |

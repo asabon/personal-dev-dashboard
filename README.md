@@ -58,15 +58,20 @@
 > GitHub Web サイトの Billing 画面に表示される無料枠ゲージ（プライベートリポジトリのみを対象とした Included minutes）とは異なり、**パブリックリポジトリでの無料実行時間も合算されてカウントされます**（GitHub 公式 API 仕様上の制約です）。  
 > そのため、本ダッシュボードの残り枠やペース判定は、**「月間 2,000 分のクォータを基準とした全体の稼働ペース管理の目安」** としてご活用ください。
 
-- **🔍 複数リポジトリの PR & CI 統合ビュー**:
-  - 監視対象リポジトリの Open な Pull Request と CI チェック結果（Check Runs）を 1 画面に集約。
+- **⚡ Actions Status (リポジトリ横断のワークフロー稼働・障害監視)**:
+  - 監視対象リポジトリすべての Actions ワークフロー（`push`, `release`, `pull_request`, `schedule`, `workflow_dispatch` 等）を横断監視。
+  - **「現在実行中（Running）」および「最新状態が失敗（Failed）のまま未解決」のワークフローのみ**をタイムライン形式で抽出し、再実行（Re-run）や修正 push・新タグ打ちで後続 Run が成功すると自動的にリストから消去。
+  - 問題がない平常時は `All Passed` バッジでクリーンに表示。
+- **🔀 Open PRs (複数リポジトリの PR & CI 統合ビュー)**:
+  - 監視対象リポジトリのうち、**Open な Pull Request が存在するリポジトリ（または取得エラーがあるリポジトリ）のみ**を自動抽出して表示（Open PR が 0 件かつエラーのないリポジトリは非表示にして画面の余白を最適化）。
   - PR を開く前から `All passed (3/3)`、`1 failed (2/3 passed)`、`3 Checks (2 passed, 1 running)` 等のチェック詳細（分子/分母）が一目で把握可能。
   - リポジトリ階層でも `2/2 PRs passed` や `1/2 PRs failed` と PR 単位の状況を集約表示。
   - 失敗したチェックの詳細ログへワンクリックでジャンプ可能。
-- **🖥️ セルフホステッドランナー監視 (任意)**:
+- **🖥️ Self-hosted Runners (セルフホステッドランナー監視・任意)**:
   - リポジトリまたは Organization の Self-Hosted Runners の稼働状況（online / busy / offline）を一覧表示。
-- **📦 統一されたカード階層 & 閲覧特化 UI**:
-  - 「Actions 使用状況」「Self-hosted Runners」「監視リポジトリ」の 3 大主要機能を統一された親カードデザインで整理。
+- **📦 GitHub セクション見出し & 統一されたカード階層**:
+  - 将来の他サービス拡張も見据え、`GitHub` セクション見出し行にアカウント名（`Logged in as @username`）、監視リポジトリ数、`API残数` を集約。
+  - セクション配下の **`Actions Usage` / `Self-hosted Runners` / `Actions Status` / `Open PRs`** を統一された親カードデザイン・英語タイトルで整理。
   - メイン画面は「閲覧・監視（Glanceable）」に特化し、リポジトリや Runner の登録・削除・設定変更は設定画面（⚙️）に一元化して誤操作を防止。
 - **🎮 トークン不要のデモモード (?demo=true)**:
   - URL に `?demo=true` を付けるだけで、PAT なしで誰でもすぐに動くダッシュボードを体験可能。
@@ -156,7 +161,7 @@ npm run build
 - 🧩 [**データモデル (docs/dev/data-model.md)**](docs/dev/data-model.md): ローカル設定・キャッシュ構造、TypeScript 型定義
 - 🖥️ [**UI / UX 設計 (docs/dev/ui-design.md)**](docs/dev/ui-design.md): 画面レイアウト、コンポーネント構成、オンボーディング導線
 - 🧪 [**テスト方針 & テスト観点仕様書 (docs/dev/testing.md)**](docs/dev/testing.md): Vitest テスト設計、セキュリティ・ロジック・UI の検証項目
-- 🚀 [**開発・リリース運用ガイド (docs/dev/release-flow.md)**](docs/dev/release-flow.md): ブランチ戦略、リリース自動公開、CI/CD 設計
+- 🚀 [**開発・リリース運用ガイド (docs/dev/release-flow.md)**](docs/dev/release-flow.md): AI 開発・レビューサイクル（指示チートシート）、ブランチ戦略、リリース自動公開、CI/CD 設計
 - 🗺️ [**開発ロードマップ & 実装実績 (docs/dev/roadmap.md)**](docs/dev/roadmap.md): 開発実績、マイルストーン、今後の拡張アイデア
 
 ---

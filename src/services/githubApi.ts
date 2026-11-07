@@ -8,6 +8,9 @@ import type {
   RepositoryDashboardData,
   UserRepositoryOption,
   SelfHostedRunner,
+  WorkflowRunItem,
+  WorkflowRunStatus,
+  WorkflowRunConclusion,
 } from '../types';
 
 export interface RateLimitInfo {
@@ -651,5 +654,308 @@ export async function fetchAllSelfHostedRunners(
     warning: warnings.length > 0 ? warnings.join('\n') : undefined,
   };
 }
+
+const WORKFLOW_RUNS_CACHE_TTL_MS = 20 * 1000;
+const MAX_WORKFLOW_RUN_REPOS = 20;
+const MIN_RATE_LIMIT_RESERVE = 100;
+
+const workflowRunsCache = new Map<
+  string,
+  {
+    pat: string;
+    runs: WorkflowRunItem[];
+    warning?: string;
+    incompleteCoverage?: boolean;
+    fetchedAt: number;
+  }
+>();
+const workflowAttemptConclusionCache = new Map<
+  string,
+  {
+    pat: string;
+    conclusion: WorkflowRunConclusion;
+  }
+>();
+let workflowRunsCacheGeneration = 0;
+
+/**
+ * Actions ワークフロー実行履歴のメモリキャッシュをクリアし、進行中の取得による再格納も無効化する
+ */
+export function clearWorkflowRunsCache(): void {
+  workflowRunsCache.clear();
+  workflowAttemptConclusionCache.clear();
+  workflowRunsCacheGeneration += 1;
+}
+
+/**
+ * ワークフロー実行結果が失敗（要対応）かどうかを判定する
+ */
+function isFailedWorkflowConclusion(conclusion: WorkflowRunConclusion): boolean {
+  return (
+    conclusion === 'failure' ||
+    conclusion === 'timed_out' ||
+    conclusion === 'action_required' ||
+    conclusion === 'startup_failure'
+  );
+}
+
+/**
+ * 単一リポジトリの直近の Actions ワークフロー実行履歴を取得する
+ */
+export async function fetchRepositoryWorkflowRuns(
+  pat: string,
+  owner: string,
+  repo: string,
+  perPage = 30
+): Promise<{ runs: WorkflowRunItem[]; warning?: string; incompleteCoverage?: boolean }> {
+  const trimmedPat = pat.trim();
+  const repoFullName = `${owner}/${repo}`;
+  const cacheKey = `${repoFullName}::${perPage}`;
+  const now = Date.now();
+  const cached = workflowRunsCache.get(cacheKey);
+  const cacheGeneration = workflowRunsCacheGeneration;
+
+  if (cached && cached.pat === trimmedPat && now - cached.fetchedAt < WORKFLOW_RUNS_CACHE_TTL_MS) {
+    return {
+      runs: cached.runs,
+      warning: cached.warning,
+      incompleteCoverage: cached.incompleteCoverage,
+    };
+  }
+
+  // レート制限残数が少ない場合はキャッシュを返して通信を抑制
+  if (
+    latestRateLimit &&
+    latestRateLimit.remaining < MIN_RATE_LIMIT_RESERVE &&
+    latestRateLimit.resetAt.getTime() > now
+  ) {
+    return {
+      runs: cached && cached.pat === trimmedPat ? cached.runs : [],
+      warning: `${repoFullName}: GitHub API レート制限残数が少ないため (${latestRateLimit.remaining}/${latestRateLimit.limit})、Actions 実行履歴の取得を一時停止しています`,
+      incompleteCoverage: true,
+    };
+  }
+
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/runs?per_page=${perPage}`,
+      {
+        headers: {
+          Authorization: `Bearer ${trimmedPat}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      }
+    );
+
+    updateRateLimitFromHeaders(res.headers);
+
+    if (!res.ok) {
+      return {
+        runs: cached && cached.pat === trimmedPat ? cached.runs : [],
+        warning: `${repoFullName}: Actions 実行履歴の取得に失敗しました (${res.status})`,
+        incompleteCoverage: true,
+      };
+    }
+
+    const data = await res.json();
+    if (!data || !Array.isArray(data.workflow_runs)) {
+      return {
+        runs: [],
+        warning: `${repoFullName}: Actions 実行履歴のレスポンス形式が不正です`,
+        incompleteCoverage: true,
+      };
+    }
+
+    const runs: WorkflowRunItem[] = data.workflow_runs.map((r: any) => ({
+      id: r.id,
+      workflowId: typeof r.workflow_id === 'number' ? r.workflow_id : undefined,
+      pullRequestNumber:
+        typeof r.pull_requests?.[0]?.number === 'number'
+          ? r.pull_requests[0].number
+          : undefined,
+      headRepositoryFullName:
+        typeof r.head_repository?.full_name === 'string'
+          ? r.head_repository.full_name
+          : undefined,
+      runAttempt: typeof r.run_attempt === 'number' ? r.run_attempt : undefined,
+      runStartedAt: r.run_started_at || r.created_at || new Date().toISOString(),
+      repoFullName,
+      workflowName: r.name || 'Workflow',
+      displayTitle: r.display_title || r.head_commit?.message?.split('\n')[0] || r.name || 'Run',
+      runNumber: r.run_number || 0,
+      event: r.event || 'unknown',
+      status: (r.status || 'completed') as WorkflowRunStatus,
+      conclusion: (r.conclusion ?? null) as WorkflowRunConclusion,
+      htmlUrl: r.html_url || `https://github.com/${repoFullName}/actions`,
+      headBranch: r.head_branch || '',
+      shortSha: typeof r.head_sha === 'string' ? r.head_sha.slice(0, 7) : '',
+      actor: {
+        login: r.actor?.login || r.triggering_actor?.login || 'github-actions',
+        avatarUrl: r.actor?.avatar_url || r.triggering_actor?.avatar_url || '',
+      },
+      createdAt: r.created_at || new Date().toISOString(),
+      updatedAt: r.updated_at || r.created_at || new Date().toISOString(),
+    }));
+
+    // 再実行（run_attempt > 1）が cancelled / skipped / neutral / stale で終わった場合、
+    // 直前の試行から未解決の失敗ステータスを復元する（キャッシュ再利用＋レート制限保護）
+    let attemptLookupIncomplete = false;
+    let attemptWarning: string | undefined;
+
+    for (const run of runs) {
+      if (
+        run.status === 'completed' &&
+        run.conclusion !== 'success' &&
+        !isFailedWorkflowConclusion(run.conclusion) &&
+        typeof run.runAttempt === 'number' &&
+        run.runAttempt > 1
+      ) {
+        for (let attempt = run.runAttempt - 1; attempt >= 1; attempt -= 1) {
+          const attemptCacheKey = `${repoFullName}::${run.id}::${attempt}`;
+          const cachedAttempt = workflowAttemptConclusionCache.get(attemptCacheKey);
+          if (cachedAttempt && cachedAttempt.pat === trimmedPat) {
+            if (
+              cachedAttempt.conclusion === 'success' ||
+              isFailedWorkflowConclusion(cachedAttempt.conclusion)
+            ) {
+              run.conclusion = cachedAttempt.conclusion;
+              break;
+            }
+            continue;
+          }
+
+          if (
+            latestRateLimit &&
+            latestRateLimit.remaining < MIN_RATE_LIMIT_RESERVE &&
+            latestRateLimit.resetAt.getTime() > Date.now()
+          ) {
+            attemptLookupIncomplete = true;
+            attemptWarning = `${repoFullName}: GitHub API レート制限残数が少ないため、再実行前の試行履歴の確認を一部スキップしました`;
+            break;
+          }
+          try {
+            const attemptRes = await fetch(
+              `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/runs/${encodeURIComponent(String(run.id))}/attempts/${attempt}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${trimmedPat}`,
+                  Accept: 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+                },
+              }
+            );
+            updateRateLimitFromHeaders(attemptRes.headers);
+            if (!attemptRes.ok) {
+              attemptLookupIncomplete = true;
+              attemptWarning = `${repoFullName}: 再実行前の試行履歴の取得に失敗しました (${attemptRes.status})`;
+              break;
+            }
+            const attemptData = await attemptRes.json();
+            const priorConclusion = (attemptData?.conclusion ?? null) as WorkflowRunConclusion;
+            if (cacheGeneration === workflowRunsCacheGeneration) {
+              workflowAttemptConclusionCache.set(attemptCacheKey, {
+                pat: trimmedPat,
+                conclusion: priorConclusion,
+              });
+            }
+            if (priorConclusion === 'success' || isFailedWorkflowConclusion(priorConclusion)) {
+              run.conclusion = priorConclusion;
+              break;
+            }
+          } catch {
+            attemptLookupIncomplete = true;
+            attemptWarning = `${repoFullName}: 再実行前の試行履歴の取得中に通信エラーが発生しました`;
+            break;
+          }
+        }
+      }
+    }
+
+    if (cacheGeneration === workflowRunsCacheGeneration) {
+      workflowRunsCache.set(cacheKey, {
+        pat: trimmedPat,
+        runs,
+        warning: attemptWarning,
+        incompleteCoverage: attemptLookupIncomplete,
+        fetchedAt: Date.now(),
+      });
+    }
+
+    return {
+      runs,
+      warning: attemptWarning,
+      incompleteCoverage: attemptLookupIncomplete,
+    };
+  } catch (err) {
+    console.warn(`Failed to fetch workflow runs for ${repoFullName}:`, err);
+    return {
+      runs: cached && cached.pat === trimmedPat ? cached.runs : [],
+      warning: `${repoFullName}: Actions 実行履歴の取得中に通信エラーが発生しました`,
+      incompleteCoverage: true,
+    };
+  }
+}
+
+/**
+ * 監視対象リポジトリ群の直近 Actions ワークフロー実行履歴を横断取得・ソートする
+ */
+export async function fetchAllWorkflowRuns(
+  pat: string,
+  repositories: string[],
+  perRepoLimit = 30
+): Promise<{ runs: WorkflowRunItem[]; warning?: string; incompleteCoverage?: boolean }> {
+  const trimmedPat = pat.trim();
+  if (!trimmedPat || repositories.length === 0) {
+    return { runs: [] };
+  }
+
+  const targetRepositories = repositories.slice(0, MAX_WORKFLOW_RUN_REPOS);
+  const skippedCount = repositories.length - targetRepositories.length;
+
+  const results = await Promise.all(
+    targetRepositories.map(async (repoFullName) => {
+      const [owner, name] = repoFullName.split('/');
+      if (!owner || !name) {
+        return {
+          runs: [] as WorkflowRunItem[],
+          warning: `${repoFullName}: リポジトリ名が不正です`,
+          incompleteCoverage: true,
+        };
+      }
+      return fetchRepositoryWorkflowRuns(trimmedPat, owner, name, perRepoLimit);
+    })
+  );
+
+  const allRuns = results.flatMap((r) => r.runs);
+  const warnings = results.map((r) => r.warning).filter(Boolean) as string[];
+  if (skippedCount > 0) {
+    warnings.push(
+      `API レート制限保護のため、先頭 ${MAX_WORKFLOW_RUN_REPOS} リポジトリのみ Actions 実行履歴を取得しています（残り ${skippedCount} 件をスキップ）`
+    );
+  }
+
+  const incompleteCoverage =
+    skippedCount > 0 ||
+    warnings.length > 0 ||
+    results.some((r) => Boolean(r.incompleteCoverage));
+
+  // ソート順: 実行中・待機中 (status !== 'completed') を最優先し、次に更新日時の新しい順
+  allRuns.sort((a, b) => {
+    const aActive = a.status !== 'completed' ? 1 : 0;
+    const bActive = b.status !== 'completed' ? 1 : 0;
+    if (aActive !== bActive) {
+      return bActive - aActive;
+    }
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+  });
+
+  return {
+    runs: allRuns,
+    warning: warnings.length > 0 ? warnings.join('\n') : undefined,
+    incompleteCoverage,
+  };
+}
+
 
 

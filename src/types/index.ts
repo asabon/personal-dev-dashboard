@@ -115,6 +115,69 @@ export interface SelfHostedRunner {
   scopeName: string; // "org名" または "owner/repo"
 }
 
+export type WorkflowRunStatus =
+  | 'queued'
+  | 'in_progress'
+  | 'completed'
+  | 'waiting'
+  | 'requested'
+  | 'pending';
+
+export type WorkflowRunConclusion =
+  | 'success'
+  | 'failure'
+  | 'neutral'
+  | 'cancelled'
+  | 'skipped'
+  | 'timed_out'
+  | 'action_required'
+  | 'startup_failure'
+  | 'stale'
+  | null;
+
+export interface WorkflowRunItem {
+  id: number;
+  /** ワークフロー定義 ID (GitHub Actions workflow_id) */
+  workflowId?: number;
+  /** Pull Request 番号 (PR トリガー時、GitHub API から返却された場合) */
+  pullRequestNumber?: number;
+  /** Head リポジトリのフルネーム (フォーク PR 識別用) */
+  headRepositoryFullName?: string;
+  /** 再実行試行回数 (1 = 初回実行, 2+ = Rerun) */
+  runAttempt?: number;
+  /** 最新試行の開始日時 (ISO 8601、Rerun 時の実行順判定用) */
+  runStartedAt?: string;
+  /** リポジトリフルネーム (例: "owner/repo") */
+  repoFullName: string;
+  /** ワークフロー名 (例: "CI", "Deploy to GitHub Pages") */
+  workflowName: string;
+  /** 実行タイトル / コミットメッセージ / タグ名 */
+  displayTitle: string;
+  /** 実行番号 (例: 42) */
+  runNumber: number;
+  /** トリガーイベント (例: "push", "pull_request", "release", "workflow_dispatch", "schedule") */
+  event: string;
+  /** 実行ステータス */
+  status: WorkflowRunStatus;
+  /** 実行結果 (完了時) */
+  conclusion: WorkflowRunConclusion;
+  /** GitHub Actions 実行詳細 URL */
+  htmlUrl: string;
+  /** ブランチ名またはタグ名 (例: "main", "v0.4.0") */
+  headBranch: string;
+  /** 短縮コミット SHA (7文字) */
+  shortSha: string;
+  /** 実行者情報 */
+  actor: {
+    login: string;
+    avatarUrl: string;
+  };
+  /** 作成日時 (ISO 8601) */
+  createdAt: string;
+  /** 最終更新日時 (ISO 8601) */
+  updatedAt: string;
+}
+
 export interface DashboardState {
   isLoading: boolean;
   isRefreshing: boolean;

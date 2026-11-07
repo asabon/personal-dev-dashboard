@@ -13,17 +13,26 @@ interface DashboardSummaryBarProps {
   featureAlerts?: FeatureAlert[];
 }
 
+/**
+ * 画面上部に CI 失敗・実行中・リポジトリ取得エラー・各機能アラートを一覧表示するサマリーバー
+ */
 export const DashboardSummaryBar: React.FC<DashboardSummaryBarProps> = ({
   projects,
   featureAlerts = [],
 }) => {
-  // 1. CI 失敗 / 実行中 PR の集計
+  // 1. CI 失敗 / 実行中 PR およびリポジトリ取得エラーの集計
   let failedPrCount = 0;
   let runningPrCount = 0;
+  let erroredRepoCount = 0;
   let firstFailedRepo: string | null = null;
   let firstRunningRepo: string | null = null;
+  let firstErroredRepo: string | null = null;
 
   for (const project of projects) {
+    if (project.error) {
+      erroredRepoCount++;
+      if (!firstErroredRepo) firstErroredRepo = project.fullName;
+    }
     for (const pr of project.pullRequests) {
       if (pr.overallCiState === 'FAILURE') {
         failedPrCount++;
@@ -37,7 +46,7 @@ export const DashboardSummaryBar: React.FC<DashboardSummaryBarProps> = ({
 
   const hasFeatureIssues = featureAlerts.some((alert) => alert.tone === 'danger');
   const hasFeatureWarnings = featureAlerts.length > 0;
-  const hasIssues = failedPrCount > 0 || hasFeatureIssues;
+  const hasIssues = failedPrCount > 0 || erroredRepoCount > 0 || hasFeatureIssues;
   const isAllClear = !hasIssues && runningPrCount === 0 && !hasFeatureWarnings;
 
   // スクロール用ヘルパー
@@ -79,6 +88,20 @@ export const DashboardSummaryBar: React.FC<DashboardSummaryBarProps> = ({
           <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
           <span>異常なし</span>
         </div>
+      )}
+
+      {/* 0. リポジトリ取得エラーアラート */}
+      {erroredRepoCount > 0 && (
+        <button
+          type="button"
+          onClick={() => firstErroredRepo && scrollToElement(`repo-${firstErroredRepo.replace('/', '-')}`)}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition-all font-semibold active:scale-95 cursor-pointer shadow-sm shadow-rose-500/10"
+          title="取得エラーが発生しているリポジトリへ移動"
+        >
+          <XCircle className="w-3.5 h-3.5 text-rose-400" />
+          <span>PR 取得エラー: {erroredRepoCount}件</span>
+          <ArrowDown className="w-3 h-3 text-rose-400 opacity-70" />
+        </button>
       )}
 
       {/* 1. CI 失敗アラート */}

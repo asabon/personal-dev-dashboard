@@ -1,12 +1,12 @@
 import React from 'react';
-import { RefreshCw, Settings, ShieldCheck, Activity, Clock, Minimize2, Maximize2 } from 'lucide-react';
+import { RefreshCw, Settings, Activity, Clock, Minimize2, Maximize2 } from 'lucide-react';
 import type { RateLimitInfo } from '../services/githubApi';
 
 interface HeaderProps {
-  username: string;
+  username?: string;
   isRefreshing: boolean;
   lastRefreshedAt: Date | null;
-  rateLimit: RateLimitInfo | null;
+  rateLimit?: RateLimitInfo | null;
   viewMode?: 'compact' | 'expanded';
   onToggleViewMode?: () => void;
   onRefresh: () => void;
@@ -14,10 +14,8 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  username,
   isRefreshing,
   lastRefreshedAt,
-  rateLimit,
   viewMode = 'expanded',
   onToggleViewMode,
   onRefresh,
@@ -39,48 +37,14 @@ export const Header: React.FC<HeaderProps> = ({
             <Activity className="w-5 h-5 text-white" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-slate-100 tracking-tight">
-                Personal Dev Dashboard
-              </h1>
-              <a
-                href="https://github.com/asabon/personal-dev-dashboard/releases"
-                target="_blank"
-                rel="noreferrer"
-                title={`バージョン v${__APP_VERSION__} のリリースノートを開く`}
-                className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-400 hover:text-slate-200 border border-slate-700/60 hover:border-slate-600 transition-colors"
-              >
-                v{__APP_VERSION__}
-              </a>
-              <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                OSS
-              </span>
-            </div>
-            {username && (
-              <p className="text-xs text-slate-400">
-                Logged in as <span className="text-slate-200 font-medium">@{username}</span>
-              </p>
-            )}
+            <h1 className="text-base sm:text-lg font-bold text-slate-100 tracking-tight">
+              Personal Dev Dashboard
+            </h1>
           </div>
         </div>
 
         {/* Status & Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Rate Limit Badge */}
-          {rateLimit && (
-            <div
-              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300 cursor-help"
-              title={`GitHub API レート制限の残数（1時間上限: ${rateLimit.limit}回）\n枠のリセット予定: ${rateLimit.resetAt.toLocaleTimeString()}`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>API残数:</span>
-              <span className="font-mono font-medium text-slate-100">
-                {rateLimit.remaining}
-              </span>
-              <span className="text-slate-500">/ {rateLimit.limit}</span>
-            </div>
-          )}
-
           {/* Last Refreshed */}
           <div className="hidden sm:flex items-center gap-1 text-xs text-slate-400">
             <Clock className="w-3.5 h-3.5 text-slate-500" />

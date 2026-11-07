@@ -49,7 +49,10 @@ GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合
 - **`--body-file` の使用を義務化**:
   - シェルコマンドの `--body "..."` に複数行の Markdown やバッククォートを直接渡さないでください。PowerShell 等の展開処理によって意図しないバックスラッシュ（`\`）の混入やコードブロック破損が発生します。
   - 必ず `.gitignore` 対象の `scratch/` 配下に一時的な Markdown ファイル（例: `scratch/pr_body.md`）を書き出し、`gh pr create --body-file <path>` または `gh pr edit --body-file <path>` を使用してください。送信完了後は一時ファイルを直ちに削除してください。
-- 詳細ルール: [`.agents/rules/cli-markdown-escaping.md`](.agents/rules/cli-markdown-escaping.md), [`.agents/rules/windows-shell-commands.md`](.agents/rules/windows-shell-commands.md)
+- **事前コードレビューの義務化とチェックリストの継続更新（CodeRabbit レート制限対策）**:
+  - 新規 PR 作成時やレビュー修正の `git push` を行う前に、必ず [コードレビュールール (`.agents/rules/code-review.md`)](.agents/rules/code-review.md) およびスキル [`.agents/skills/code-review/SKILL.md`](.agents/skills/code-review/SKILL.md) に従い、同スキルの `references/` 配下のチェックリストを用いて独立した視点（サブエージェント等）で差分を事前点検・修正してから 1 回の Push にまとめてください。
+  - また、CodeRabbit やユーザーから PR で新たな指摘を受けた際は、スキル [`.agents/skills/address-review-comments/SKILL.md`](.agents/skills/address-review-comments/SKILL.md) に従って指摘の収集・妥当性判定・修正・1 回の Push を行い、再発防止のため [`.agents/skills/code-review/references/`](.agents/skills/code-review/references/) の該当チェックリストに項目を追記してください。`@coderabbitai review` 等のレビュー再実行コメントをエージェントが自動投稿することは禁止します。
+- 詳細ルール: [`.agents/rules/cli-markdown-escaping.md`](.agents/rules/cli-markdown-escaping.md), [`.agents/rules/windows-shell-commands.md`](.agents/rules/windows-shell-commands.md), [`.agents/rules/code-review.md`](.agents/rules/code-review.md)
 
 ---
 
@@ -73,6 +76,6 @@ GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合
 - 📡 [GitHub API & GraphQL Rollup 設計 (`docs/dev/api-design.md`)](docs/dev/api-design.md)
 - 🧩 [データモデル & State 定義 (`docs/dev/data-model.md`)](docs/dev/data-model.md)
 - 🖥️ [UI / UX コンポーネント設計 (`docs/dev/ui-design.md`)](docs/dev/ui-design.md)
-- 🚀 [開発・ブランチ・リリース運用ガイド (`docs/dev/release-flow.md`)](docs/dev/release-flow.md)
+- 🚀 [開発・ブランチ・リリース運用ガイド (`docs/dev/release-flow.md`)](docs/dev/release-flow.md)（AI 開発ループ & 指示チートシート含む）
 - 🧪 [テスト方針 & テスト観点仕様書 (`docs/dev/testing.md`)](docs/dev/testing.md)
 - 🗺️ [開発ロードマップ & 実装実績 (`docs/dev/roadmap.md`)](docs/dev/roadmap.md)

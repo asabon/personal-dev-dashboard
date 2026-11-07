@@ -17,6 +17,9 @@ interface PullRequestCardProps {
   isCompact?: boolean;
 }
 
+/**
+ * 単一の Pull Request とその CI チェック内訳を表示するカードコンポーネント
+ */
 export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact = false }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -28,33 +31,48 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact 
     (c) => c.status === 'IN_PROGRESS' || c.status === 'QUEUED' || c.status === 'PENDING' || c.status === 'WAITING'
   ).length;
   const passedChecks = pr.checks.filter((c) => c.conclusion === 'SUCCESS').length;
+  const otherChecks = Math.max(0, totalChecks - passedChecks - failedChecks - runningChecks);
 
+  /**
+   * PR 行の右端に表示する CI ステータスバッジ群を返す
+   */
   const getStatusBadge = () => {
     if (totalChecks > 0) {
-      if (failedChecks > 0) {
-        return (
-          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 font-mono shrink-0">
-            <XCircle className="w-3.5 h-3.5 shrink-0" />
-            <span>{failedChecks} failed</span>
-          </span>
-        );
-      }
-      if (runningChecks > 0) {
-        return (
-          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono shrink-0">
-            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-            <span>{runningChecks} running</span>
-          </span>
-        );
-      }
       if (passedChecks === totalChecks) {
         return (
           <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono shrink-0">
             <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-            <span>All passed ({passedChecks}/{totalChecks})</span>
+            <span>All Passed</span>
           </span>
         );
       }
+      return (
+        <div className="flex flex-wrap items-center justify-end gap-1 font-mono">
+          {runningChecks > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+              <Loader2 className="w-3.5 h-3.5 motion-safe:animate-spin shrink-0" />
+              <span>{runningChecks} Running</span>
+            </span>
+          )}
+          {failedChecks > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
+              <XCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{failedChecks} Failed</span>
+            </span>
+          )}
+          {passedChecks > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              <span>{passedChecks} Passed</span>
+            </span>
+          )}
+          {otherChecks > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
+              <span>{otherChecks} Other</span>
+            </span>
+          )}
+        </div>
+      );
     }
 
     switch (pr.overallCiState) {
@@ -62,7 +80,7 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact 
         return (
           <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
             <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-            <span>All passed</span>
+            <span>All Passed</span>
           </span>
         );
       case 'FAILURE':
@@ -75,7 +93,7 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact 
       case 'PENDING':
         return (
           <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
-            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+            <Loader2 className="w-3.5 h-3.5 motion-safe:animate-spin shrink-0" />
             <span>Running</span>
           </span>
         );
@@ -88,6 +106,9 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact 
     }
   };
 
+  /**
+   * チェック内訳アコーディオン開閉ボタンのラベル文字列を返す
+   */
   const getChecksButtonLabel = () => {
     if (totalChecks === 0) return null;
     if (passedChecks === totalChecks) {
@@ -97,12 +118,16 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact 
     if (passedChecks > 0) parts.push(`${passedChecks} passed`);
     if (failedChecks > 0) parts.push(`${failedChecks} failed`);
     if (runningChecks > 0) parts.push(`${runningChecks} running`);
+    if (otherChecks > 0) parts.push(`${otherChecks} other`);
     return `${totalChecks} Checks (${parts.join(', ')})`;
   };
 
+  /**
+   * 個別チェック行の左端に表示するステータスアイコン要素を返す
+   */
   const getCheckIcon = (check: ActionCheck) => {
     if (check.status === 'IN_PROGRESS' || check.status === 'QUEUED') {
-      return <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin shrink-0" />;
+      return <Loader2 className="w-3.5 h-3.5 text-amber-400 motion-safe:animate-spin shrink-0" />;
     }
     if (check.conclusion === 'SUCCESS') {
       return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />;
@@ -113,6 +138,9 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact 
     return <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />;
   };
 
+  /**
+   * ISO 8601 日時文字列を現在時刻からの相対時間表記（分・時間・日前）に変換する
+   */
   const formatRelativeTime = (iso: string) => {
     const diff = Date.now() - new Date(iso).getTime();
     const minutes = Math.floor(diff / 60000);

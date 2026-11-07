@@ -7,7 +7,7 @@ import {
   FolderGit2,
   CheckCircle2,
   AlertCircle,
-  AlertTriangle,
+  XCircle,
   PlayCircle,
   Tag,
   Laptop,
@@ -26,6 +26,9 @@ interface RunnerCardProps {
   isCompact?: boolean;
 }
 
+/**
+ * 個別の Self-hosted Runner の稼働状態・OS・ラベルを表示するサブカードコンポーネント
+ */
 export const RunnerCard: React.FC<RunnerCardProps> = ({ runner, isCompact = false }) => {
   const isOnline = runner.status === 'online';
   const isBusy = runner.busy;
@@ -121,6 +124,9 @@ export const RunnerCard: React.FC<RunnerCardProps> = ({ runner, isCompact = fals
   );
 };
 
+/**
+ * 監視対象 Organization およびリポジトリの Self-hosted Runners 稼働状況を一覧表示するダッシュボードカード
+ */
 export const RunnersCard: React.FC<RunnersCardProps> = ({
   runners,
   isLoading,
@@ -183,7 +189,7 @@ export const RunnersCard: React.FC<RunnersCardProps> = ({
 
         {/* サマリーと開閉ボタン（スマホ時は2行目） */}
         <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto pt-0.5 sm:pt-0">
-          <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono">
             {hasError && (
               <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
                 <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
@@ -200,18 +206,23 @@ export const RunnersCard: React.FC<RunnersCardProps> = ({
               onlineCount === totalCount ? (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
-                  <span>{onlineCount}/{totalCount} Online</span>
-                </span>
-              ) : onlineCount === 0 ? (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
-                  <AlertCircle className="w-3 h-3 text-rose-400 shrink-0" />
-                  <span>0/{totalCount} Online</span>
+                  <span>All Online</span>
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold shrink-0">
-                  <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span>{onlineCount}/{totalCount} Online</span>
-                </span>
+                <>
+                  {offlineCount > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 font-semibold shrink-0">
+                      <XCircle className="w-3 h-3 text-rose-400 shrink-0" />
+                      <span>{offlineCount}台 Offline</span>
+                    </span>
+                  )}
+                  {onlineCount > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
+                      <CheckCircle2 className="w-3 h-3 shrink-0" />
+                      <span>{onlineCount}台 Online</span>
+                    </span>
+                  )}
+                </>
               )
             )}
             {totalCount === 0 && !hasError && (
