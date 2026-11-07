@@ -17,6 +17,9 @@ CodeRabbit 等で GitHub API 固有の仕様やセキュリティ・キャッシ
   - 後続の別 Run や再実行（`run_attempt > 1`）が `cancelled` / `skipped` / `neutral` / `stale` で完了した場合に、直前の未解決の失敗ステータスが誤って消去（`All Passed` 扱い）されないか。
   - 再実行（Rerun）された古い Run の失敗が新しい Run より後に実行された場合、`createdAt` ではなく最新試行の実行日時（`run_started_at` / `updated_at`）を基準に最新状態を判定しているか。
   - フォークからの PR トリガー等で `pull_requests[].number` が空の場合でも、`head_repository.full_name` をスコープキーに含めて別フォークの同名ブランチ（`main` 等）と衝突しないようにしているか。
+- [ ] **Pull Request イベント判定と非 PR ワークフロー（`push` 等）の保護**:
+  - GitHub Actions REST API では `event: 'push'`（マージコミット等）であっても `pull_requests` 配列が付与されて返却される仕様があるため、PR スコープの判定は `event === 'pull_request' || event === 'pull_request_target'` で厳格に行い、非 PR イベント（`push`、`schedule`、`workflow_dispatch` 等）を PR と誤認して `main` の失敗ビルドを除外・不可視化しないようにしているか。
+  - 再実行（Rerun）試行の直前失敗復元処理は PR 状態（open / closed）の解決処理より先行して実行し、キャンセルされた再実行の直前失敗も確実に判定対象としているか。
 - [ ] **URL パスパラメータのエンコード**:
   - `owner`、`repo`、`orgName` などを REST API URL に埋め込む際、`encodeURIComponent()` を使用しているか。
 
@@ -28,8 +31,9 @@ CodeRabbit 等で GitHub API 固有の仕様やセキュリティ・キャッシ
   - リポジトリごとに個別 REST API を呼び出す機能では、最大取得リポジトリ数上限（例: 20件）や短時間 TTL キャッシュ（例: 20秒）、レート制限残数ガード（残り 100 未満時はスキップ）を設けているか。
 - [ ] **上限スキップ・補助ルックアップ失敗時の通知**:
   - リポジトリ数上限やレート制限保護により一部取得をスキップした場合、または再実行前の試行履歴（`/attempts/{attempt}`）などの補助ルックアップが失敗・スキップされた場合、無言で切り捨てず `warning` および `incompleteCoverage: true` を返してユーザーに通知しているか（キャッシュヒット時もその `warning` / `incompleteCoverage` を保持しているか）。
-- [ ] **不変データのトークンスコープキャッシュ**:
+- [ ] **不変データのトークンスコープキャッシュと可変データの TTL 期限設定**:
   - 完了済みワークフロー試行の `conclusion` など不変の補助 API 結果は、PAT スコープ付きでキャッシュしてリフレッシュごとの重複リクエストを防いでいるか。
+  - 一方で Pull Request の状態（`open` / `closed`）のように将来変化し得る可変データには適切な短時間 TTL（例: 1分）を設け、再オープン等の状態変化に対応できるようにしているか。
 - [ ] **キャッシュのクリアタイミングと In-flight リクエストの無効化**:
   - モジュールスコープのキャッシュを設けた場合、手動更新ボタン押下時（`!isSilent`）、ログアウト時（`handleLogout`）、および PAT 変更時に古いキャッシュが残らないようクリアまたは PAT キー検証を行っているか。
   - キャッシュクリア時に世代番号（generation counter）等をインクリメントし、クリア前から進行中（in-flight）だった古いリクエストが後から完了してキャッシュを再汚染しないようにしているか。
