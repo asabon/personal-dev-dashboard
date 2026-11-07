@@ -120,7 +120,7 @@ async function captureScreenshots() {
       const mobilePath = path.join(assetsDir, 'dashboard-mobile-preview.png');
       await mobilePage.screenshot({
         path: mobilePath,
-        fullPage: false,
+        fullPage: true, // サマリーバッジの折り返し時も Open PRs を含む全カードが収まるよう全体撮影
       });
       console.log(`✅ Saved mobile preview: ${mobilePath}`);
     } finally {
