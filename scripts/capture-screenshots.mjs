@@ -1,5 +1,5 @@
 /**
- * @fileoverview デモモード（?demo=true）を利用して、README用の最新スクリーンショット（PC詳細モード・PC簡易モード・スマホ版）を自動撮影するスクリプト。
+ * @fileoverview デモモード（?demo=true）を利用して、README用の最新スクリーンショット（PC簡易モード・PC詳細モード）を自動撮影するスクリプト。
  * Vite 開発サーバーを一時起動し、Puppeteer (Chromium) で高精細キャプチャを行って docs/assets/ に上書き保存します。
  */
 
@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
 /**
- * デスクトップ表示（詳細・簡易）およびスマートフォン表示のスクリーンショットを自動撮影して docs/assets/ に保存する。
+ * デスクトップ表示（簡易表示モード・詳細モード）のスクリーンショットを自動撮影して docs/assets/ に保存する。
  *
  * @returns {Promise<void>}
  */
@@ -46,34 +46,7 @@ async function captureScreenshots() {
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
-    // 1. Desktop Screenshot (Detailed Mode)
-    console.log('🖥️ Capturing Desktop preview (detailed mode)...');
-    const desktopPage = await browser.newPage();
-    try {
-      await desktopPage.setViewport({
-        width: 1280,
-        height: 900,
-        deviceScaleFactor: 2,
-      });
-      await desktopPage.evaluateOnNewDocument(() => {
-        localStorage.setItem('dashboard_view_mode', 'expanded');
-      });
-      await desktopPage.goto(baseUrl, { waitUntil: 'networkidle0' });
-      await desktopPage.waitForSelector('main');
-      // アニメーションおよび Lucide アイコン等の描画完了を待機
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      const desktopPath = path.join(assetsDir, 'dashboard-preview.png');
-      await desktopPage.screenshot({
-        path: desktopPath,
-        fullPage: true,
-      });
-      console.log(`✅ Saved desktop preview: ${desktopPath}`);
-    } finally {
-      await desktopPage.close().catch(() => {});
-    }
-
-    // 2. Desktop Screenshot (Compact View Mode - 基本スタイル)
+    // 1. Desktop Screenshot (Compact View Mode - 基本・常時監視スタイル)
     console.log('🖥️ Capturing Desktop preview (compact view mode)...');
     const desktopCompactPage = await browser.newPage();
     try {
@@ -87,6 +60,7 @@ async function captureScreenshots() {
       });
       await desktopCompactPage.goto(baseUrl, { waitUntil: 'networkidle0' });
       await desktopCompactPage.waitForSelector('main');
+      // アニメーションおよび Lucide アイコン等の描画完了を待機
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       const desktopCompactPath = path.join(assetsDir, 'dashboard-compact-preview.png');
@@ -99,32 +73,30 @@ async function captureScreenshots() {
       await desktopCompactPage.close().catch(() => {});
     }
 
-    // 3. Mobile Screenshot (Compact View Mode)
-    console.log('📱 Capturing Mobile preview (compact view mode)...');
-    const mobilePage = await browser.newPage();
+    // 2. Desktop Screenshot (Detailed Mode - 全カード展開)
+    console.log('🖥️ Capturing Desktop preview (detailed mode)...');
+    const desktopPage = await browser.newPage();
     try {
-      await mobilePage.setViewport({
-        width: 390,
-        height: 844,
+      await desktopPage.setViewport({
+        width: 1280,
+        height: 900,
         deviceScaleFactor: 2,
-        isMobile: true,
-        hasTouch: true,
       });
-      await mobilePage.evaluateOnNewDocument(() => {
-        localStorage.setItem('dashboard_view_mode', 'compact');
+      await desktopPage.evaluateOnNewDocument(() => {
+        localStorage.setItem('dashboard_view_mode', 'expanded');
       });
-      await mobilePage.goto(baseUrl, { waitUntil: 'networkidle0' });
-      await mobilePage.waitForSelector('main');
+      await desktopPage.goto(baseUrl, { waitUntil: 'networkidle0' });
+      await desktopPage.waitForSelector('main');
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      const mobilePath = path.join(assetsDir, 'dashboard-mobile-preview.png');
-      await mobilePage.screenshot({
-        path: mobilePath,
-        fullPage: true, // サマリーバッジの折り返し時も Open PRs を含む全カードが収まるよう全体撮影
+      const desktopPath = path.join(assetsDir, 'dashboard-preview.png');
+      await desktopPage.screenshot({
+        path: desktopPath,
+        fullPage: true,
       });
-      console.log(`✅ Saved mobile preview: ${mobilePath}`);
+      console.log(`✅ Saved desktop preview: ${desktopPath}`);
     } finally {
-      await mobilePage.close().catch(() => {});
+      await desktopPage.close().catch(() => {});
     }
 
     console.log('🎉 All screenshots successfully updated!');

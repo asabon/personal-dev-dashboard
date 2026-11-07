@@ -18,23 +18,10 @@
 
 **Personal Dev Dashboard** は、これらの情報をブラウザ 1 画面でリアルタイムに俯瞰できる、**完全クライアント完結型 (Zero-Backend SPA)** のダッシュボードです。
 
-### 🪟 幅狭ウィンドウ（PC常駐監視・スマホ）表示
-
-IDE やメインブラウザの隣に「細長いウィンドウ」を独立常駐させる使い方に最適化されています。  
-アコーディオン最小構成（簡易表示モード）により、サブモニターの片隅や画面端でも邪魔にならず、1 画面でリアルタイムに常時監視できます。
-
 <p align="center">
-  <img src="docs/assets/dashboard-mobile-preview.png" alt="Personal Dev Dashboard - 幅狭ウィンドウ (常駐監視)" width="360" />
+  <img src="docs/assets/dashboard-compact-preview.png" alt="Personal Dev Dashboard (簡易表示モード)" width="900" />
   <br />
-  <sub>PC画面端の独立ウィンドウや、スマートフォン（360px〜）にすっきり収まる最小構成</sub>
-</p>
-
-### 🖥️ ワイドデスクトップ表示（簡易表示モード）
-
-サブモニター全画面などで広々と一覧したいときのスタイルです。普段は全カードがコンパクトに折りたたまれており、気になるカードだけをクリックして個別に展開・確認できます。
-
-<p align="center">
-  <img src="docs/assets/dashboard-compact-preview.png" alt="Personal Dev Dashboard - PCワイド版 (簡易表示モード)" width="900" />
+  <sub>日常の常時監視に最適な「簡易表示モード」。IDE の隣に置く幅狭ウィンドウやスマホ画面でもレイアウトを崩さずすっきり表示されます</sub>
 </p>
 
 <details>
