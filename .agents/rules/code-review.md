@@ -15,7 +15,7 @@ CodeRabbit（無料プラン）のレート制限を節約し、コード品質�
 1. **ユーザーからの実装・修正指示**
 2. **エージェントによるローカル実装・テスト作成**
 3. **スキル [`code-review`](../skills/code-review/SKILL.md) による内部レビュー ＆ 自己修正ループ**:
-   - 独立したサブエージェント（`research`）を起動し、[`references/`](../skills/code-review/references/) 配下のチェックリストに基づいて `git diff main` を点検します。
+   - 独立したサブエージェント（`research`）を起動し、**Stage 1（チェックリストに縛られない自由推論による深掘り）** と **Stage 2（[`references/`](../skills/code-review/references/) のプロジェクト固有ベースライン照合）** の 2 段階で `git diff main` を点検します。
    - 検出された問題および修正に伴って追加したコードの二次チェックを行い、**指摘がなくなるまでローカルで修正と検証（`typecheck`, `test`, `build`, LF 確認）を繰り返します**。
 4. **コミット・`git push`・PR 作成（または更新）**:
    - すべての内部指摘とテストがクリアされた状態で **1 回の Push** にまとめて反映し、CI（`gh pr checks --watch`）の通過を確認してユーザーへ報告・待機します。
@@ -23,7 +23,7 @@ CodeRabbit（無料プラン）のレート制限を節約し、コード品質�
 6. **ユーザーから「レビュー指摘がある」旨の指示**
 7. **スキル [`address-review-comments`](../skills/address-review-comments/SKILL.md) による外部指摘対応 ＆ チェックリスト育成**:
    - PR 上の指摘を収集・妥当性判定し、コードを修正します。
-   - **なぜ事前の内部レビュー（手順 3）をすり抜けたのかを汎用化し、再発防止項目として [`references/`](../skills/code-review/references/) の該当チェックリストに追記**します。
+   - **プロジェクト固有の規約や非自明な仕様上の罠など、再発防止価値の高い知見を厳選・抽象化して [`references/`](../skills/code-review/references/) の該当チェックリストに還元**します（モデルの推論力を削ぐ汎用的なノイズの追記は避ける）。
    - 手順 3（[`code-review`](../skills/code-review/SKILL.md) による内部レビュー）→ 手順 4（1 回の Push と CI 確認）を実行します。
 8. **すべての指摘が解消されたら、ユーザーが PR を承認・マージして完了**
 
