@@ -68,17 +68,44 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          # Release Drafter が作成したドラフト Release を検索して正式 Release として昇格・公開
-          DRAFT_ID=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq '.[] | select(.draft == true) | .id' | head -n 1)
+          # CHANGELOG.md から該当バージョンのリリースノートを抽出
+          node -e '
+            const fs = require("fs");
+            if (fs.existsSync("CHANGELOG.md")) {
+              const content = fs.readFileSync("CHANGELOG.md", "utf8");
+              const tag = process.env.TAG_NAME;
+              const escaped = tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+              const match = content.match(new RegExp(`## \\[${escaped}\\][^\\n]*\\n+([\\s\\S]*?)(?=\\n---\\n|\\n## \\[|$)`));
+              if (match && match[1].trim()) {
+                fs.writeFileSync("release_notes.md", "## 変更内容 / What\x27s Changed\n\n" + match[1].trim() + "\n", "utf8");
+              }
+            }
+          '
+
+          # prepare-release スキルで作成されたドラフト Release を検索（同タグ名を優先）して正式 Release として昇格・公開
+          DRAFT_ID=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq "([.[] | select(.draft == true and .tag_name == \"$TAG_NAME\") | .id] + [.[] | select(.draft == true) | .id])[0] // empty")
 
           if [ -n "$DRAFT_ID" ]; then
             echo "Publishing draft release ID: $DRAFT_ID as $TAG_NAME"
-            gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$DRAFT_ID" \
-              -f tag_name="$TAG_NAME" \
-              -f name="$TAG_NAME" \
-              -F draft=false \
-              -F make_latest=true
+            if [ -f "release_notes.md" ]; then
+              gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$DRAFT_ID" \
+                -f tag_name="$TAG_NAME" \
+                -f name="$TAG_NAME" \
+                -F body=@release_notes.md \
+                -F draft=false \
+                -f make_latest=true
+            else
+              gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$DRAFT_ID" \
+                -f tag_name="$TAG_NAME" \
+                -f name="$TAG_NAME" \
+                -F draft=false \
+                -f make_latest=true
+            fi
           else
-            echo "No draft release found. Creating a new release for $TAG_NAME"
-            gh release create "$TAG_NAME" --title "$TAG_NAME" --generate-notes
+            echo "No draft release found. Creating release for $TAG_NAME"
+            if [ -f "release_notes.md" ]; then
+              gh release create "$TAG_NAME" --title "$TAG_NAME" --notes-file "release_notes.md" --latest
+            else
+              gh release create "$TAG_NAME" --title "$TAG_NAME" --generate-notes --latest
+            fi
           fi

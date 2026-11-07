@@ -32,10 +32,9 @@
    - AI エージェントの役割は、トピックブランチの作成、実装・テスト、コミット、プッシュ、PR 作成、および CI の通過確認までです。
    - **PR のレビュー・承認（Approve）・マージ（`gh pr merge` 等）は必ずユーザー自身が行います。エージェントが自ら承認やマージを実行することは厳禁です。**
    - CI のパスを確認後、ユーザーに PR の URL を案内し、レビューおよびマージを依頼して待機してください。
-3. **リリース（タグ）駆動デプロイ & Release Drafter**:
-   - `main` ブランチへの通常マージ時は **Release Drafter** が自動起動し、ドラフトリリースノート（"Next release"）を更新・蓄積します。
-   - リリース時はリリース PR をユーザーがマージ後にタグ（`v*.*.*`）を push することで、デプロイワークフロー (`deploy.yml`) が起動し、デプロイ成功後にドラフトが自動で正式 Release として公開されます。
-   - リリース作業は専用スキル [`.agents/skills/prepare-release/SKILL.md`](.agents/skills/prepare-release/SKILL.md) および [`.agents/skills/publish-release/SKILL.md`](.agents/skills/publish-release/SKILL.md) の手順に従って実行してください。
+3. **リリース（タグ）駆動デプロイ & `CHANGELOG.md`**:
+   - リリース準備時はスキル [`prepare-release`](.agents/skills/prepare-release/SKILL.md) が前回リリースタグからのコミット履歴・コード差分を解析してリリースノートを生成し、`package.json` と [`CHANGELOG.md`](CHANGELOG.md) の更新、GitHub Draft Release の作成、およびリリース PR の作成を行います。
+   - リリース PR をユーザーがマージ後に、スキル [`publish-release`](.agents/skills/publish-release/SKILL.md) でタグ（`v*.*.*`）を push することでデプロイワークフロー (`deploy.yml`) が起動し、デプロイ成功後に `CHANGELOG.md` の内容で Draft Release が正式 Release として自動公開されます。
    - 運用手順の詳細は [`docs/dev/release-flow.md`](docs/dev/release-flow.md) を参照してください。
 
 ---
@@ -79,3 +78,4 @@ GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合
 - 🚀 [開発・ブランチ・リリース運用ガイド (`docs/dev/release-flow.md`)](docs/dev/release-flow.md)（AI 開発ループ & 指示チートシート含む）
 - 🧪 [テスト方針 & テスト観点仕様書 (`docs/dev/testing.md`)](docs/dev/testing.md)
 - 🗺️ [開発ロードマップ & 実装実績 (`docs/dev/roadmap.md`)](docs/dev/roadmap.md)
+- 📋 [変更履歴 (`CHANGELOG.md`)](CHANGELOG.md)
