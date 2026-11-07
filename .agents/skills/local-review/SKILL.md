@@ -29,7 +29,7 @@ Stage 2 で参照する、本リポジトリ固有の UI 規約・GitHub API の
 2. **[GitHub API・レート制限・セキュリティ チェックリスト (`references/github-api-security.md`)](references/github-api-security.md)**
    - レスポンス型防御、`total_count` と `per_page` の区別、`conclusion` 網羅性と再実行・キャンセル時の失敗保持、補助ルックアップの失敗通知とトークンスコープキャッシュ、In-flight リクエスト無効化、PAT 秘匿
 3. **[テスト・ドキュメント整合性 チェックリスト (`references/testing-and-docs.md`)](references/testing-and-docs.md)**
-   - テスト間のキャッシュ分離、UI アサーション強度、`storage.test.ts` 後方互換、`security.test.ts` 新 API カバレッジ、JSDoc（Docstring 80% 基準）、Markdownlint 空行ルール、設計ドキュメント同期
+   - 既存テストの改ざん・弱体化監査、テスト間のキャッシュ分離、UI アサーション強度、`storage.test.ts` 後方互換、`security.test.ts` 新 API カバレッジ、JSDoc（Docstring 80% 基準）、Markdownlint 空行ルール、設計ドキュメント同期
 
 ---
 
@@ -54,7 +54,7 @@ git diff --stat main
      - ロジックの破綻、境界値・エッジケースの考慮漏れ、データ不整合
      - 非同期処理の競合（Race Condition）、状態遷移の不備、メモリリーク・キャッシュ不整合
      - アーキテクチャや既存コードベースとの設計上の不整合、セキュリティ・パフォーマンス上の懸念
-     - テストケースの抜け漏れやアサーションの不十分さ
+     - テストケースの抜け漏れ、アサーションの不十分さ、および **本体コードの都合に合わせた既存テストの不当な書き換え・弱体化（テストの同語反復化）**
      - ドキュメント・設計書・スキル定義・設定ファイルにおける記述の矛盾、リンク切れ、実装との乖離
 2. **Stage 2: プロジェクト固有ベースライン（`references/`）の照合**
    - Stage 1 の洗い出しが完了した後に、`.agents/skills/local-review/references/` 配下の 3 つのチェックリストファイルを読み込むこと。

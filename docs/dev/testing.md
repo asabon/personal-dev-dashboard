@@ -29,6 +29,7 @@
 ## 3. テスト観点・項目一覧
 
 ### 3.1 🔒 PAT セキュリティ & 非漏洩テスト (`src/services/security.test.ts`)
+
 Personal Access Token (PAT) が安全に取り扱われ、設計通りの局所性（ローカル完結）が保たれているかを検証します。
 
 | No | テスト項目 | 検証観点 | 保証されること |
@@ -42,6 +43,7 @@ Personal Access Token (PAT) が安全に取り扱われ、設計通りの局所�
 ---
 
 ### 3.2 🧮 Actions 使用量・ペース判定ロジック (`src/utils/actionsUsage.test.ts`)
+
 GitHub Actions 無料枠の利用状況・ペース判定に関する計算の正確性を検証します。
 
 | No | テスト項目 | 検証観点 | 期待値・ルール |
@@ -58,6 +60,7 @@ GitHub Actions 無料枠の利用状況・ペース判定に関する計算の�
 ---
 
 ### 3.3 💾 設定管理 & ストレージ (`src/services/storage.test.ts`)
+
 ブラウザ `localStorage` を用いた設定（PAT、監視リポジトリ一覧、更新間隔等）の永続化を検証します。
 
 | No | テスト項目 | 検証観点 | 期待値 |
@@ -70,6 +73,7 @@ GitHub Actions 無料枠の利用状況・ペース判定に関する計算の�
 ---
 
 ### 3.4 🖥️ UI コンポーネント描画 (`src/components/ActionsUsageCard.test.tsx`)
+
 今回整理した Actions 使用量カードのレンダリング挙動を検証します。
 
 | No | テスト項目 | 検証観点 | 期待値 |
@@ -85,6 +89,7 @@ GitHub Actions 無料枠の利用状況・ペース判定に関する計算の�
 ## 4. テスト実行方法
 
 ### ローカルでの実行
+
 ```bash
 # 全テストを 1 回実行（CI モード）
 npm test
@@ -94,4 +99,20 @@ npm run test:watch
 ```
 
 ### CI (GitHub Actions) での自動実行
+
 Pull Request 作成時および `main` ブランチへの push 時に、[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) 内で自動的に `npm test` が実行されます。すべてのテストが通過しない限りマージできません。
+
+---
+
+## 5. テストコード保守ガイドライン（テストの形骸化・同語反復化の防止）
+
+本体コードの修正に合わせてテストコードを都合よく書き換えてしまうと、テストが「仕様の番人」ではなく「現在の実装の追認（同語反復）」になり、リグレッション検知能力が失われます。これを防ぐため、以下のルール（詳細は [`.agents/rules/testing-integrity.md`](../../.agents/rules/testing-integrity.md)）を徹底します。
+
+1. **既存テストが失敗したときは本体コードのデグレを疑う**:
+   - コード変更後に既存テストが落ちた場合、テスト側を修正するのではなく、まず本体コードの変更が既存仕様を壊していないかを確認します。
+2. **原則は「既存テスト無変更 ＋ 新規テストケース追加」**:
+   - バグ修正や機能追加では、既存の `it(...)` や `expect(...)` を変更・削除せず、新しいテストケースを追加して検証します。
+3. **不変条件（Invariants）テストの絶対保護**:
+   - [`src/services/security.test.ts`](../../src/services/security.test.ts)（通信先・PAT 非漏洩・CSP）および [`src/services/storage.test.ts`](../../src/services/storage.test.ts)（過去データの後方互換）の既存アサーションは、いかなる機能変更でも緩和・削除しません。
+4. **仕様変更に伴う既存テスト修正時の明示と監査**:
+   - 意図した仕様変更（UI 文言や表示条件の変更等）によって既存テストの期待値を変更する必要がある場合は、変更理由を PR 本文に明記し、Push 前の [`local-review`](../../.agents/skills/local-review/SKILL.md) で差分（`-` 行）の妥当性を独立したサブエージェントに監査させます。

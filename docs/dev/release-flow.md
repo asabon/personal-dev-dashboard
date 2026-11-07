@@ -73,6 +73,7 @@ sequenceDiagram
 | 種別 | パス | 役割 |
 | :--- | :--- | :--- |
 | **ルール** | [`.agents/rules/local-review.md`](../../.agents/rules/local-review.md) | 1〜8 の標準開発ループと厳守事項の定義 |
+| **ルール** | [`.agents/rules/testing-integrity.md`](../../.agents/rules/testing-integrity.md) | 実装時における単体テストの完全性維持（既存テストの安易な改ざん・弱体化防止） |
 | **スキル** | [`.agents/skills/local-review/SKILL.md`](../../.agents/skills/local-review/SKILL.md) | Push 前・依頼時の 2 段階ローカル事前レビュー手順（Stage 1: 自由推論 → Stage 2: 固有ベースライン） |
 | **チェックリスト** | [`.agents/skills/local-review/references/`](../../.agents/skills/local-review/references/) | Stage 2 で照合するプロジェクト固有規約・既知トラップ集（TS/React、GitHub API/Security、Test/Docs） |
 | **スキル** | [`.agents/skills/address-review-comments/SKILL.md`](../../.agents/skills/address-review-comments/SKILL.md) | PR 指摘の収集・トリアージ・修正・チェックリストへの厳選還元手順 |
