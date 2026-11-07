@@ -36,7 +36,7 @@
    - **PR のレビュー・承認（Approve）・マージ（`gh pr merge` 等）は必ずユーザー自身が行います。エージェントが自ら承認やマージを実行することは厳禁です。**
    - CI のパスを確認後、ユーザーに PR の URL を案内し、レビューおよびマージを依頼して待機してください。
 3. **リリース（タグ）駆動デプロイ & `CHANGELOG.md`**:
-   - リリース準備時はスキル [`prepare-release`](.agents/skills/prepare-release/SKILL.md) が前回リリースタグからのコミット履歴・コード差分を解析してリリースノートを生成し、`package.json` と [`CHANGELOG.md`](CHANGELOG.md) の更新、GitHub Draft Release の作成、およびリリース PR の作成を行います。
+   - リリース準備時はスキル [`prepare-release`](.agents/skills/prepare-release/SKILL.md) が前回リリースタグからのコミット履歴・コード差分を解析してリリースノートを生成し、`package.json` と [`CHANGELOG.md`](CHANGELOG.md) の更新、必要に応じた [`README.md`](README.md)・スクリーンショット画像の最新化、GitHub Draft Release の作成、およびリリース PR の作成を行います。
    - リリース PR をユーザーがマージ後に、スキル [`publish-release`](.agents/skills/publish-release/SKILL.md) でタグ（`v*.*.*`）を push することでデプロイワークフロー (`deploy.yml`) が起動し、デプロイ成功後に `CHANGELOG.md` の内容で Draft Release が正式 Release として自動公開されます。
    - 運用手順の詳細は [`docs/dev/release-flow.md`](docs/dev/release-flow.md) を参照してください。
 
@@ -65,6 +65,7 @@ GitHub CLI (`gh`) を使用して Pull Request の作成や編集を行う場合
 - `npm run typecheck`: TypeScript 型チェックを実行 (`tsc --noEmit`)
 - `npm run build`: プロダクションビルドを実行 (`tsc && vite build`)
 - `npm run preview`: 本番ビルド成果物をローカルでプレビュー
+- `npm run capture-screenshots`: デモモードを利用して README 用スクリーンショットを自動撮影 (`docs/assets/`)
 
 ---
 

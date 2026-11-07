@@ -16,7 +16,7 @@
 | **② ローカル差分の点検だけしたい** | 「今の変更をレビューして」<br>「ローカルレビューして」 | **`local-review`（Read-Only）** でサブエージェントが 2 段階レビュー（自由推論 ＋ 固有ベースライン照合）を行い、指摘事項を報告（ファイルは変更しない） | 報告を見て修正するか判断する |
 | **③ PR で指摘が出た** | 「CodeRabbit の指摘が挙がっています」<br>「PR のレビュー指摘に対応して」 | **`address-review-comments`** で指摘収集・判定 → 修正 → **プロジェクト固有の再発防止観点を `references/` に厳選還元** → **`local-review` で事前レビュー** → 1回で Push & CI 確認 | 指摘が解消されたら PR をマージする |
 | **④ CodeRabbit 再実行後の監視** | 「CodeRabbit の再実行を行いました」<br>（PR 上で `@coderabbitai review` 投稿後） | `gh pr checks --watch` でレビュー完了を自動待機 → 指摘があればそのまま **③（`address-review-comments`）** を自動実行 | 完了報告を待ち、問題なければ PR をマージする |
-| **⑤ リリース PR を作る** | 「リリース準備して」 | **`prepare-release`** で `main` の CI 確認 → 前回タグからのコミット・コード差分を解析して次期バージョン判定 & リリースノート要約 → `package.json` と `CHANGELOG.md` 更新・GitHub Draft Release 作成・リリース PR 作成 | リリース PR（`CHANGELOG.md` 含む）を確認してマージする |
+| **⑤ リリース PR を作る** | 「リリース準備して」 | **`prepare-release`** で `main` の CI 確認 → 前回タグからのコミット・コード差分を解析して次期バージョン判定 & リリースノート要約 → `package.json` と `CHANGELOG.md` 更新、必要に応じた `README.md`・スクリーンショット（`capture-screenshots`）更新・GitHub Draft Release 作成・リリース PR 作成 | リリース PR（`CHANGELOG.md` や `README.md` 等）を確認してマージする |
 | **⑥ 本番デプロイ・公開する** | 「公開して」<br>（リリース PR マージ後） | **`publish-release`** でタグ（`vX.Y.Z`）を Push → `deploy.yml` 監視 → GitHub Pages デプロイ & `CHANGELOG.md` の内容で Release 自動公開を確認 | 公開された本番ページ・Release を確認する |
 
 > [!IMPORTANT]
@@ -146,9 +146,11 @@ sequenceDiagram
 - 変更点をカテゴリ（`### 🚀 新機能 / Features` / `### 🐛 バグ修正・改善 / Bug Fixes & Improvements` / `### 📖 ドキュメント・開発基盤 / Documentation & Developer Experience`）に整理・要約し、以下を一括実行します：
   1. `package.json` の `version` 更新
   2. [`CHANGELOG.md`](../../CHANGELOG.md) の先頭への新バージョンセクション追記
-  3. GitHub Releases 上への Draft Release（`vX.Y.Z`）の作成（または更新）
-  4. リリース PR（`chore/release-vX.Y.Z`）の作成（事前内部レビュー & CI 通過確認込み）
-- あなたは PR 上で `CHANGELOG.md` のリリースノート文面を確認（必要に応じて修正指示）し、`main` へマージします。
+  3. [`README.md`](../../README.md) の点検・更新（新機能や重要仕様変更の反映）
+  4. スクリーンショットの自動撮影・更新（UI 変更やカード追加時: `npm run capture-screenshots`）
+  5. GitHub Releases 上への Draft Release（`vX.Y.Z`）の作成（または更新）
+  6. リリース PR（`chore/release-vX.Y.Z`）の作成（事前内部レビュー & CI 通過確認込み）
+- あなたは PR 上で `CHANGELOG.md` や `README.md` の記述を確認（必要に応じて修正指示）し、`main` へマージします。
 
 ### ステップ 2: リリース公開 & 自動デプロイ (`publish-release` スキル)
 

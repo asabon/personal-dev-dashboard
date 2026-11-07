@@ -146,6 +146,9 @@ npm test
 # 型チェック & プロダクションビルド
 npm run typecheck
 npm run build
+
+# README用スクリーンショットの自動撮影 (デモモード利用)
+npm run capture-screenshots
 ```
 
 ---
