@@ -664,8 +664,16 @@ const workflowRunsCache = new Map<
   {
     pat: string;
     runs: WorkflowRunItem[];
+    warning?: string;
     incompleteCoverage?: boolean;
     fetchedAt: number;
+  }
+>();
+const workflowAttemptConclusionCache = new Map<
+  string,
+  {
+    pat: string;
+    conclusion: WorkflowRunConclusion;
   }
 >();
 let workflowRunsCacheGeneration = 0;
@@ -675,6 +683,7 @@ let workflowRunsCacheGeneration = 0;
  */
 export function clearWorkflowRunsCache(): void {
   workflowRunsCache.clear();
+  workflowAttemptConclusionCache.clear();
   workflowRunsCacheGeneration += 1;
 }
 
@@ -709,6 +718,7 @@ export async function fetchRepositoryWorkflowRuns(
   if (cached && cached.pat === trimmedPat && now - cached.fetchedAt < WORKFLOW_RUNS_CACHE_TTL_MS) {
     return {
       runs: cached.runs,
+      warning: cached.warning,
       incompleteCoverage: cached.incompleteCoverage,
     };
   }
@@ -789,7 +799,10 @@ export async function fetchRepositoryWorkflowRuns(
     }));
 
     // 再実行（run_attempt > 1）が cancelled / skipped / neutral / stale で終わった場合、
-    // 直前の試行から未解決の失敗ステータスを復元する（レート制限残数がある場合のみ）
+    // 直前の試行から未解決の失敗ステータスを復元する（キャッシュ再利用＋レート制限保護）
+    let attemptLookupIncomplete = false;
+    let attemptWarning: string | undefined;
+
     for (const run of runs) {
       if (
         run.status === 'completed' &&
@@ -799,11 +812,26 @@ export async function fetchRepositoryWorkflowRuns(
         run.runAttempt > 1
       ) {
         for (let attempt = run.runAttempt - 1; attempt >= 1; attempt -= 1) {
+          const attemptCacheKey = `${repoFullName}::${run.id}::${attempt}`;
+          const cachedAttempt = workflowAttemptConclusionCache.get(attemptCacheKey);
+          if (cachedAttempt && cachedAttempt.pat === trimmedPat) {
+            if (
+              cachedAttempt.conclusion === 'success' ||
+              isFailedWorkflowConclusion(cachedAttempt.conclusion)
+            ) {
+              run.conclusion = cachedAttempt.conclusion;
+              break;
+            }
+            continue;
+          }
+
           if (
             latestRateLimit &&
             latestRateLimit.remaining < MIN_RATE_LIMIT_RESERVE &&
             latestRateLimit.resetAt.getTime() > Date.now()
           ) {
+            attemptLookupIncomplete = true;
+            attemptWarning = `${repoFullName}: GitHub API レート制限残数が少ないため、再実行前の試行履歴の確認を一部スキップしました`;
             break;
           }
           try {
@@ -818,14 +846,26 @@ export async function fetchRepositoryWorkflowRuns(
               }
             );
             updateRateLimitFromHeaders(attemptRes.headers);
-            if (!attemptRes.ok) break;
+            if (!attemptRes.ok) {
+              attemptLookupIncomplete = true;
+              attemptWarning = `${repoFullName}: 再実行前の試行履歴の取得に失敗しました (${attemptRes.status})`;
+              break;
+            }
             const attemptData = await attemptRes.json();
             const priorConclusion = (attemptData?.conclusion ?? null) as WorkflowRunConclusion;
+            if (cacheGeneration === workflowRunsCacheGeneration) {
+              workflowAttemptConclusionCache.set(attemptCacheKey, {
+                pat: trimmedPat,
+                conclusion: priorConclusion,
+              });
+            }
             if (priorConclusion === 'success' || isFailedWorkflowConclusion(priorConclusion)) {
               run.conclusion = priorConclusion;
               break;
             }
           } catch {
+            attemptLookupIncomplete = true;
+            attemptWarning = `${repoFullName}: 再実行前の試行履歴の取得中に通信エラーが発生しました`;
             break;
           }
         }
@@ -836,12 +876,17 @@ export async function fetchRepositoryWorkflowRuns(
       workflowRunsCache.set(cacheKey, {
         pat: trimmedPat,
         runs,
-        incompleteCoverage: false,
+        warning: attemptWarning,
+        incompleteCoverage: attemptLookupIncomplete,
         fetchedAt: Date.now(),
       });
     }
 
-    return { runs, incompleteCoverage: false };
+    return {
+      runs,
+      warning: attemptWarning,
+      incompleteCoverage: attemptLookupIncomplete,
+    };
   } catch (err) {
     console.warn(`Failed to fetch workflow runs for ${repoFullName}:`, err);
     return {

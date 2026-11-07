@@ -214,4 +214,97 @@ describe('githubApi - Actions 使用量および倍率計算テスト', () => {
     expect(result.runs).toHaveLength(1);
     expect(result.runs[0].conclusion).toBe('failure');
   });
+
+  it('fetchRepositoryWorkflowRuns は再実行前の試行取得が失敗またはレート制限残数不足の場合に incompleteCoverage と warning を返すこと', async () => {
+    clearWorkflowRunsCache();
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/attempts/1')) {
+        return new Response('Server Error', { status: 500 });
+      }
+      return new Response(
+        JSON.stringify({
+          total_count: 1,
+          workflow_runs: [
+            {
+              id: 888,
+              workflow_id: 10,
+              name: 'CI',
+              display_title: 'Rerun cancelled with lookup failure',
+              run_number: 51,
+              run_attempt: 2,
+              event: 'push',
+              status: 'completed',
+              conclusion: 'cancelled',
+              html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/888',
+              head_branch: 'main',
+              head_sha: '1234567890abcdef',
+              actor: { login: 'asabon', avatar_url: '' },
+              created_at: '2026-09-25T10:00:00Z',
+              updated_at: '2026-09-25T10:10:00Z',
+            },
+          ],
+        }),
+        { status: 200 }
+      );
+    });
+
+    const failedLookupResult = await fetchRepositoryWorkflowRuns(
+      TEST_PAT,
+      'asabon',
+      'personal-dev-dashboard',
+      30
+    );
+
+    expect(failedLookupResult.incompleteCoverage).toBe(true);
+    expect(failedLookupResult.warning).toContain('再実行前の試行履歴の取得に失敗しました');
+
+    // レート制限残数が少ない場合（remaining < 100）も incompleteCoverage になること
+    clearWorkflowRunsCache();
+    const resetEpoch = Math.floor((Date.now() + 600_000) / 1000);
+    globalThis.fetch = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          total_count: 1,
+          workflow_runs: [
+            {
+              id: 889,
+              workflow_id: 10,
+              name: 'CI',
+              display_title: 'Rerun cancelled with low rate limit',
+              run_number: 52,
+              run_attempt: 2,
+              event: 'push',
+              status: 'completed',
+              conclusion: 'cancelled',
+              html_url: 'https://github.com/asabon/personal-dev-dashboard/actions/runs/889',
+              head_branch: 'main',
+              head_sha: '1234567890abcdef',
+              actor: { login: 'asabon', avatar_url: '' },
+              created_at: '2026-09-25T10:00:00Z',
+              updated_at: '2026-09-25T10:10:00Z',
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: {
+            'x-ratelimit-remaining': '50',
+            'x-ratelimit-limit': '5000',
+            'x-ratelimit-reset': String(resetEpoch),
+          },
+        }
+      );
+    });
+
+    const lowRateLimitResult = await fetchRepositoryWorkflowRuns(
+      TEST_PAT,
+      'asabon',
+      'personal-dev-dashboard',
+      30
+    );
+
+    expect(lowRateLimitResult.incompleteCoverage).toBe(true);
+    expect(lowRateLimitResult.warning).toContain('レート制限残数が少ないため');
+  });
 });

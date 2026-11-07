@@ -132,6 +132,13 @@ export function App() {
     featureStatesRef.current = featureStates;
   }, [featureStates]);
 
+  const projectsRef = useRef(state.projects);
+  useEffect(() => {
+    projectsRef.current = state.projects;
+  }, [state.projects]);
+
+  const refreshGenerationRef = useRef(0);
+
   // デバッグモード用の選択状態
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(
     isDebugMode ? 'healthy' : null
@@ -234,6 +241,8 @@ export function App() {
 
     if (!settings.pat || !settings.username) return;
 
+    const currentGeneration = ++refreshGenerationRef.current;
+
     if (!isSilent) {
       clearWorkflowRunsCache();
       setState((prev) => ({ ...prev, isRefreshing: true }));
@@ -290,17 +299,19 @@ export function App() {
                 try {
                   return await fetchRepositoryPRs(settings.pat, owner, name);
                 } catch (err: any) {
+                  const prevRepo = projectsRef.current.find((p) => p.fullName === repoFullName);
                   return {
                     owner,
                     name,
                     fullName: repoFullName,
-                    isPrivate: false,
-                    pullRequests: [],
+                    isPrivate: prevRepo?.isPrivate ?? false,
+                    pullRequests: prevRepo?.pullRequests ?? [],
                     error: err?.message || 'リポジトリ情報の取得に失敗しました',
                   } as RepositoryDashboardData;
                 }
               })
             ).then((repoResults) => {
+              if (refreshGenerationRef.current !== currentGeneration) return;
               setState((prev) => ({ ...prev, projects: repoResults, isLoading: false }));
             })
           : Promise.resolve();
@@ -319,11 +330,13 @@ export function App() {
               },
               previousData: featureStatesRef.current[feature.id]?.data,
             });
+            if (refreshGenerationRef.current !== currentGeneration) return;
             setFeatureStates((previous) => ({
               ...previous,
               [feature.id]: { data, error: null, isLoading: false },
             }));
           } catch (err: any) {
+            if (refreshGenerationRef.current !== currentGeneration) return;
             console.warn(`Dashboard feature (${feature.id}) fetch failed:`, err);
             setFeatureStates((previous) => ({
               ...previous,
@@ -339,6 +352,7 @@ export function App() {
 
       await Promise.all([repoFetchPromise, featuresFetchPromise]);
 
+      if (refreshGenerationRef.current !== currentGeneration) return;
       setState((prev) => ({
         ...prev,
         rateLimit: getLatestRateLimit(),
@@ -347,6 +361,7 @@ export function App() {
         error: null,
       }));
     } catch (err: any) {
+      if (refreshGenerationRef.current !== currentGeneration) return;
       console.error('Refresh error:', err);
       setState((prev) => ({
         ...prev,
@@ -427,6 +442,7 @@ export function App() {
   // ログアウト / リセットハンドラ
   const handleLogout = () => {
     if (window.confirm('ダッシュボードの設定とトークンを消去して初期化しますか？')) {
+      refreshGenerationRef.current += 1;
       clearSettings();
       clearWorkflowRunsCache();
       setSettings({

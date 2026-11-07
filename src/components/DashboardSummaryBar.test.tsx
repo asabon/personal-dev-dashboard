@@ -105,4 +105,20 @@ describe('DashboardSummaryBar', () => {
     expect(scrollIntoViewMock).toHaveBeenCalled();
     document.body.removeChild(dummyEl);
   });
+
+  it('リポジトリ取得エラーがある場合は異常なしと表示せず、PR 取得エラーバッジを表示すること', () => {
+    const erroredRepo: RepositoryDashboardData = {
+      owner: 'test',
+      name: 'repo-error',
+      fullName: 'test/repo-error',
+      isPrivate: false,
+      pullRequests: [],
+      error: '500 Internal Server Error',
+    };
+
+    render(<DashboardSummaryBar projects={[erroredRepo]} />);
+
+    expect(screen.queryByText('異常なし')).toBeNull();
+    expect(screen.getByText('PR 取得エラー: 1件')).toBeInTheDocument();
+  });
 });

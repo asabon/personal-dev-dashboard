@@ -263,7 +263,7 @@ describe('RepositoriesCard', () => {
     expect(screen.getByText('octocat/frontend-app')).toBeInTheDocument();
   });
 
-  it('PR のチェックに SUCCESS と SKIPPED が混在する場合、All Passed ではなく Passed と Skipped の件数バッジが表示されること', () => {
+  it('PR のチェックに SUCCESS と SKIPPED が混在する場合、All Passed ではなく Passed と Other の件数バッジが表示されること', () => {
     const prWithSkippedCheck: RepositoryDashboardData = {
       owner: 'asabon',
       name: 'personal-dev-dashboard',
@@ -309,7 +309,29 @@ describe('RepositoriesCard', () => {
       />
     );
 
-    expect(screen.getByText('1 Skipped')).toBeInTheDocument();
-    expect(screen.getByText('2 Checks (1 passed, 1 skipped)')).toBeInTheDocument();
+    expect(screen.getByText('1 Other')).toBeInTheDocument();
+    expect(screen.getByText('2 Checks (1 passed, 1 other)')).toBeInTheDocument();
+  });
+
+  it('リポジトリ再取得時にエラーが発生しても前回取得時の PR が保持されている場合、エラー表示と前回 PR の両方が表示されること', () => {
+    const erroredRepoWithStalePrs: RepositoryDashboardData = {
+      ...mockProjects[0],
+      error: 'GitHub API エラー: 502 Bad Gateway',
+    };
+
+    render(
+      <RepositoriesCard
+        repositories={['asabon/personal-dev-dashboard']}
+        projects={[erroredRepoWithStalePrs]}
+        isCompact={false}
+      />
+    );
+
+    expect(screen.getByText('1 リポエラー')).toBeInTheDocument();
+    expect(screen.getAllByText('1 Passed')).toHaveLength(2);
+    expect(
+      screen.getByText('最新情報の取得エラー（前回取得時の PR を表示中）')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Add feature')).toBeInTheDocument();
   });
 });

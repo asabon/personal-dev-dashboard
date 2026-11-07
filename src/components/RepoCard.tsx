@@ -78,7 +78,7 @@ export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false }) =
             <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
               0 PR
             </span>
-          ) : passedPrs.length === totalPrs ? (
+          ) : passedPrs.length === totalPrs && !repo.error ? (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
               <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
               <span>All Passed</span>
@@ -119,27 +119,30 @@ export const RepoCard: React.FC<RepoCardProps> = ({ repo, isCompact = false }) =
 
       {/* Content Body */}
       {isExpanded && (
-        <div className="p-3 sm:p-4 flex-1">
-          {repo.error ? (
+        <div className="p-3 sm:p-4 flex-1 space-y-2.5">
+          {repo.error && (
             <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
               <div className="min-w-0">
-                <p className="font-semibold">取得エラー</p>
+                <p className="font-semibold">
+                  {repo.pullRequests.length > 0 ? '最新情報の取得エラー（前回取得時の PR を表示中）' : '取得エラー'}
+                </p>
                 <p className="text-rose-400/80 mt-0.5">{repo.error}</p>
               </div>
             </div>
-          ) : repo.pullRequests.length === 0 ? (
-            <div className="py-6 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
-              <CheckCircle2 className="w-7 h-7 text-slate-700" />
-              <p className="text-xs font-medium">現在 Open な Pull Request はありません</p>
-            </div>
-          ) : (
+          )}
+          {repo.pullRequests.length > 0 ? (
             <div className="space-y-2">
               {repo.pullRequests.map((pr) => (
                 <PullRequestCard key={pr.id} pr={pr} isCompact={isCompact} />
               ))}
             </div>
-          )}
+          ) : !repo.error ? (
+            <div className="py-6 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
+              <CheckCircle2 className="w-7 h-7 text-slate-700" />
+              <p className="text-xs font-medium">現在 Open な Pull Request はありません</p>
+            </div>
+          ) : null}
         </div>
       )}
     </div>

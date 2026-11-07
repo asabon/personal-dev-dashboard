@@ -68,7 +68,7 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact 
           )}
           {otherChecks > 0 && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
-              <span>{otherChecks} Skipped</span>
+              <span>{otherChecks} Other</span>
             </span>
           )}
         </div>
@@ -118,7 +118,7 @@ export const PullRequestCard: React.FC<PullRequestCardProps> = ({ pr, isCompact 
     if (passedChecks > 0) parts.push(`${passedChecks} passed`);
     if (failedChecks > 0) parts.push(`${failedChecks} failed`);
     if (runningChecks > 0) parts.push(`${runningChecks} running`);
-    if (otherChecks > 0) parts.push(`${otherChecks} skipped`);
+    if (otherChecks > 0) parts.push(`${otherChecks} other`);
     return `${totalChecks} Checks (${parts.join(', ')})`;
   };
 

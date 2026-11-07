@@ -26,27 +26,34 @@ description: Perform a comprehensive CodeRabbit-equivalent code review on curren
 ## 📋 実行手順
 
 ### 1. 変更差分の把握
+
 現在の作業ツリーおよびトピックブランチと `main` ブランチの差分・変更ファイル一覧を確認します（未コミット変更も含めるため `git diff main` および `git status -s` を使用します）。
+
 ```powershell
 git status -s
 git diff --stat main
 ```
 
 ### 2. 独立レビューサブエージェント (`research`) の起動
+
 実装者バイアスを排除するため、`invoke_subagent` で `research` サブエージェントを起動し、以下を指示します：
+
 - `git diff main` の差分および変更・新規作成されたファイルを全文確認すること
 - `.agents/skills/code-review/references/` 配下の 3 つのチェックリストファイルを読み込み、すべての項目に照らして検査すること
 - 発見事項を重大度別（🔴 Critical / 🟠 Major / 🟡 Minor・Nitpick / ✅ 問題なし確認済み項目）に報告すること
 
 ### 3. 指摘事項の修正とローカル検証（修正依頼または PR 作成・Push 前の場合）
+
 レビューのみの場合は作業ツリーを変更せず、指摘事項を報告します。
 修正依頼または PR 作成・Push 前の場合は、修正すべき項目をローカルで修正し、以下をすべて通過させます。
+
 1. `npm run typecheck`
 2. `npm test`
 3. `npm run build`
 4. 変更ファイルの改行コードがすべて LF (`\n`) であることの確認
 
 ### 4. 結果報告（またはコミット・Push）
+
 レビュー結果と修正内容をユーザーに報告します。PR 作成・更新フローの中で実行した場合は、すべての修正と検証が完了してから 1 回のコミット・`git push` にまとめて反映します。
 
 ---

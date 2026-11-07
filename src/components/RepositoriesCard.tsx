@@ -126,7 +126,7 @@ export const RepositoriesCard: React.FC<RepositoriesCardProps> = ({
               </span>
             )}
             {!isLoading && repositories.length > 0 && totalPrs > 0 && (
-              passedPrs.length === totalPrs ? (
+              passedPrs.length === totalPrs && erroredRepos.length === 0 ? (
                 <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold shrink-0">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
                   <span>All Passed</span>
